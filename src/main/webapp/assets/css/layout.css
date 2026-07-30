@@ -1,0 +1,491 @@
+@charset "UTF-8";
+
+/* ==========================================================
+   NEXACORE - LAYOUT.CSS
+   Componentes reutilizáveis do sistema
+==========================================================*/
+
+
+/* ==========================================================
+   CARDS
+==========================================================*/
+
+.card{
+
+    background:var(--bg-card);
+
+    border:1px solid var(--border-color);
+
+    border-radius:var(--radius-md);
+
+    box-shadow:var(--shadow-sm);
+
+    margin-bottom:20px;
+
+    transition:var(--transition);
+
+}
+
+.card:hover{
+
+    box-shadow:var(--shadow-md);
+
+}
+
+.card-header{
+
+    background:#fff;
+
+    border-bottom:1px solid var(--border-color);
+
+    padding:15px 20px;
+
+    font-size:15px;
+
+    font-weight:600;
+
+}
+
+.card-body{
+
+    padding:20px;
+
+}
+
+.card-footer{
+
+    background:#fff;
+
+    border-top:1px solid var(--border-color);
+
+}
+
+
+/* ==========================================================
+   TÍTULOS
+==========================================================*/
+
+.section-title{
+
+    font-size:16px;
+
+    font-weight:600;
+
+    color:#2c3e50;
+
+    margin-bottom:20px;
+
+}
+
+
+/* ==========================================================
+   LABELS
+==========================================================*/
+
+.form-label{
+
+    font-size:12px;
+
+    font-weight:600;
+
+    color:#555;
+
+    margin-bottom:5px;
+
+}
+
+
+/* ==========================================================
+   INPUTS
+==========================================================*/
+
+.form-control,
+.form-select{
+
+    border:1px solid #ced4da;
+
+    border-radius:5px;
+
+    transition:var(--transition);
+
+    box-shadow:none;
+
+}
+
+.form-control-sm,
+.form-select-sm{
+
+    height:var(--input-height);
+
+    font-size:13px;
+
+}
+
+.form-control:focus,
+.form-select:focus{
+
+    border-color:var(--primary-color);
+
+    box-shadow:0 0 0 .15rem rgba(13,110,253,.15);
+
+}
+
+textarea.form-control{
+
+    min-height:90px;
+
+    resize:vertical;
+
+}
+
+
+/* ==========================================================
+   BOTÕES
+==========================================================*/
+
+.btn{
+
+    font-size:13px;
+
+    font-weight:600;
+
+    border-radius:5px;
+
+    transition:var(--transition);
+
+}
+
+.btn-sm{
+
+    padding:.45rem .90rem;
+
+}
+
+.btn-primary{
+
+    background:var(--primary-color);
+
+    border-color:var(--primary-color);
+
+}
+
+.btn-primary:hover{
+
+    background:var(--primary-hover);
+
+    border-color:var(--primary-hover);
+
+}
+
+
+/* ==========================================================
+   TABS
+==========================================================*/
+
+.nav-tabs{
+
+    border-bottom:1px solid var(--border-color);
+
+}
+
+.nav-tabs .nav-link{
+
+    color:#666;
+
+    border:none;
+
+    font-size:13px;
+
+    padding:10px 18px;
+
+    transition:var(--transition);
+
+}
+
+.nav-tabs .nav-link:hover{
+
+    color:var(--primary-color);
+
+}
+
+.nav-tabs .nav-link.active{
+
+    color:var(--primary-color);
+
+    background:#fff;
+
+    font-weight:600;
+
+    border-bottom:3px solid var(--primary-color);
+
+}
+
+
+/* ==========================================================
+   TABELAS
+==========================================================*/
+
+.table{
+
+    font-size:13px;
+
+    margin-bottom:0;
+
+}
+
+.table thead{
+
+    background:#f8f9fa;
+
+}
+
+.table th{
+
+    font-weight:600;
+
+    color:#495057;
+
+    vertical-align:middle;
+
+}
+
+.table td{
+
+    vertical-align:middle;
+
+}
+
+
+/* ==========================================================
+   BADGES
+==========================================================*/
+
+.badge{
+
+    font-size:11px;
+
+    font-weight:600;
+
+    padding:6px 10px;
+
+}
+
+
+/* ==========================================================
+   MODAIS
+==========================================================*/
+
+.modal-content{
+
+    border:none;
+
+    border-radius:10px;
+
+    box-shadow:var(--shadow-lg);
+
+}
+
+.modal-header{
+
+    border-bottom:1px solid var(--border-color);
+
+}
+
+.modal-footer{
+
+    border-top:1px solid var(--border-color);
+
+}
+
+
+/* ==========================================================
+   DROPDOWNS
+==========================================================*/
+
+.dropdown-menu{
+
+    border:1px solid var(--border-color);
+
+    border-radius:6px;
+
+    box-shadow:var(--shadow-md);
+
+}
+
+
+/* ==========================================================
+   ALERTAS
+==========================================================*/
+
+.alert{
+
+    border-radius:6px;
+
+    font-size:13px;
+
+}
+
+
+/* ==========================================================
+   PAGINAÇÃO
+==========================================================*/
+
+.pagination .page-link{
+
+    color:var(--primary-color);
+
+}
+
+.pagination .active .page-link{
+
+    background:var(--primary-color);
+
+    border-color:var(--primary-color);
+
+}
+
+
+/* ==========================================================
+   UTILITÁRIOS
+==========================================================*/
+
+.cursor-pointer{
+
+    cursor:pointer;
+
+}
+
+.shadow-sm{
+
+    box-shadow:var(--shadow-sm);
+
+}
+
+.shadow-md{
+
+    box-shadow:var(--shadow-md);
+
+}
+
+.rounded-md{
+
+    border-radius:var(--radius-md);
+
+}
+
+.text-muted-small{
+
+    font-size:12px;
+
+    color:#777;
+
+}
+/* ==========================================================
+   AJUSTES ESPECÍFICOS PARA TABELA DE ATRIBUTOS
+   Estilos aplicados dinamicamente na renderização das linhas 
+   da tabela (ex: editores inline).
+========================================================== */
+
+.acoes-container {
+    display: flex;
+    justify-content: flex-end; /* Mantém os ícones alinhados à direita */
+    gap: 4px;                /* Espaçamento entre editar e excluir */
+    align-items: center;
+    /* Define altura fixa para evitar "pulo" visual ao trocar visualização por edição */
+    min-height: var(--input-height);
+    /*min-height: 38px;        /* Mesma altura dos inputs definida no global.css */
+}
+
+/* Garante que o botão de editar tenha um estilo consistente */
+.btn-nexacore-edit {
+    color: var(--primary-color);
+    background: transparent;
+    border: 1px solid transparent;
+    transition: var(--transition);
+}
+
+.btn-nexacore-edit:hover {
+    color: var(--primary-hover);
+    background-color: #e7f1ff;
+    border-color: #b6d4fe;
+}
+
+/* Ajuste fino para os selects dentro da linha de edição */
+.edit-grupo, .edit-tipo, .edit-obrigatorio, .edit-attr {
+    font-size: 13px;
+    padding: 0.25rem 0.5rem;
+}
+
+/* ==========================================================
+   CAMPO DE BUSCA GLOBAL (Header)
+==========================================================*/
+
+.search-container {
+    width: 300px;
+}
+
+.search-container .form-control {
+    border-right: none; /* Remove a borda para colar no botão */
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.search-container .btn-outline-secondary {
+    border-color: #ced4da;
+    border-left: none; /* Remove a borda para colar no input */
+    background-color: #fff;
+    color: var(--text-secondary);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    transition: var(--transition);
+}
+
+.search-container .btn-outline-secondary:hover {
+    background-color: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+/* ==========================================================
+   CAMPO DE BUSCA GLOBAL (Header)
+==========================================================*/
+
+.search-container {
+    flex-grow: 1;             /* Substitui a classe flex-grow-1 do Bootstrap */
+    margin-left: 1.5rem;      /* Substitui a margem horizontal (mx-4) à esquerda */
+    margin-right: 1.5rem;     /* Substitui a margem horizontal (mx-4) à direita */
+    max-width: 550px;         /* Limita o crescimento para não colar no botão "Novo Produto" */
+}
+
+.search-container .form-control {
+    border-right: none;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.search-container .btn-outline-secondary {
+    border-color: #ced4da;
+    border-left: none;
+    background-color: #fff;
+    color: var(--text-secondary);
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    transition: var(--transition);
+}
+
+.search-container .btn-outline-secondary:hover {
+    background-color: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+/* ==========================================================
+   AJUSTES EXTRAS PARA SUPORTE ÀS TELAS
+========================================================== */
+.text-primary-dark {
+    color: #1a237e !important;
+}
+
+.select-paginacao {
+    width: 80px;
+}

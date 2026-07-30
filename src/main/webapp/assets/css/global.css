@@ -1,0 +1,349 @@
+@charset "UTF-8";
+
+/* ==========================================================
+   NEXACORE - GLOBAL.CSS
+   Configurações globais do sistema
+   NÃO colocar estilos específicos de telas aqui.
+========================================================== */
+
+/* ==========================================================
+   VARIÁVEIS GLOBAIS
+   Centralização das propriedades visuais. 
+   Alterar aqui reflete em todo o sistema (Single Source of Truth).
+========================================================== */
+
+:root{
+
+    /* Cores principais */
+    --primary-color:#0d6efd;
+    --primary-hover:#0b5ed7;
+
+    --success-color:#198754;
+    --danger-color:#dc3545;
+    --warning-color:#ffc107;
+    --info-color:#0dcaf0;
+
+    /* Fundo */
+
+    --bg-body:#f4f6f9;
+    --bg-card:#ffffff;
+
+    /* Texto */
+
+    --text-main:#343a40;
+    --text-secondary:#6c757d;
+
+    /* Bordas */
+
+    --border-color:#dfe6ef;
+
+    /* Sombras */
+
+    --shadow-sm:0 1px 3px rgba(0,0,0,.05);
+    --shadow-md:0 2px 10px rgba(0,0,0,.06);
+    --shadow-lg:0 5px 20px rgba(0,0,0,.08);
+
+    /* Radius */
+
+    --radius-sm:4px;
+    --radius-md:8px;
+    --radius-lg:12px;
+
+    /* Fontes */
+
+    --font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
+
+    /* Alturas */
+
+    --input-height:38px;
+    --button-height:38px;
+
+    /* Transição */
+
+    --transition:.2s ease-in-out;
+
+}
+
+/* ==========================================================
+   RESET
+========================================================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+/* ==========================================================
+   HTML / BODY
+========================================================== */
+
+html{
+
+    scroll-behavior:smooth;
+
+}
+
+body{
+
+    background:var(--bg-body);
+
+    font-family:var(--font-family);
+
+    color:var(--text-main);
+
+    font-size:14px;
+
+    line-height:1.5;
+
+}
+
+/* ==========================================================
+   LINKS
+========================================================== */
+
+a{
+
+    color:var(--primary-color);
+
+    text-decoration:none;
+
+    transition:var(--transition);
+
+}
+
+a:hover{
+
+    color:var(--primary-hover);
+
+}
+
+/* ==========================================================
+   TÍTULOS
+========================================================== */
+
+h1,h2,h3,h4,h5,h6{
+
+    margin-bottom:.5rem;
+
+    font-weight:600;
+
+}
+
+/* ==========================================================
+   PARÁGRAFOS
+========================================================== */
+
+p{
+
+    margin-bottom:1rem;
+
+}
+
+/* ==========================================================
+   LISTAS
+========================================================== */
+
+ul{
+
+    margin:0;
+
+    padding:0;
+
+    list-style:none;
+
+}
+
+/* ==========================================================
+   IMAGENS
+========================================================== */
+
+img{
+
+    max-width:100%;
+
+    height:auto;
+
+}
+
+/* ==========================================================
+   HR
+========================================================== */
+
+hr{
+
+    border:none;
+
+    border-top:1px solid var(--border-color);
+
+    opacity:.6;
+
+    margin:1rem 0;
+
+}
+
+/* ==========================================================
+   SCROLLBAR (Chrome/Edge)
+   Estilização específica para garantir consistência visual 
+   em navegadores baseados em Chromium.
+========================================================== */
+
+::-webkit-scrollbar{
+
+    width:8px;
+
+    height:8px;
+
+}
+
+::-webkit-scrollbar-track{
+
+    background:#ececec;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+    background:#b8b8b8;
+
+    border-radius:20px;
+
+}
+
+::-webkit-scrollbar-thumb:hover{
+
+    background:#8d8d8d;
+
+}
+
+
+/* ==========================================================
+ NEXACORE (Estilo Centralizado - Refinado)
+========================================================== */
+
+/* Usando as variáveis que você já definiu acima */
+.card { 
+    border: none; 
+    box-shadow: var(--shadow-sm); /* Usando sua variável de sombra */
+}
+
+.list-group-item-action.active { 
+    background-color: var(--primary-color); 
+    border-color: var(--primary-color); 
+}
+
+/* Botão de Exclusão Padrão */
+.btn-nexacore-delete {
+    color: var(--danger-color); /* Usando sua variável de cor danger */
+    background: transparent;
+    border: 1px solid transparent;
+    transition: var(--transition); /* Usando sua variável de transição */
+}
+
+.btn-nexacore-delete:hover {
+    color: #a71d2a; /* Cor levemente mais escura */
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+}
+
+/* ==========================================================
+   NEXACORE (Modais Dinâmicos - ModalService)
+   Classes de estado para o ModalService. 
+   O JavaScript deve injetar as classes .error, .success ou .warning
+   dinamicamente no container .modal-content-custom.
+========================================================== */
+/* Container que centraliza tudo */
+.modal-content-custom {
+    background-color: #fefefe;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+    margin: auto;
+    border: 2px solid transparent; /* Para aplicar a cor de borda conforme o sucesso/erro */
+}
+
+.modal-content-custom h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+    color: #333;
+}
+
+.modal-content-custom p {
+    font-size: 1.1em;
+    color: #555;
+    margin-bottom: 25px;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+    position: relative; /* Garante posicionamento */
+    z-index: 1060;      /* Fica acima de qualquer backdrop */
+}
+
+.modal-buttons button {
+    padding: 10px 25px;
+    font-size: 1em;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer !important; /* Força a mãozinha */
+    pointer-events: auto !important; /* Força a clicabilidade */
+    transition: background-color 0.3s;
+}
+
+/* Container base limpo */
+.modal-content-custom {
+    background-color: #ffffff !important;
+    border: 2px solid #ccc !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+    padding: 30px !important;
+    text-align: center;
+}
+
+/* Quando o JS adicionar a classe 'error' no container: */
+.modal-content-custom.error {
+    border-color: #dc3545 !important; /* Cor danger do seu bootstrap */
+}
+.modal-content-custom.error h3 {
+    color: #dc3545 !important;
+}
+
+/* Quando o JS adicionar a classe 'success' no container: */
+/* Borda verde e título verde */
+.modal-content-custom.success {
+    border: 2px solid #198754 !important; /* Cor verde do Bootstrap */
+}
+.modal-content-custom.success h3 {
+    color: #198754 !important;
+}
+/* Quando o JS adicionar a classe 'warning' no container: */
+.modal-content-custom.warning {
+    border: 2px solid var(--warning-color) !important;
+}
+.modal-content-custom.warning h3 {
+    color: var(--warning-color) !important;
+}
+
+.btn-confirmar { background-color: #2196f3; color: white; }
+.btn-confirmar:hover { background-color: #1976d2; }
+
+.btn-cancelar { background-color: #f44336; color: white; }
+.btn-cancelar:hover { background-color: #da190b; }
+
+/* ==========================================================
+   CLASSES UTILITÁRIAS (Helpers)
+========================================================== */
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mb-2 { margin-bottom: 1rem; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.text-center { text-align: center; }
+.w-100 { width: 100%; }
+

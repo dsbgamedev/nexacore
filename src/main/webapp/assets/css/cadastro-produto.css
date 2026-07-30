@@ -1,0 +1,375 @@
+@charset "UTF-8";
+
+/* ==========================================================
+   NEXACORE
+   Cadastro de Produto
+==========================================================*/
+
+/* Título da página */
+
+.page-title{
+
+    font-size:22px;
+    font-weight:700;
+    color:#1847b8;
+    margin-bottom:3px;
+}
+
+.page-subtitle{
+
+    font-size:12px;
+    color:#6c757d;
+    margin-bottom:20px;
+}
+
+/* ==========================================================
+   CARD PRINCIPAL
+==========================================================*/
+
+.card{
+
+    min-height:100%;
+}
+
+.card h6{
+
+    color:#1c3f94;
+    font-size:15px;
+    font-weight:700;
+    margin-bottom:18px;
+}
+
+/* ==========================================================
+   GRID DOS CAMPOS
+==========================================================*/
+
+#div-campos-dinamicos{
+
+    width:100%;
+}
+
+#container-atributos-tecnicos{
+
+    margin-top:5px;
+}
+
+/* Espaçamento entre linhas */
+
+.row.g-3{
+
+    --bs-gutter-y:1rem;
+}
+
+/* ==========================================================
+   INPUTS
+==========================================================*/
+
+.form-control-sm,
+.form-select-sm{
+
+    height:36px;
+    font-size:13px;
+}
+
+textarea.form-control{
+
+    min-height:75px;
+}
+
+textarea{
+
+    resize:none;
+}
+
+/* ==========================================================
+   ABAS
+==========================================================*/
+
+.nav-tabs{
+
+    margin-top:8px;
+    margin-bottom:20px;
+}
+
+.nav-tabs .nav-link{
+
+    padding:10px 18px;
+    font-size:13px;
+}
+
+.tab-content{
+
+    padding-top:5px;
+}
+
+/* ==========================================================
+   PAINEL LATERAL (Ajustado para o estilo da Imagem)
+   O align-self: flex-start impede que o painel estique 
+   verticalmente para acompanhar a altura do conteúdo central.
+==========================================================*/
+.painel-produto {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    height: auto; /* Garante que não estique desnecessariamente */
+    align-self: flex-start; /* Impede esticamento vertical */
+}
+
+/* ==========================================================
+   BOTÕES (Ajustado para o estilo da Imagem)
+==========================================================*/
+.btn-primary {
+    background-color: #1a4db8;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    width: auto; /* Permite que o botão cresça com o texto */
+    min-width: 140px;
+}
+
+.btn-secondary {
+    background-color: #ffffff;
+    border: 1px solid #ced4da;
+    color: #495057;
+    padding: 0.5rem 1.5rem;
+    width: auto;
+    min-width: 120px;
+    margin-left: 10px;
+}
+
+/* ==========================================================
+   LISTA DE CAMPOS
+==========================================================*/
+
+#container-lista-campos{
+
+    margin-top:15px;
+}
+
+#container-lista-campos div{
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:7px 0;
+    font-size:13px;
+    border-bottom:1px solid #f1f1f1;
+}
+
+#container-lista-campos div:last-child{
+
+    border-bottom:none;
+}
+
+#container-lista-campos i{
+
+    color:#16a34a;
+}
+
+/* ==========================================================
+   CAMPOS OCULTOS
+==========================================================*/
+
+#container-campos-ocultos{
+
+    margin-top:15px;
+}
+
+#container-campos-ocultos div{
+
+    padding:6px 0;
+    font-size:13px;
+    color:#555;
+}
+
+#container-campos-ocultos i{
+
+    color:#888;
+}
+
+/* ==========================================================
+   DESCRIÇÕES
+==========================================================*/
+
+#desc-resumida{
+
+    background:#fafafa;
+    font-weight:500;
+}
+
+/* ==========================================================
+   RESPONSIVIDADE
+==========================================================*/
+
+@media(max-width:991px){
+
+    .painel-produto{
+
+        margin-top:20px;
+        position:relative;
+        top:0;
+    }
+
+    .btn-primary,
+    .btn-secondary{
+        width:100%;
+        margin:5px 0;
+
+    }
+
+}
+/* ==========================================================
+   ABA DE IMAGENS (GALERIA & DESTAQUE)
+==========================================================*/
+
+/* Container Geral da Imagem Principal */
+.preview-box-main {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    background-color: #ffffff;
+    height: 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+}
+
+.preview-box-main img {
+    max-height: 140px;
+    object-fit: contain;
+    margin-bottom: 15px;
+    transition: var(--transition);
+}
+
+/* Botões da Imagem Principal */
+.preview-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    justify-content: center;
+}
+
+.preview-actions .btn {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+}
+
+/* Grid da Galeria de Imagens */
+.gallery-wrapper {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    background-color: #ffffff;
+    min-height: 240px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: var(--shadow-sm);
+}
+
+.gallery-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Itens da Galeria (Miniaturas) */
+.gallery-item {
+    width: 100px;
+    height: 100px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    background-color: #fafafa;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.gallery-item:hover {
+    transform: scale(1.02);
+    border-color: #1a4db8;
+}
+
+/* Destaque visual para a miniatura selecionada como Principal */
+.gallery-item.is-main {
+    border: 2px solid #1a4db8;
+    box-shadow: 0 0 0 3px rgba(26, 77, 184, 0.15);
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Botão de Exclusão Individual na Miniatura (Aparece ao passar o mouse) */
+.gallery-item .btn-remove-thumb {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition);
+}
+
+.gallery-item:hover .btn-remove-thumb {
+    opacity: 1;
+}
+
+/* Caixa "Adicionar Imagem" (Tracejada) */
+.add-image-box {
+    width: 100px;
+    height: 100px;
+    border: 2px dashed #b8c2cc;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background-color: #ffffff;
+    transition: background-color var(--transition), border-color var(--transition);
+}
+
+.add-image-box:hover {
+    background-color: #f1f5f9;
+    border-color: #1a4db8;
+}
+
+.add-image-box i {
+    font-size: 18px;
+    color: #6c757d;
+    margin-bottom: 4px;
+}
+
+.add-image-box span {
+    font-size: 10px;
+    font-weight: 600;
+    color: #495057;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.img-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1c3f94; /* Cor que você usa nos h6 do card */
+    margin-bottom: 10px;
+    display: block;
+}
