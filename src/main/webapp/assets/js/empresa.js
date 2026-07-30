@@ -4,11 +4,80 @@ document.addEventListener("DOMContentLoaded", function () {
     const btnCancelar = document.getElementById("btnCancelar");
     const btnExcluir = document.getElementById("btnExcluir");
     const inputCep = document.getElementById("cep");
+    
+    // Seletores dos novos campos para máscaras
+    const inputCnpj = document.getElementById("cnpj");
+    const inputInscEstadual = document.getElementById("inscricaoEstadual");
+    const inputSufixo = document.getElementById("sufixo");
+    const inputDddTel1 = document.getElementById("dddTelefone1");
+    const inputTel1 = document.getElementById("telefone1");
+    const inputDddTel2 = document.getElementById("dddTelefone2");
+    const inputTel2 = document.getElementById("telefone2");
+
+    // --- Máscara de CNPJ (00.000.000/0000-00) ---
+    if (inputCnpj) {
+        inputCnpj.setAttribute('maxlength', '18');
+        inputCnpj.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 14) value = value.slice(0, 14);
+            
+            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+            value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+            value = value.replace(/(\d{4})(\d)$/, '$1-$2');
+            
+            e.target.value = value;
+        });
+    }
+
+    // --- Inscrição Estadual (Permite números, letras maiúsculas e separadores comuns) ---
+    if (inputInscEstadual) {
+        inputInscEstadual.addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase().replace(/[^0-9A-Z.\-\/]/g, '');
+        });
+    }
+
+    // --- Sufixo (Permite apenas letras maiúsculas) ---
+    if (inputSufixo) {
+        inputSufixo.addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+        });
+    }
+
+    // --- Máscaras de DDD (Máximo 2 dígitos numéricos) ---
+    [inputDddTel1, inputDddTel2].forEach(input => {
+        if (input) {
+            input.setAttribute('maxlength', '2');
+            input.addEventListener('input', function(e) {
+                e.target.value = e.target.value.replace(/\D/g, '').slice(0, 2);
+            });
+        }
+    });
+
+    // --- Máscaras de Telefones/Celulares (Formato 0000-0000 ou 00000-0000) ---
+    [inputTel1, inputTel2].forEach(input => {
+        if (input) {
+            input.setAttribute('maxlength', '10');
+            input.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 9) value = value.slice(0, 9);
+                
+                // Aplica hífen dinamicamente dependendo se tem 8 ou 9 dígitos
+                if (value.length > 5) {
+                    value = value.replace(/^(\d{4,5})(\d{1,4})$/, '$1-$2');
+                }
+                e.target.value = value;
+            });
+        }
+    });
 
     // --- Máscara e Consulta Automática de CEP ---
     if (inputCep) {
+        inputCep.setAttribute('maxlength', '9');
         inputCep.addEventListener("input", function() {
             let valor = inputCep.value.replace(/\D/g, '');
+            if (valor.length > 8) valor = valor.slice(0, 8);
+            
             if (valor.length > 5) {
                 inputCep.value = valor.replace(/^(\d{5})(\d{1,3})?$/, "$1-$2");
             } else {
@@ -94,15 +163,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 body: JSON.stringify(empresaData)
             })
             .then(response => response.json().then(data => ({ status: response.status, body: data })))
-            .then(async ({ status, body }) => { // Adicionado 'async' para usar await no ModalService
+            .then(async ({ status, body }) => {
                 if (status === 200 && body.sucesso) {
                     if (typeof ModalService !== 'undefined') {
-                        // Aguarda o usuário clicar em OK no modal para prosseguir
                         await ModalService.success("Sucesso", body.mensagem);
                     } else {
                         alert(body.mensagem);
                     }
-                    // Limpa o formulário somente após o usuário fechar a mensagem de sucesso
                     formEmpresa.reset();
                 } else {
                     if (typeof ModalService !== 'undefined') {
@@ -122,6 +189,7 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         });
     }
+
     // Ação do Botão Novo
     if (btnNovo) {
         btnNovo.addEventListener("click", function () {

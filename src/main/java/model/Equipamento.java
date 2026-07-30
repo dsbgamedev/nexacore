@@ -13,7 +13,10 @@ public class Equipamento {
     private String patrimonio;
     private String numeroSerie;
     private String nomeIdentificador;
-    private String origemFilial;
+    
+    // Substituído o texto antigo pelo Código numérico da origem/filial
+    private Integer origemCodigo; 
+    
     private String ipAtual;
     private String statusAtual;
     private String usuarioAtual;
@@ -23,6 +26,9 @@ public class Equipamento {
     
     private String observacoes;
     private String dataCadastro;
+    
+    private String nomeOrigem;
+    private String nomeDepartamento;
 
     /**
      * @return the idEquipamento
@@ -114,22 +120,26 @@ public class Equipamento {
     public String getNomeIdentificador() {
         return nomeIdentificador;
     }
-    
+    /**
+     * @param nomeIdentificador the nomeIdentificador to set
+     */
     public void setNomeIdentificador(String nomeIdentificador) {
         this.nomeIdentificador = nomeIdentificador;
     }
+    
     /**
-     * @return the origemFilial
+     * @return the origemCodigo
      */
-    public String getOrigemFilial() {
-        return origemFilial;
+    public Integer getOrigemCodigo() {
+        return origemCodigo;
     }
     /**
-     * @param origemFilial the origemFilial to set
+     * @param origemCodigo the origemCodigo to set
      */
-    public void setOrigemFilial(String origemFilial) {
-        this.origemFilial = origemFilial;
+    public void setOrigemCodigo(Integer origemCodigo) {
+        this.origemCodigo = origemCodigo;
     }
+
     /**
      * @return the ipAtual
      */
@@ -204,4 +214,29 @@ public class Equipamento {
     public void setDataCadastro(String dataCadastro) {
         this.dataCadastro = dataCadastro;
     }
+	/**
+	 * @return the nomeOrigem
+	 */
+	public String getNomeOrigem() {
+		return nomeOrigem;
+	}
+	/**
+	 * @param nomeOrigem the nomeOrigem to set
+	 */
+	public void setNomeOrigem(String nomeOrigem) {
+		this.nomeOrigem = nomeOrigem;
+	}
+	/**
+	 * @return the nomeDepartamento
+	 */
+	public String getNomeDepartamento() {
+		return nomeDepartamento;
+	}
+	/**
+	 * @param nomeDepartamento the nomeDepartamento to set
+	 */
+	public void setNomeDepartamento(String nomeDepartamento) {
+		this.nomeDepartamento = nomeDepartamento;
+	}
+    
 }

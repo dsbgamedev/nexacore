@@ -43,10 +43,35 @@ public class EquipamentoServlet extends HttpServlet {
             return;
         }
 
-        // 2. Caso contrário, faz a listagem normal de equipamentos
+        // 2. Trata a listagem geral ou com filtros para a tela de consulta
         PrintWriter out = response.getWriter();
         try {
-            List<Equipamento> lista = dao.listar();
+            String produto = request.getParameter("produto");
+            String idSistema = request.getParameter("idSistema");
+            String patrimonio = request.getParameter("patrimonio");
+            String serial = request.getParameter("serial");
+            String origem = request.getParameter("origem");
+            String departamento = request.getParameter("departamento");
+            String usuario = request.getParameter("usuario");
+            String status = request.getParameter("status");
+
+            List<Equipamento> lista;
+
+            // Se algum filtro foi preenchido, usa o método com filtros completos; senão, traz todos
+            if ((produto != null && !produto.trim().isEmpty()) ||
+                (idSistema != null && !idSistema.trim().isEmpty()) ||
+                (patrimonio != null && !patrimonio.trim().isEmpty()) ||
+                (serial != null && !serial.trim().isEmpty()) ||
+                (origem != null && !origem.trim().isEmpty()) ||
+                (departamento != null && !departamento.trim().isEmpty()) ||
+                (usuario != null && !usuario.trim().isEmpty()) ||
+                (status != null && !status.trim().isEmpty())) {
+                
+                lista = dao.listarComFiltros(idSistema, patrimonio, serial, origem, departamento, status, produto, usuario);
+            } else {
+                lista = dao.listar();
+            }
+
             out.print(gson.toJson(lista));
         } catch (Exception e) {
             e.printStackTrace();

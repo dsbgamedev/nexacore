@@ -5,6 +5,7 @@
     response.sendRedirect(request.getContextPath() + "/jsp/gerenciar-atributos.jsp");
 	response.sendRedirect(request.getContextPath() + "/jsp/cadastro-produto.jsp");
 	response.sendRedirect(request.getContextPath() + "/jsp/consulta-produto.jsp");
+	response.sendRedirect(request.getContextPath() + "/jsp/consulta-equipamento.jsp");
 	response.sendRedirect(request.getContextPath() + "/jsp/cadastro-equipamento.jsp");
 	response.sendRedirect(request.getContextPath() + "/jsp/marcas.jsp");
 	response.sendRedirect(request.getContextPath() + "/jsp/fabricantes.jsp");

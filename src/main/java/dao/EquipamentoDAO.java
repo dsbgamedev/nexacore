@@ -15,8 +15,8 @@ public class EquipamentoDAO {
             eq.setIdSistema(gerarProximoIdSistema());
         }
 
-        // Alterado de 'departamento' para 'departamento_id'
-        String sql = "INSERT INTO equipamentos (id_produto, id_sistema, patrimonio, numero_serie, nome_identificador, origem_filial, ip_atual, status_atual, usuario_atual, departamento_id, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // Alterado de 'origem_filial' para 'origem_codigo' (Integer)
+        String sql = "INSERT INTO equipamentos (id_produto, id_sistema, patrimonio, numero_serie, nome_identificador, origem_codigo, ip_atual, status_atual, usuario_atual, departamento_id, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -33,7 +33,15 @@ public class EquipamentoDAO {
                 stmt.setString(3, eq.getPatrimonio());
                 stmt.setString(4, eq.getNumeroSerie());
                 stmt.setString(5, eq.getNomeIdentificador());
-                stmt.setString(6, eq.getOrigemFilial());
+                
+                
+                // Tratando o origem_codigo como Integer (aceita null se não selecionado)
+                if (eq.getOrigemCodigo() != null && eq.getOrigemCodigo() > 0) {
+                    stmt.setInt(6, eq.getOrigemCodigo());
+                } else {
+                    stmt.setNull(6, Types.INTEGER);
+                }
+                
                 stmt.setString(7, eq.getIpAtual());
                 stmt.setString(8, eq.getStatusAtual());
                 stmt.setString(9, eq.getUsuarioAtual());
@@ -94,7 +102,11 @@ public class EquipamentoDAO {
                 eq.setPatrimonio(rs.getString("patrimonio"));
                 eq.setNumeroSerie(rs.getString("numero_serie"));
                 eq.setNomeIdentificador(rs.getString("nome_identificador"));
-                eq.setOrigemFilial(rs.getString("origem_filial"));
+                
+                // Mapeando o código da origem numérico corretamente
+                int origemCod = rs.getInt("origem_codigo");
+                eq.setOrigemCodigo(rs.wasNull() ? null : origemCod);
+
                 eq.setIpAtual(rs.getString("ip_atual"));
                 eq.setStatusAtual(rs.getString("status_atual"));
                 eq.setUsuarioAtual(rs.getString("usuario_atual"));
@@ -106,6 +118,112 @@ public class EquipamentoDAO {
                 eq.setObservacoes(rs.getString("observacoes"));
                 eq.setDataCadastro(rs.getString("data_cadastro"));
                 
+                lista.add(eq);
+            }
+        } finally {
+            Conexao.fechar(rs, stmt, conn);
+        }
+        return lista;
+    }
+    
+    public List<Equipamento> listarComFiltros(String idSistema, String patrimonio, String serial, String origem, String departamento, String status, String produto, String usuario) throws SQLException {
+        List<Equipamento> lista = new ArrayList<>();
+        
+        StringBuilder sql = new StringBuilder(
+            "SELECT e.*, p.codigo_catalogo, p.modelo, " +
+            "f.nome_empresa as nome_origem, d.nome_departamento as nome_departamento " +
+            "FROM equipamentos e " +
+            "INNER JOIN produtos p ON e.id_produto = p.id " +
+            "LEFT JOIN filiais f ON e.origem_codigo = f.origem_codigo " +
+            "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
+            "WHERE 1=1"
+        );
+        
+        List<Object> parametros = new ArrayList<>();
+
+        if (idSistema != null && !idSistema.trim().isEmpty()) {
+            sql.append(" AND e.id_sistema ILIKE ?");
+            parametros.add("%" + idSistema.trim() + "%");
+        }
+        if (patrimonio != null && !patrimonio.trim().isEmpty()) {
+            sql.append(" AND e.patrimonio ILIKE ?");
+            parametros.add("%" + patrimonio.trim() + "%");
+        }
+        if (serial != null && !serial.trim().isEmpty()) {
+            sql.append(" AND e.numero_serie ILIKE ?");
+            parametros.add("%" + serial.trim() + "%");
+        }
+        if (origem != null && !origem.trim().isEmpty()) {
+            sql.append(" AND e.origem_codigo = ?");
+            parametros.add(Integer.parseInt(origem));
+        }
+        if (departamento != null && !departamento.trim().isEmpty()) {
+            sql.append(" AND e.departamento_id = ?");
+            parametros.add(Integer.parseInt(departamento));
+        }
+        if (status != null && !status.trim().isEmpty() && !status.equalsIgnoreCase("Todos")) {
+            sql.append(" AND e.status_atual = ?");
+            parametros.add(status.trim());
+        }
+        if (produto != null && !produto.trim().isEmpty()) {
+            sql.append(" AND (p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ?)");
+            parametros.add("%" + produto.trim() + "%");
+            parametros.add("%" + produto.trim() + "%");
+        }
+        if (usuario != null && !usuario.trim().isEmpty()) {
+            sql.append(" AND e.usuario_atual ILIKE ?");
+            parametros.add("%" + usuario.trim() + "%");
+        }
+
+        sql.append(" ORDER BY e.id_equipamento DESC");
+
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = Conexao.conectar();
+            stmt = conn.prepareStatement(sql.toString());
+
+            for (int i = 0; i < parametros.size(); i++) {
+                stmt.setObject(i + 1, parametros.get(i));
+            }
+
+            rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                Equipamento eq = new Equipamento();
+                eq.setIdEquipamento(rs.getInt("id_equipamento"));
+                eq.setIdProduto(rs.getInt("id_produto"));
+                eq.setCodigoCatalogo(rs.getString("codigo_catalogo"));
+                eq.setNomeProduto(rs.getString("modelo")); 
+                eq.setIdSistema(rs.getString("id_sistema"));
+                eq.setPatrimonio(rs.getString("patrimonio"));
+                eq.setNumeroSerie(rs.getString("numero_serie"));
+                eq.setNomeIdentificador(rs.getString("nome_identificador"));
+                
+                int origemCod = rs.getInt("origem_codigo");
+                eq.setOrigemCodigo(rs.wasNull() ? null : origemCod);
+                
+                int depId = rs.getInt("departamento_id");
+                eq.setDepartamentoId(rs.wasNull() ? null : depId);
+
+                eq.setIpAtual(rs.getString("ip_atual"));
+                eq.setStatusAtual(rs.getString("status_atual"));
+                eq.setUsuarioAtual(rs.getString("usuario_atual"));
+                
+                // Salvando os nomes descritivos vindos do JOIN (Certifique-se de ter esses campos ou use getters/setters equivalentes no Model)
+                eq.setObservacoes(rs.getString("observacoes")); // mantem observacoes
+                
+                // Se o seu model Equipamento tiver os atributos auxiliares (ou você pode adicioná-los):
+                // eq.setNomeOrigem(rs.getString("nome_origem"));
+                // eq.setNomeDepartamento(rs.getString("nome_departamento"));
+                
+                // Alternativa caso queira injetar direto sem alterar o Model principal (guardando temporariamente em variáveis customizadas se preferir, ou adicionando os campos no Model):
+                // Vamos adicionar os campos abaixo no Model Equipamento:
+                try { eq.getClass().getMethod("setNomeOrigem", String.class).invoke(eq, rs.getString("nome_origem")); } catch (Exception ignored) {}
+                try { eq.getClass().getMethod("setNomeDepartamento", String.class).invoke(eq, rs.getString("nome_departamento")); } catch (Exception ignored) {}
+
                 lista.add(eq);
             }
         } finally {

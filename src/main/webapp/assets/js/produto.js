@@ -147,15 +147,22 @@ document.addEventListener("DOMContentLoaded", function() {
 	function renderizarGaleria() {
         if (!galleryContainer) return;
 
-        // Mantém apenas o botão de adicionar
+        // Mantém apenas o bloco base de adicionar
         galleryContainer.innerHTML = `
-            <div class="border border-dashed rounded p-3 text-center d-flex flex-column align-items-center justify-content-center" 
-                 style="width: 100px; height: 100px; cursor: pointer;"
-                 onclick="document.getElementById('file-upload').click()">
+            <div id="btn-trigger-upload" class="border border-dashed rounded p-3 text-center d-flex flex-column align-items-center justify-content-center" 
+                 style="width: 100px; height: 100px; cursor: pointer;">
                 <i class="fa fa-plus text-muted"></i>
                 <small class="text-muted">Adicionar</small>
             </div>
         `;
+
+        // Associa o evento de clique de forma segura pelo JS
+        const btnTriggerUpload = document.getElementById('btn-trigger-upload');
+        if (btnTriggerUpload) {
+            btnTriggerUpload.onclick = function() {
+                if (fileUpload) fileUpload.click();
+            };
+        }
 
         // Adiciona cada imagem da lista na galeria
         listaImagens.forEach((imgSrc, index) => {
@@ -185,12 +192,12 @@ document.addEventListener("DOMContentLoaded", function() {
                 atualizarDestaque();
             };
 
-            // Ação de Tornar Principal (joga o item clicado para a posição 0 do array)
+            // Ação de Tornar Principal
             if (!isPrincipal) {
                 div.querySelector('.btn-make-primary').onclick = function(e) {
                     e.stopPropagation();
                     const itemMovido = listaImagens.splice(index, 1)[0];
-                    listaImagens.unshift(itemMovido); // Move para o início (posição 0)
+                    listaImagens.unshift(itemMovido);
                     atualizarDestaque();
                 };
             }

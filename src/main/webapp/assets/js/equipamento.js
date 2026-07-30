@@ -44,6 +44,30 @@ document.addEventListener("DOMContentLoaded", function() {
             inputIdSistema.value = "EQ0000000001";
         }
     }
+	
+	// Carrega as filiais cadastradas para o select de origem
+	    async function carregarFiliais() {
+	        try {
+	            const response = await fetch('/nexacore/api/empresas/');
+	            if (response.ok) {
+	                const filiais = await response.json();
+	                const selectOrigem = document.getElementById("input-origem");
+	                if (selectOrigem) {
+	                    selectOrigem.innerHTML = '<option value="">Selecione a origem...</option>';
+	                    filiais.forEach(f => {
+	                        const option = document.createElement("option");
+	                        // O value recebe o código numérico (ex: 161)
+	                        option.value = f.origemCodigo;
+	                        // O texto exibe no formato solicitado: Código - Sufixo (ex: 161 - ssa)
+	                        option.textContent = `${f.origemCodigo} - ${f.sufixo}`;
+	                        selectOrigem.appendChild(option);
+	                    });
+	                }
+	            }
+	        } catch (error) {
+	            console.error("Erro ao carregar filiais:", error);
+	        }
+	    }
 
     // 2. Carrega todos os produtos para a busca rápida local e para o modal
     async function carregarProdutosCatalogo() {
@@ -82,6 +106,7 @@ document.addEventListener("DOMContentLoaded", function() {
     carregarProximoId();
     carregarProdutosCatalogo();
     carregarDepartamentos(); // Executa o carregamento dos setores ao iniciar
+	carregarFiliais(); // <-- Adicionado aqui
 
     // 4. Comportamento da Barra de Pesquisa (Autocomplete)
     inputBusca.addEventListener("input", function() {
@@ -379,7 +404,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 patrimonio: document.getElementById("input-patrimonio").value.trim(),
                 numeroSerie: document.getElementById("input-numeroserie").value.trim(),
                 nomeIdentificador: document.getElementById("input-nomeidentificador").value.trim(),
-                origemFilial: document.getElementById("input-origem").value,
+				// Atualizado para enviar o número inteiro da origem selecionada:
+				origemCodigo: document.getElementById("input-origem").value ? parseInt(document.getElementById("input-origem").value) : null,
                 ipAtual: checkPossuiIp && checkPossuiIp.checked ? document.getElementById("input-ip").value.trim() : "",
                 statusAtual: document.getElementById("input-status").value,
                 usuarioAtual: document.getElementById("input-usuario").value.trim(),
@@ -387,7 +413,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 observacoes: document.getElementById("input-observacoes").value.trim()
             };
 
-            if (!payload.idProduto || !payload.idSistema || !payload.patrimonio || !payload.nomeIdentificador || !payload.origemFilial) {
+            if (!payload.idProduto || !payload.idSistema || !payload.patrimonio || !payload.nomeIdentificador || !payload.origemCodigo) {
                 if (typeof ModalService !== 'undefined') {
                     await ModalService.error("Campos Obrigatórios", "Por favor, selecione um produto e preencha os campos obrigatórios (*).");
                 } else {

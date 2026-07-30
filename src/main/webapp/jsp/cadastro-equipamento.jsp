@@ -103,15 +103,12 @@
                             <input type="text" id="input-nomeidentificador" class="form-control form-control-sm" placeholder="Ex: DESK253 ou IMP-HP-01">
                             <div class="form-text text-muted" style="font-size: 0.75rem;">Identificador único na rede/empresa</div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Origem (Filial) *</label>
-                            <select class="form-select form-select-sm" id="input-origem">
-                                <option value="">Selecione a origem...</option>
-                                <option value="161 SP - Matriz">161 SP - Matriz</option>
-                                <option value="162 RJ - Regional">162 RJ - Regional</option>
-                                <option value="163 MG - Filial BH">163 MG - Filial BH</option>
-                            </select>
-                        </div>
+						                        <div class="col-md-6">
+						    <label class="form-label">Origem (Filial) *</label>
+						    <select class="form-select form-select-sm" id="input-origem" required>
+						        <option value="">Carregando origens...</option>
+						    </select>
+						</div>
 
                         <div class="col-md-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
