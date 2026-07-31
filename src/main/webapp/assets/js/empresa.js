@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const btnExcluir = document.getElementById("btnExcluir");
     const inputCep = document.getElementById("cep");
     
-    // Seletores dos novos campos para máscaras
+    // Seletores dos campos para máscaras
     const inputCnpj = document.getElementById("cnpj");
     const inputInscEstadual = document.getElementById("inscricaoEstadual");
     const inputSufixo = document.getElementById("sufixo");
@@ -30,21 +30,21 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // --- Inscrição Estadual (Permite números, letras maiúsculas e separadores comuns) ---
+    // --- Inscrição Estadual ---
     if (inputInscEstadual) {
         inputInscEstadual.addEventListener('input', function(e) {
             e.target.value = e.target.value.toUpperCase().replace(/[^0-9A-Z.\-\/]/g, '');
         });
     }
 
-    // --- Sufixo (Permite apenas letras maiúsculas) ---
+    // --- Sufixo ---
     if (inputSufixo) {
         inputSufixo.addEventListener('input', function(e) {
             e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
         });
     }
 
-    // --- Máscaras de DDD (Máximo 2 dígitos numéricos) ---
+    // --- Máscaras de DDD ---
     [inputDddTel1, inputDddTel2].forEach(input => {
         if (input) {
             input.setAttribute('maxlength', '2');
@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // --- Máscaras de Telefones/Celulares (Formato 0000-0000 ou 00000-0000) ---
+    // --- Máscaras de Telefones/Celulares ---
     [inputTel1, inputTel2].forEach(input => {
         if (input) {
             input.setAttribute('maxlength', '10');
@@ -62,7 +62,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 let value = e.target.value.replace(/\D/g, '');
                 if (value.length > 9) value = value.slice(0, 9);
                 
-                // Aplica hífen dinamicamente dependendo se tem 8 ou 9 dígitos
                 if (value.length > 5) {
                     value = value.replace(/^(\d{4,5})(\d{1,4})$/, '$1-$2');
                 }
@@ -126,6 +125,26 @@ document.addEventListener("DOMContentLoaded", function () {
                     console.error("Erro ao consultar CEP:", error);
                 }
             }
+        });
+    }
+
+    // --- INTEGRAÇÃO DA LUPA / MODAL DE BUSCA DE EMPRESAS ---
+    const btnBuscarEmpresaModal = document.getElementById("btnBuscarEmpresaModal");
+    const filtroTextoBusca = document.getElementById("filtroTextoBusca");
+
+    if (btnBuscarEmpresaModal) {
+        btnBuscarEmpresaModal.addEventListener("click", abrirModalBusca);
+    }
+
+    if (filtroTextoBusca) {
+        filtroTextoBusca.addEventListener("input", function () {
+            const termo = this.value.toLowerCase();
+            const linhas = document.querySelectorAll("#tabelaResultadosBuscaEmpresa tbody tr");
+            
+            linhas.forEach(linha => {
+                const textoLinha = linha.textContent.toLowerCase();
+                linha.style.display = textoLinha.includes(termo) ? "" : "none";
+            });
         });
     }
 
@@ -267,3 +286,74 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 });
+
+// --- FUNÇÕES AUXILIARES DO MODAL DE BUSCA DE EMPRESAS ---
+
+async function abrirModalBusca() {
+    try {
+        const basePath = typeof contextPath !== 'undefined' ? contextPath : '';
+        const response = await fetch(`${basePath}/api/empresas`);
+        if (!response.ok) throw new Error("Erro ao buscar empresas.");
+        
+        const empresas = await response.json();
+        const tbody = document.querySelector("#tabelaResultadosBuscaEmpresa tbody");
+        tbody.innerHTML = "";
+
+        if (!empresas || empresas.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Nenhuma empresa encontrada.</td></tr>`;
+        } else {
+            empresas.forEach(emp => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td class="ps-3 fw-bold">${emp.origemCodigo || emp.origem || ''}</td>
+                    <td>${emp.nomeEmpresa || ''}</td>
+                    <td>${emp.cnpj || ''}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-primary btn-sm px-2 py-1" title="Selecionar">
+                            <i class="fa fa-check"></i> Selecionar
+                        </button>
+                    </td>
+                `;
+
+                tr.querySelector("button").addEventListener("click", () => {
+                    preencherFormularioComEmpresa(emp);
+                    const modalEl = document.getElementById("modalBuscaEmpresa");
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    modal.hide();
+                });
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        const modalBusca = new bootstrap.Modal(document.getElementById("modalBuscaEmpresa"));
+        modalBusca.show();
+
+    } catch (error) {
+        console.error("Erro:", error);
+        if (typeof ModalService !== "undefined" && ModalService.error) {
+            ModalService.error("Erro", "Não foi possível carregar a lista de empresas.");
+        } else {
+            alert("Erro ao carregar lista de empresas.");
+        }
+    }
+}
+
+function preencherFormularioComEmpresa(emp) {
+    document.getElementById("origemCodigo").value = emp.origemCodigo || emp.origem || "";
+    document.getElementById("nomeEmpresa").value = emp.nomeEmpresa || "";
+    document.getElementById("cnpj").value = emp.cnpj || "";
+    document.getElementById("inscricaoEstadual").value = emp.inscricaoEstadual || "";
+    document.getElementById("cep").value = emp.cep || "";
+    document.getElementById("endereco").value = emp.endereco || "";
+    document.getElementById("numero").value = emp.numero || "";
+    document.getElementById("bairro").value = emp.bairro || "";
+    document.getElementById("municipio").value = emp.municipio || "";
+    document.getElementById("uf").value = emp.uf || "SP - São Paulo";
+    document.getElementById("sufixo").value = emp.sufixo || "";
+    document.getElementById("dddTelefone1").value = emp.dddTelefone1 || "";
+    document.getElementById("telefone1").value = emp.telefone1 || "";
+    document.getElementById("dddTelefone2").value = emp.dddTelefone2 || "";
+    document.getElementById("telefone2").value = emp.telefone2 || "";
+    document.getElementById("email").value = emp.email || "";
+}
