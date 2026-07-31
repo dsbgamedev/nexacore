@@ -29,6 +29,13 @@ public class Equipamento {
     
     private String nomeOrigem;
     private String nomeDepartamento;
+    
+ // Novos campos adicionados para preencher o Dossiê do Equipamento
+    private String nomeMarca;
+    private String nomeTipo;
+    private String modelo;
+    private String descricaoDetalhada;
+    private String imagemUrl;
 
     /**
      * @return the idEquipamento
@@ -238,5 +245,66 @@ public class Equipamento {
 	public void setNomeDepartamento(String nomeDepartamento) {
 		this.nomeDepartamento = nomeDepartamento;
 	}
+	/**
+	 * @return the nomeMarca
+	 */
+	public String getNomeMarca() {
+		return nomeMarca;
+	}
+	/**
+	 * @param nomeMarca the nomeMarca to set
+	 */
+	public void setNomeMarca(String nomeMarca) {
+		this.nomeMarca = nomeMarca;
+	}
+	/**
+	 * @return the nomeTipo
+	 */
+	public String getNomeTipo() {
+		return nomeTipo;
+	}
+	/**
+	 * @param nomeTipo the nomeTipo to set
+	 */
+	public void setNomeTipo(String nomeTipo) {
+		this.nomeTipo = nomeTipo;
+	}
+	/**
+	 * @return the modelo
+	 */
+	public String getModelo() {
+		return modelo;
+	}
+	/**
+	 * @param modelo the modelo to set
+	 */
+	public void setModelo(String modelo) {
+		this.modelo = modelo;
+	}
+	/**
+	 * @return the descricaoDetalhada
+	 */
+	public String getDescricaoDetalhada() {
+		return descricaoDetalhada;
+	}
+	/**
+	 * @param descricaoDetalhada the descricaoDetalhada to set
+	 */
+	public void setDescricaoDetalhada(String descricaoDetalhada) {
+		this.descricaoDetalhada = descricaoDetalhada;
+	}
+	/**
+	 * @return the imagemUrl
+	 */
+	public String getImagemUrl() {
+		return imagemUrl;
+	}
+	/**
+	 * @param imagemUrl the imagemUrl to set
+	 */
+	public void setImagemUrl(String imagemUrl) {
+		this.imagemUrl = imagemUrl;
+	}
+	
     
 }

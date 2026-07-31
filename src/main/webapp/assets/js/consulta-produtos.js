@@ -206,6 +206,8 @@ async function executarExclusaoProduto(id) {
     }
 }
 
+
+
 async function visualizarDetalhesProduto(id) {
     try {
         const response = await fetch(`/nexacore/api/produtos/buscar?id=${id}`);

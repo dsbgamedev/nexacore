@@ -29,24 +29,44 @@ public class EquipamentoServlet extends HttpServlet {
 
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+        PrintWriter out = response.getWriter();
 
-        // 1. Trata a requisição do ID automático
+        // 1. Trata a requisição do ID automático para cadastro
         if ("proximo-id".equals(acao)) {
             try {
                 String novoId = dao.gerarProximoIdSistema();
-                response.getWriter().print("{\"proximoId\": \"" + novoId + "\"}");
+                out.print("{\"proximoId\": \"" + novoId + "\"}");
             } catch (SQLException e) {
                 e.printStackTrace();
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                response.getWriter().print("{\"erro\": \"Erro ao gerar próximo ID: " + e.getMessage() + "\"}");
+                out.print("{\"erro\": \"Erro ao gerar próximo ID: " + e.getMessage() + "\"}");
+            }
+            return;
+        }
+
+        // 1.1. Trata a busca de um equipamento específico por ID para edição
+        String idParam = request.getParameter("id");
+        if (idParam != null && !idParam.trim().isEmpty()) {
+            try {
+                int idEq = Integer.parseInt(idParam);
+                Equipamento eq = dao.buscarPorId(idEq);
+                if (eq != null) {
+                    out.print(gson.toJson(eq));
+                } else {
+                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    out.print("{\"erro\": \"Equipamento não encontrado\"}");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                out.print("{\"erro\": \"" + e.getMessage() + "\"}");
             }
             return;
         }
 
         // 2. Trata a listagem geral ou com filtros para a tela de consulta
-        PrintWriter out = response.getWriter();
         try {
-            String pesquisaGlobal = request.getParameter("pesquisaGlobal"); // <- Captura a busca global
+            String pesquisaGlobal = request.getParameter("pesquisaGlobal"); 
             String produto = request.getParameter("produto");
             String idSistema = request.getParameter("idSistema");
             String patrimonio = request.getParameter("patrimonio");
@@ -58,7 +78,6 @@ public class EquipamentoServlet extends HttpServlet {
 
             List<Equipamento> lista;
 
-            // Se a pesquisa global ou qualquer outro filtro foi preenchido, usa o método com filtros
             if ((pesquisaGlobal != null && !pesquisaGlobal.trim().isEmpty()) ||
                 (produto != null && !produto.trim().isEmpty()) ||
                 (idSistema != null && !idSistema.trim().isEmpty()) ||
@@ -82,7 +101,6 @@ public class EquipamentoServlet extends HttpServlet {
             erro.put("erro", "Erro ao listar equipamentos: " + e.getMessage());
             out.print(gson.toJson(erro));
         }
-        
     }
 
     @Override
@@ -95,12 +113,22 @@ public class EquipamentoServlet extends HttpServlet {
             BufferedReader reader = request.getReader();
             Equipamento eq = gson.fromJson(reader, Equipamento.class);
 
-            boolean sucesso = dao.inserir(eq);
+            boolean sucesso;
+            String mensagem;
+
+            // Se o objeto possui ID maior que 0, significa que estamos editando; caso contrário, inserindo
+            if (eq.getIdEquipamento() > 0) {
+                sucesso = dao.atualizar(eq);
+                mensagem = "Equipamento atualizado com sucesso!";
+            } else {
+                sucesso = dao.inserir(eq);
+                mensagem = "Equipamento cadastrado com sucesso!";
+            }
 
             Map<String, Object> resp = new HashMap<>();
             if (sucesso) {
                 resp.put("sucesso", true);
-                resp.put("mensagem", "Equipamento cadastrado com sucesso!");
+                resp.put("mensagem", mensagem);
                 response.setStatus(HttpServletResponse.SC_OK);
             } else {
                 resp.put("sucesso", false);
@@ -115,6 +143,24 @@ public class EquipamentoServlet extends HttpServlet {
             resp.put("sucesso", false);
             resp.put("erro", "Erro técnico ao salvar: " + e.getMessage());
             out.print(gson.toJson(resp));
+        }
+    }
+    
+    @Override
+    protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String idStr = request.getParameter("id");
+        if (idStr != null && !idStr.isEmpty()) {
+            try {
+                int id = Integer.parseInt(idStr);
+                EquipamentoDAO dao = new EquipamentoDAO();
+                dao.excluirEquipamento(id);
+                response.setStatus(HttpServletResponse.SC_OK);
+            } catch (Exception e) {
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().write("Erro ao excluir: " + e.getMessage());
+            }
+        } else {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         }
     }
 }

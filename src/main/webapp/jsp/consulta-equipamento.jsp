@@ -190,6 +190,62 @@
     </div>
 </div>
 
+<!-- Modal de Detalhes Completo do Equipamento e Produto -->
+<div class="modal fade" id="modalDetalhesEquipamento" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Dossiê do Equipamento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <!-- Coluna da Esquerda -->
+                    <div class="col-md-5 border-end text-center">
+                        <h6 class="text-secondary fw-bold mb-3">Produto (Catálogo)</h6>
+                        <div class="mb-3" id="det-container-img" style="display: none;">
+                            <img id="det-img-produto" src="" alt="Produto" class="img-fluid rounded border p-1" style="max-height: 150px; object-fit: contain;">
+                        </div>
+                        <div class="text-start small bg-light p-3 rounded">
+                            <p class="mb-1"><strong>SKU:</strong> <span id="det-prod-sku">-</span></p>
+                            <p class="mb-1"><strong>Tipo:</strong> <span id="det-prod-tipo">-</span></p>
+                            <p class="mb-1"><strong>Marca:</strong> <span id="det-prod-marca">-</span></p>
+                            <p class="mb-1"><strong>Modelo:</strong> <span id="det-prod-modelo">-</span></p>
+                            <p class="mb-0"><strong>Detalhes:</strong> <span id="det-prod-detalhes">-</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Coluna da Direita -->
+                    <div class="col-md-7">
+                        <h6 class="text-secondary fw-bold mb-3">Unidade Física</h6>
+                        <div class="small">
+                            <p class="mb-1"><strong>ID Sistema:</strong> <span id="det-eq-idsistema" class="text-primary fw-bold">-</span></p>
+                            <p class="mb-1"><strong>Patrimônio / Etiqueta:</strong> <span id="det-eq-patrimonio">-</span></p>
+                            <p class="mb-1"><strong>Número de Série:</strong> <span id="det-eq-serie">-</span></p>
+                            <p class="mb-1"><strong>Identificador / CPU:</strong> <span id="det-eq-nome">-</span></p>
+                            <p class="mb-1"><strong>Origem (Filial):</strong> <span id="det-eq-origem">-</span></p>
+                            <p class="mb-1"><strong>Departamento:</strong> <span id="det-eq-departamento">-</span></p>
+                            <p class="mb-1"><strong>IP Atual:</strong> <span id="det-eq-ip">-</span></p>
+                            <p class="mb-1"><strong>Usuário Atual:</strong> <span id="det-eq-usuario">-</span></p>
+                            <p class="mb-1"><strong>Status:</strong> <span id="det-eq-status">-</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Observações -->
+                    <div class="col-12 mt-3">
+                        <hr>
+                        <p class="mb-1 small fw-bold text-secondary">Observações:</p>
+                        <p class="text-muted border p-2 rounded bg-light small mb-0" id="det-eq-observacoes" style="white-space: pre-wrap;">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>

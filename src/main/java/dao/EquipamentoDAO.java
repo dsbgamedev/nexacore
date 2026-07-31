@@ -141,7 +141,6 @@ public class EquipamentoDAO {
         
         List<Object> parametros = new ArrayList<>();
 
-        // Pesquisa global unificada (procura em texto, produto, filial e departamento)
         if (pesquisaGlobal != null && !pesquisaGlobal.trim().isEmpty()) {
             sql.append(" AND (e.id_sistema ILIKE ? OR e.patrimonio ILIKE ? OR e.numero_serie ILIKE ? OR e.usuario_atual ILIKE ? OR e.nome_identificador ILIKE ? OR p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ? OR f.nome_empresa ILIKE ? OR d.nome_departamento ILIKE ?)");
             String termoGlobal = "%" + pesquisaGlobal.trim() + "%";
@@ -262,5 +261,134 @@ public class EquipamentoDAO {
         
         // Retorna formatado com 10 dígitos: EQ0000000001
         return String.format("EQ%010d", proximoNumero);
+    }
+    
+    public Equipamento buscarPorId(int idEquipamento) throws SQLException {
+        String sql = "SELECT e.*, p.codigo_catalogo, p.modelo, p.descricao_catalogo, " +
+                     "m.nome_marca, t.nome as nome_tipo, d.nome_departamento " +
+                     "FROM equipamentos e " +
+                     "INNER JOIN produtos p ON e.id_produto = p.id " +
+                     "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+                     "LEFT JOIN tipos_produto t ON p.tipo_id = t.id " +
+                     "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
+                     "WHERE e.id_equipamento = ?";
+        
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        Equipamento eq = null;
+        
+        try {
+            conn = Conexao.conectar();
+            stmt = conn.prepareStatement(sql);
+            stmt.setInt(1, idEquipamento);
+            rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                eq = new Equipamento();
+                eq.setIdEquipamento(rs.getInt("id_equipamento"));
+                eq.setIdProduto(rs.getInt("id_produto"));
+                eq.setCodigoCatalogo(rs.getString("codigo_catalogo"));
+                eq.setNomeProduto(rs.getString("modelo"));
+                
+                eq.setModelo(rs.getString("modelo"));
+                eq.setNomeMarca(rs.getString("nome_marca"));
+                eq.setNomeTipo(rs.getString("nome_tipo"));
+                
+                // Usando a coluna correta que existe na tabela produtos:
+                eq.setDescricaoDetalhada(rs.getString("descricao_catalogo")); 
+
+                eq.setIdSistema(rs.getString("id_sistema"));
+                eq.setPatrimonio(rs.getString("patrimonio"));
+                eq.setNumeroSerie(rs.getString("numero_serie"));
+                eq.setNomeIdentificador(rs.getString("nome_identificador"));
+                
+                int origemCod = rs.getInt("origem_codigo");
+                eq.setOrigemCodigo(rs.wasNull() ? null : origemCod);
+                
+                eq.setIpAtual(rs.getString("ip_atual"));
+                eq.setStatusAtual(rs.getString("status_atual"));
+                eq.setUsuarioAtual(rs.getString("usuario_atual"));
+                
+                int depId = rs.getInt("departamento_id");
+                eq.setDepartamentoId(rs.wasNull() ? null : depId);
+                
+                eq.setNomeDepartamento(rs.getString("nome_departamento"));
+                eq.setObservacoes(rs.getString("observacoes"));
+            }
+        } finally {
+            Conexao.fechar(rs, stmt, conn);
+        }
+        return eq;
+    }
+    public boolean atualizar(Equipamento eq) throws SQLException {
+        String sql = "UPDATE equipamentos SET id_produto = ?, patrimonio = ?, numero_serie = ?, nome_identificador = ?, origem_codigo = ?, ip_atual = ?, status_atual = ?, usuario_atual = ?, departamento_id = ?, observacoes = ? WHERE id_equipamento = ?";
+        
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        
+        try {
+            conn = Conexao.conectar();
+            stmt = conn.prepareStatement(sql);
+            
+            stmt.setInt(1, eq.getIdProduto());
+            stmt.setString(2, eq.getPatrimonio());
+            stmt.setString(3, eq.getNumeroSerie());
+            stmt.setString(4, eq.getNomeIdentificador());
+            
+            if (eq.getOrigemCodigo() != null && eq.getOrigemCodigo() > 0) {
+                stmt.setInt(5, eq.getOrigemCodigo());
+            } else {
+                stmt.setNull(5, Types.INTEGER);
+            }
+            
+            stmt.setString(6, eq.getIpAtual());
+            stmt.setString(7, eq.getStatusAtual());
+            stmt.setString(8, eq.getUsuarioAtual());
+            
+            if (eq.getDepartamentoId() != null) {
+                stmt.setInt(9, eq.getDepartamentoId());
+            } else {
+                stmt.setNull(9, Types.INTEGER);
+            }
+            
+            stmt.setString(10, eq.getObservacoes());
+            stmt.setInt(11, eq.getIdEquipamento());
+            
+            return stmt.executeUpdate() > 0;
+        } finally {
+            Conexao.fechar(null, stmt, conn);
+        }
+    }
+    
+    /**
+     * Exclui um equipamento e suas dependências utilizando transação.
+     */
+    public void excluirEquipamento(int idEquipamento) throws SQLException {
+        // Se houver tabelas filhas vinculadas ao equipamento (ex: histórico, manutenções, etc), adicione aqui:
+        // String sqlHistorico = "DELETE FROM equipamentos_historico WHERE equipamento_id = ?";
+        
+        String sqlEquipamento = "DELETE FROM equipamentos WHERE id_equipamento = ?";
+
+        try (Connection conn = Conexao.conectar()) {
+            conn.setAutoCommit(false); // Inicia a transação
+
+            try (PreparedStatement stmtEquipamento = conn.prepareStatement(sqlEquipamento)) {
+                
+                // Se tiver outras tabelas para limpar antes, faça o PreparedStatement delas aqui.
+
+                stmtEquipamento.setInt(1, idEquipamento);
+                int linhas = stmtEquipamento.executeUpdate();
+
+                if (linhas == 0) {
+                    throw new SQLException("Equipamento não encontrado para exclusão.");
+                }
+
+                conn.commit(); // Confirma a transação se tudo deu certo
+            } catch (SQLException e) {
+                conn.rollback(); // Desfaz alterações caso ocorra qualquer erro
+                throw e;
+            }
+        }
     }
 }

@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // Evento específico para o botão da lupa da busca global (caso queira clicar nele para buscar)
+    // Evento específico para o botão da lupa da busca global
     const btnBuscaGlobal = document.getElementById('btn-busca-global');
     if (btnBuscaGlobal) {
         btnBuscaGlobal.addEventListener('click', (e) => {
@@ -33,7 +33,6 @@ async function carregarFiltrosEquipamento() {
 
         if (resOrigens.ok && selOrigem) {
             const origens = await resOrigens.json();
-            // Mantém a opção padrão e limpa o resto
             selOrigem.innerHTML = `<option value="">Selecione...</option>`;
             if (Array.isArray(origens)) {
                 origens.forEach(o => {
@@ -48,7 +47,6 @@ async function carregarFiltrosEquipamento() {
 
         if (resDepartamentos.ok && selDepartamento) {
             const departamentos = await resDepartamentos.json();
-            // Mantém a opção padrão e limpa o resto
             selDepartamento.innerHTML = `<option value="">Selecione...</option>`;
             if (Array.isArray(departamentos)) {
                 departamentos.forEach(d => {
@@ -68,7 +66,7 @@ async function carregarFiltrosEquipamento() {
 function configurarEventosDinamicosEquipamentos() {
     let timeoutBusca = null;
     const idsElementos = [
-        'busca-global', // <- Incluído aqui para escutar digitação e Enter
+        'busca-global',
         'filtroProduto', 'filtroIdSistema', 'filtroPatrimonio', 
         'filtroSerial', 'filtroOrigem', 'filtroDepartamento', 
         'filtroUsuario', 'filtroStatus'
@@ -113,7 +111,7 @@ async function pesquisarEquipamentos() {
     tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4">Buscando...</td></tr>';
 
     const params = new URLSearchParams({
-        pesquisaGlobal: getVal('busca-global'), // <- Enviando o valor da barra global para o servidor
+        pesquisaGlobal: getVal('busca-global'),
         produto: getVal('filtroProduto'),
         idSistema: getVal('filtroIdSistema'),
         patrimonio: getVal('filtroPatrimonio'),
@@ -196,18 +194,109 @@ async function pesquisarEquipamentos() {
 
 function limparFiltros() {
     const inputGlobal = document.getElementById('busca-global');
-    if (inputGlobal) inputGlobal.value = ''; // Limpa a barra global
+    if (inputGlobal) inputGlobal.value = '';
+    
     document.querySelectorAll('#formFiltroEquipamento input').forEach(el => el.value = '');
     document.querySelectorAll('#formFiltroEquipamento select').forEach(el => el.selectedIndex = 0);
-    pesquisarEquipamentos();
+    
+    const tbody = document.getElementById('tabelaEquipamentosBody');
+    const badgeTotal = document.getElementById('totalRegistros');
+    
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-4">Utilize os filtros acima para consultar os equipamentos.</td></tr>';
+    }
+    if (badgeTotal) {
+        badgeTotal.textContent = "0 registros encontrados";
+    }
 }
 
-async function confirmarExclusaoEquipamento(id) {
+async function confirmarExclusaoEquipamento(idEquipamento) {
     const confirmado = await ModalService.confirm(
         "Confirmar Exclusão", 
         "Deseja realmente excluir este equipamento? Esta ação não poderá ser desfeita."
     );
+    
     if (confirmado) {
-        // Implementar chamada de exclusão se necessário
+        try {
+            const response = await fetch(`${contextPath}/api/equipamentos?id=${idEquipamento}`, {
+                method: 'DELETE' // Ou POST dependendo de como seu Servlet trata exclusões
+            });
+
+            if (!response.ok) {
+                throw new Error("Erro ao excluir o equipamento no servidor.");
+            }
+
+            // Se deu certo, atualiza a listagem da tela
+            pesquisarEquipamentos();
+            
+            if (typeof ModalService.success === 'function') {
+                ModalService.success("Sucesso", "Equipamento excluído com sucesso.");
+            }
+        } catch (error) {
+            console.error("Erro na exclusão:", error);
+            if (typeof ModalService !== 'undefined' && ModalService.error) {
+                ModalService.error("Erro", "Não foi possível excluir o equipamento. Verifique se ele possui registros vinculados.");
+            } else {
+                alert("Não foi possível excluir o equipamento.");
+            }
+        }
+    }
+}
+
+async function visualizarDetalhesEquipamento(idEquipamento) {
+    try {
+        const response = await fetch(`${contextPath}/api/equipamentos?id=${idEquipamento}`);
+        if (!response.ok) throw new Error("Erro ao buscar detalhes no servidor.");
+
+        const eq = await response.json();
+
+        const setText = (id, valor) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = valor !== null && valor !== undefined ? valor : '-';
+        };
+
+        setText('det-eq-idsistema', eq.idSistema);
+        setText('det-eq-patrimonio', eq.patrimonio);
+        setText('det-eq-serie', eq.numeroSerie);
+        setText('det-eq-nome', eq.nomeIdentificador);
+        setText('det-eq-origem', eq.origemCodigo);
+        setText('det-eq-departamento', eq.departamentoId);
+        setText('det-eq-ip', eq.ipAtual || 'Não possui IP');
+        setText('det-eq-usuario', eq.usuarioAtual);
+        setText('det-eq-status', eq.statusAtual);
+        setText('det-eq-observacoes', eq.observacoes || 'Nenhuma observação registrada.');
+
+        setText('det-prod-sku', eq.codigoCatalogo || eq.idProduto);
+        setText('det-prod-tipo', eq.nomeTipo);
+        setText('det-prod-marca', eq.nomeMarca);
+        setText('det-prod-modelo', eq.modelo);
+        setText('det-prod-detalhes', eq.descricaoDetalhada);
+
+        const containerImg = document.getElementById('det-container-img');
+        const imgProduto = document.getElementById('det-img-produto');
+        
+        if (containerImg && imgProduto) {
+            if (eq.imagemUrl || eq.foto || eq.caminhoImagem) {
+                let imgBruta = eq.imagemUrl || eq.foto || eq.caminhoImagem;
+                let nomeArquivo = imgBruta.includes('\\') ? imgBruta.substring(imgBruta.lastIndexOf('\\') + 1) : imgBruta.split('/').pop();
+                imgProduto.src = `${contextPath}/api/imagens/${nomeArquivo}`;
+                containerImg.style.display = 'block';
+            } else {
+                containerImg.style.display = 'none';
+            }
+        }
+
+        const modalElement = document.getElementById('modalDetalhesEquipamento');
+        if (modalElement) {
+            const modalInstance = new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: true });
+            modalInstance.show();
+        }
+    } catch (error) {
+        console.error("Erro ao buscar detalhes do equipamento:", error);
+        if (typeof ModalService !== 'undefined') {
+            ModalService.error("Erro", "Não foi possível carregar os detalhes do equipamento.");
+        } else {
+            alert("Não foi possível carregar os detalhes do equipamento.");
+        }
     }
 }

@@ -68,8 +68,66 @@ document.addEventListener("DOMContentLoaded", function() {
 	            console.error("Erro ao carregar filiais:", error);
 	        }
 	    }
+		
+	//2. Função para carregar os dados do equipamento caso venha um ID na URL (Modo Edição)
+    async function carregarEquipamentoParaEdicao() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const idEquipamento = urlParams.get('id');
 
-    // 2. Carrega todos os produtos para a busca rápida local e para o modal
+        if (!idEquipamento) return; // Se não tem ID, é um cadastro novo (mantém fluxo normal)
+
+        try {
+            const response = await fetch(`/nexacore/api/equipamentos?id=${idEquipamento}`);
+            if (response.ok) {
+                const eq = await response.json();
+                
+                // Preenche o ID oculto para indicar edição
+                document.getElementById("input-id").value = eq.idEquipamento || eq.id || '';
+                
+                // Preenche os campos de texto comuns
+                inputIdSistema.value = eq.idSistema || '';
+                document.getElementById("input-patrimonio").value = eq.patrimonio || '';
+                document.getElementById("input-numeroserie").value = eq.numeroSerie || '';
+                document.getElementById("input-nomeidentificador").value = eq.nomeIdentificador || '';
+                document.getElementById("input-origem").value = eq.origemCodigo || '';
+                document.getElementById("input-status").value = eq.statusAtual || 'Ativo';
+                document.getElementById("input-usuario").value = eq.usuarioAtual || '';
+                document.getElementById("input-observacoes").value = eq.observacoes || '';
+
+                // IP e Checkbox
+                if (eq.ipAtual) {
+                    checkPossuiIp.checked = true;
+                    inputIp.disabled = false;
+                    inputIp.value = eq.ipAtual;
+                    inputIp.classList.remove("bg-light");
+                } else {
+                    checkPossuiIp.checked = false;
+                    inputIp.disabled = true;
+                    inputIp.value = "";
+                    inputIp.classList.add("bg-light");
+                }
+
+                // Departamento
+                if (selectDepartamento && eq.departamentoId) {
+                    selectDepartamento.value = eq.departamentoId;
+                }
+
+                // Se o equipamento já estiver vinculado a um produto do catálogo, seleciona-o automaticamente
+                if (eq.idProduto && listaProdutosGlobal.length > 0) {
+                    const produtoEncontrado = listaProdutosGlobal.find(p => p.id === eq.idProduto);
+                    if (produtoEncontrado) {
+                        selecionarProduto(produtoEncontrado);
+                    }
+                }
+            } else {
+                console.error("Não foi possível carregar os dados do equipamento para edição.");
+            }
+        } catch (error) {
+            console.error("Erro ao buscar equipamento por ID:", error);
+        }
+    }
+
+    // 3. Carrega todos os produtos para a busca rápida local e para o modal
     async function carregarProdutosCatalogo() {
         try {
             const response = await fetch('/nexacore/api/produtos/consultar');
@@ -81,7 +139,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    // 3. Carrega os departamentos cadastrados na tabela do banco para preencher o <select>
+    // 4. Carrega os departamentos cadastrados na tabela do banco para preencher o <select>
     async function carregarDepartamentos() {
         try {
             const response = await fetch('/nexacore/api/departamentos');
@@ -107,8 +165,12 @@ document.addEventListener("DOMContentLoaded", function() {
     carregarProdutosCatalogo();
     carregarDepartamentos(); // Executa o carregamento dos setores ao iniciar
 	carregarFiliais(); // <-- Adicionado aqui
+	// Carrega o catálogo e logo em seguida verifica se é edição
+    carregarProdutosCatalogo().then(() => {
+        carregarEquipamentoParaEdicao();
+    });
 
-    // 4. Comportamento da Barra de Pesquisa (Autocomplete)
+    // 5. Comportamento da Barra de Pesquisa (Autocomplete)
     inputBusca.addEventListener("input", function() {
         const termo = this.value.toLowerCase().trim();
         listaAutocomplete.innerHTML = "";
@@ -186,7 +248,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // 5. Abertura do Modal de Pesquisa via Lupa
+    // 6. Abertura do Modal de Pesquisa via Lupa
     if (btnAbrirModal && modalInstance) {
         btnAbrirModal.addEventListener("click", function() {
             renderizarTabelaModal(listaProdutosGlobal);
@@ -246,7 +308,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // 6. Selecionar o produto e preencher os campos
+    // 7. Selecionar o produto e preencher os campos
     function selecionarProduto(prod) {
         inputIdProduto.value = prod.id;
         inputBusca.value = prod.sku || prod.codigoCatalogo || `Produto #${prod.id}`;
@@ -395,24 +457,25 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // 7. Salvar Equipamento
+    // 8. Salvar Equipamento
     if (btnSalvar) {
-        btnSalvar.addEventListener("click", async function() {
+		btnSalvar.addEventListener("click", async function() {
             const payload = {
+                // Captura o ID oculto (se for 0 ou vazio, o Java interpreta como INSERT, se tiver valor, faz UPDATE)
+                idEquipamento: document.getElementById("input-id").value ? parseInt(document.getElementById("input-id").value) : 0,
+                
                 idProduto: parseInt(inputIdProduto.value),
                 idSistema: inputIdSistema.value.trim(),
                 patrimonio: document.getElementById("input-patrimonio").value.trim(),
                 numeroSerie: document.getElementById("input-numeroserie").value.trim(),
                 nomeIdentificador: document.getElementById("input-nomeidentificador").value.trim(),
-				// Atualizado para enviar o número inteiro da origem selecionada:
-				origemCodigo: document.getElementById("input-origem").value ? parseInt(document.getElementById("input-origem").value) : null,
+                origemCodigo: document.getElementById("input-origem").value ? parseInt(document.getElementById("input-origem").value) : null,
                 ipAtual: checkPossuiIp && checkPossuiIp.checked ? document.getElementById("input-ip").value.trim() : "",
                 statusAtual: document.getElementById("input-status").value,
                 usuarioAtual: document.getElementById("input-usuario").value.trim(),
-                departamentoId: selectDepartamento && selectDepartamento.value ? parseInt(selectDepartamento.value) : null, // Enviando o ID do setor selecionado
+                departamentoId: selectDepartamento && selectDepartamento.value ? parseInt(selectDepartamento.value) : null,
                 observacoes: document.getElementById("input-observacoes").value.trim()
             };
-
             if (!payload.idProduto || !payload.idSistema || !payload.patrimonio || !payload.nomeIdentificador || !payload.origemCodigo) {
                 if (typeof ModalService !== 'undefined') {
                     await ModalService.error("Campos Obrigatórios", "Por favor, selecione um produto e preencha os campos obrigatórios (*).");
@@ -437,7 +500,8 @@ document.addEventListener("DOMContentLoaded", function() {
                     } else {
                         alert(result.mensagem);
                     }
-                    window.location.reload(); 
+					// REDIRECIONA PARA A TELA DE CONSULTA APÓS SALVAR:
+					   window.location.href = '/nexacore/jsp/consulta-equipamento.jsp'; // (Ajuste o caminho exato da sua página de consulta se necessário)
                 } else {
                     if (typeof ModalService !== 'undefined') {
                         await ModalService.error("Erro", result.erro || "Não foi possível salvar o equipamento.");
