@@ -24,6 +24,16 @@
                 </ol>
             </nav>
         </div>
+         <!-- Centro: Barra de Pesquisa Global -->
+        <div class="input-group search-container">
+            <input type="text" id="busca-global" class="form-control" placeholder="Pesquisar no sistema...">
+            <button id="btn-busca-global" class="btn btn-outline-secondary">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+        
+        
+        
         <div>
             <a href="${pageContext.request.contextPath}/jsp/cadastro-equipamento.jsp" class="btn btn-success">
                 <i class="fa fa-plus me-1"></i> Novo Equipamento
@@ -58,11 +68,11 @@
                 </div>
                 
                 <div class="col-md-3">
-                    <label class="form-label">Origem (Filial)</label>
-                    <select class="form-select form-select-sm" id="filtroOrigem">
-                        <option value="">Todas as origens...</option>
-                    </select>
-                </div>
+				    <label class="form-label">Origem (Filial)</label>
+				    <select class="form-select form-select-sm" id="filtroOrigem">
+				        <option value="">Selecione...</option>
+				    </select>
+				</div>
                 <div class="col-md-3">
                     <label class="form-label">Departamento / Setor</label>
                     <select class="form-select form-select-sm" id="filtroDepartamento">
@@ -76,6 +86,7 @@
                 <div class="col-md-3">
                     <label class="form-label">Status</label>
                     <select class="form-select form-select-sm" id="filtroStatus">
+                    	<option value="">Selecione...</option>
                         <option value="">Todos os status</option>
                         <option value="Ativo">Ativo</option>
                         <option value="Em Manutencao">Em Manutenção</option>

@@ -126,7 +126,7 @@ public class EquipamentoDAO {
         return lista;
     }
     
-    public List<Equipamento> listarComFiltros(String idSistema, String patrimonio, String serial, String origem, String departamento, String status, String produto, String usuario) throws SQLException {
+    public List<Equipamento> listarComFiltros(String pesquisaGlobal, String idSistema, String patrimonio, String serial, String origem, String departamento, String status, String produto, String usuario) throws SQLException {
         List<Equipamento> lista = new ArrayList<>();
         
         StringBuilder sql = new StringBuilder(
@@ -140,6 +140,15 @@ public class EquipamentoDAO {
         );
         
         List<Object> parametros = new ArrayList<>();
+
+        // Pesquisa global unificada (procura em texto, produto, filial e departamento)
+        if (pesquisaGlobal != null && !pesquisaGlobal.trim().isEmpty()) {
+            sql.append(" AND (e.id_sistema ILIKE ? OR e.patrimonio ILIKE ? OR e.numero_serie ILIKE ? OR e.usuario_atual ILIKE ? OR e.nome_identificador ILIKE ? OR p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ? OR f.nome_empresa ILIKE ? OR d.nome_departamento ILIKE ?)");
+            String termoGlobal = "%" + pesquisaGlobal.trim() + "%";
+            for (int i = 0; i < 9; i++) {
+                parametros.add(termoGlobal);
+            }
+        }
 
         if (idSistema != null && !idSistema.trim().isEmpty()) {
             sql.append(" AND e.id_sistema ILIKE ?");
@@ -161,7 +170,7 @@ public class EquipamentoDAO {
             sql.append(" AND e.departamento_id = ?");
             parametros.add(Integer.parseInt(departamento));
         }
-        if (status != null && !status.trim().isEmpty() && !status.equalsIgnoreCase("Todos")) {
+        if (status != null && !status.trim().isEmpty()) {
             sql.append(" AND e.status_atual = ?");
             parametros.add(status.trim());
         }
@@ -211,16 +220,8 @@ public class EquipamentoDAO {
                 eq.setIpAtual(rs.getString("ip_atual"));
                 eq.setStatusAtual(rs.getString("status_atual"));
                 eq.setUsuarioAtual(rs.getString("usuario_atual"));
+                eq.setObservacoes(rs.getString("observacoes"));
                 
-                // Salvando os nomes descritivos vindos do JOIN (Certifique-se de ter esses campos ou use getters/setters equivalentes no Model)
-                eq.setObservacoes(rs.getString("observacoes")); // mantem observacoes
-                
-                // Se o seu model Equipamento tiver os atributos auxiliares (ou você pode adicioná-los):
-                // eq.setNomeOrigem(rs.getString("nome_origem"));
-                // eq.setNomeDepartamento(rs.getString("nome_departamento"));
-                
-                // Alternativa caso queira injetar direto sem alterar o Model principal (guardando temporariamente em variáveis customizadas se preferir, ou adicionando os campos no Model):
-                // Vamos adicionar os campos abaixo no Model Equipamento:
                 try { eq.getClass().getMethod("setNomeOrigem", String.class).invoke(eq, rs.getString("nome_origem")); } catch (Exception ignored) {}
                 try { eq.getClass().getMethod("setNomeDepartamento", String.class).invoke(eq, rs.getString("nome_departamento")); } catch (Exception ignored) {}
 

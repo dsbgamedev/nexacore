@@ -9,6 +9,15 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
+    // Evento específico para o botão da lupa da busca global (caso queira clicar nele para buscar)
+    const btnBuscaGlobal = document.getElementById('btn-busca-global');
+    if (btnBuscaGlobal) {
+        btnBuscaGlobal.addEventListener('click', (e) => {
+            e.preventDefault();
+            pesquisarEquipamentos();
+        });
+    }
+
     configurarEventosDinamicosEquipamentos();
 });
 
@@ -24,12 +33,13 @@ async function carregarFiltrosEquipamento() {
 
         if (resOrigens.ok && selOrigem) {
             const origens = await resOrigens.json();
+            // Mantém a opção padrão e limpa o resto
+            selOrigem.innerHTML = `<option value="">Selecione...</option>`;
             if (Array.isArray(origens)) {
                 origens.forEach(o => {
                     const id = o.origemCodigo;
-                    const sufixo = o.sufixo; // Alterado de nomeEmpresa para sufixo
+                    const sufixo = o.sufixo;
                     if (id !== undefined && sufixo) {
-                        // O texto da opção agora será "161 - ssa"
                         selOrigem.innerHTML += `<option value="${id}">${id} - ${sufixo}</option>`;
                     }
                 });
@@ -38,6 +48,8 @@ async function carregarFiltrosEquipamento() {
 
         if (resDepartamentos.ok && selDepartamento) {
             const departamentos = await resDepartamentos.json();
+            // Mantém a opção padrão e limpa o resto
+            selDepartamento.innerHTML = `<option value="">Selecione...</option>`;
             if (Array.isArray(departamentos)) {
                 departamentos.forEach(d => {
                     const id = d.idDepartamento;
@@ -56,6 +68,7 @@ async function carregarFiltrosEquipamento() {
 function configurarEventosDinamicosEquipamentos() {
     let timeoutBusca = null;
     const idsElementos = [
+        'busca-global', // <- Incluído aqui para escutar digitação e Enter
         'filtroProduto', 'filtroIdSistema', 'filtroPatrimonio', 
         'filtroSerial', 'filtroOrigem', 'filtroDepartamento', 
         'filtroUsuario', 'filtroStatus'
@@ -97,26 +110,18 @@ async function pesquisarEquipamentos() {
         return el ? el.value.trim() : '';
     };
 
-    const produto = getVal('filtroProduto');
-    const idSistema = getVal('filtroIdSistema');
-    const patrimonio = getVal('filtroPatrimonio');
-    const serial = getVal('filtroSerial');
-    const origem = getVal('filtroOrigem');
-    const departamento = getVal('filtroDepartamento');
-    const usuario = getVal('filtroUsuario');
-    const status = getVal('filtroStatus');
-
     tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4">Buscando...</td></tr>';
 
     const params = new URLSearchParams({
-        produto: produto,
-        idSistema: idSistema,
-        patrimonio: patrimonio,
-        serial: serial,
-        origem: origem,
-        departamento: departamento,
-        usuario: usuario,
-        status: status
+        pesquisaGlobal: getVal('busca-global'), // <- Enviando o valor da barra global para o servidor
+        produto: getVal('filtroProduto'),
+        idSistema: getVal('filtroIdSistema'),
+        patrimonio: getVal('filtroPatrimonio'),
+        serial: getVal('filtroSerial'),
+        origem: getVal('filtroOrigem'),
+        departamento: getVal('filtroDepartamento'),
+        usuario: getVal('filtroUsuario'),
+        status: getVal('filtroStatus')
     });
 
     try {
@@ -139,12 +144,11 @@ async function pesquisarEquipamentos() {
 
         if (badgeTotal) badgeTotal.textContent = `${data.length} registro(s) encontrado(s)`;
 
-		data.forEach(eq => {
+        data.forEach(eq => {
             let badgeClass = "bg-success";
             if (eq.statusAtual === "Em Manutencao" || eq.statusAtual === "Em Manutenção") badgeClass = "bg-warning text-dark";
             if (eq.statusAtual === "Inativo") badgeClass = "bg-danger";
 
-            // Busca o texto correspondente direto nos selects que já foram populados na tela
             const selOrigem = document.getElementById('filtroOrigem');
             const selDepto = document.getElementById('filtroDepartamento');
 
@@ -189,7 +193,10 @@ async function pesquisarEquipamentos() {
         tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger py-4">Erro de comunicação com o servidor.</td></tr>';
     }
 }
+
 function limparFiltros() {
+    const inputGlobal = document.getElementById('busca-global');
+    if (inputGlobal) inputGlobal.value = ''; // Limpa a barra global
     document.querySelectorAll('#formFiltroEquipamento input').forEach(el => el.value = '');
     document.querySelectorAll('#formFiltroEquipamento select').forEach(el => el.selectedIndex = 0);
     pesquisarEquipamentos();

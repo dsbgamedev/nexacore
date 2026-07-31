@@ -46,6 +46,7 @@ public class EquipamentoServlet extends HttpServlet {
         // 2. Trata a listagem geral ou com filtros para a tela de consulta
         PrintWriter out = response.getWriter();
         try {
+            String pesquisaGlobal = request.getParameter("pesquisaGlobal"); // <- Captura a busca global
             String produto = request.getParameter("produto");
             String idSistema = request.getParameter("idSistema");
             String patrimonio = request.getParameter("patrimonio");
@@ -57,8 +58,9 @@ public class EquipamentoServlet extends HttpServlet {
 
             List<Equipamento> lista;
 
-            // Se algum filtro foi preenchido, usa o método com filtros completos; senão, traz todos
-            if ((produto != null && !produto.trim().isEmpty()) ||
+            // Se a pesquisa global ou qualquer outro filtro foi preenchido, usa o método com filtros
+            if ((pesquisaGlobal != null && !pesquisaGlobal.trim().isEmpty()) ||
+                (produto != null && !produto.trim().isEmpty()) ||
                 (idSistema != null && !idSistema.trim().isEmpty()) ||
                 (patrimonio != null && !patrimonio.trim().isEmpty()) ||
                 (serial != null && !serial.trim().isEmpty()) ||
@@ -67,7 +69,7 @@ public class EquipamentoServlet extends HttpServlet {
                 (usuario != null && !usuario.trim().isEmpty()) ||
                 (status != null && !status.trim().isEmpty())) {
                 
-                lista = dao.listarComFiltros(idSistema, patrimonio, serial, origem, departamento, status, produto, usuario);
+                lista = dao.listarComFiltros(pesquisaGlobal, idSistema, patrimonio, serial, origem, departamento, status, produto, usuario);
             } else {
                 lista = dao.listar();
             }
@@ -80,6 +82,7 @@ public class EquipamentoServlet extends HttpServlet {
             erro.put("erro", "Erro ao listar equipamentos: " + e.getMessage());
             out.print(gson.toJson(erro));
         }
+        
     }
 
     @Override
