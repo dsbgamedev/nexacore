@@ -43,7 +43,7 @@ public class FilialServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        response.setContentType("application/json");
+    	response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
         Map<String, Object> resp = new HashMap<>();
@@ -51,7 +51,7 @@ public class FilialServlet extends HttpServlet {
         try {
             String acao = request.getParameter("acao");
 
-            // Verifica se a requisição é para excluir
+            // 1. Ação de Excluir
             if ("excluir".equals(acao)) {
                 String origemStr = request.getParameter("origemCodigo");
                 if (origemStr != null && !origemStr.isEmpty()) {
@@ -72,12 +72,39 @@ public class FilialServlet extends HttpServlet {
                     resp.put("erro", "Código de origem não fornecido para exclusão.");
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 }
-            } else {
-                // Fluxo padrão: Salvar / Cadastrar Novo Registro
+            } 
+            // 2. Ação de Atualizar / Editar
+            else if ("atualizar".equals(acao)) {
                 BufferedReader reader = request.getReader();
                 Filial filial = gson.fromJson(reader, Filial.class);
 
-                // 1. Validações utilizando else if
+                // Opcional: Validar se o sufixo pertence a outro registro (ignorando o próprio código)
+                boolean sucesso = dao.atualizar(filial);
+
+                if (sucesso) {
+                    resp.put("sucesso", true);
+                    resp.put("mensagem", "Empresa/Filial atualizada com sucesso!");
+                    response.setStatus(HttpServletResponse.SC_OK);
+                } else {
+                    resp.put("sucesso", false);
+                    resp.put("erro", "Não foi possível atualizar o registro no banco de dados.");
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                }
+            } 
+         // 3. Fluxo Padrão: Cadastrar Novo Registro (INSERT)
+            else {
+            BufferedReader reader = request.getReader();
+            Filial filial = gson.fromJson(reader, Filial.class);
+
+            // Validação de campos obrigatórios no servidor
+            if (filial.getOrigemCodigo() <= 0 || filial.getSufixo() == null || filial.getSufixo().trim().isEmpty() ||
+                filial.getNomeEmpresa() == null || filial.getNomeEmpresa().trim().isEmpty() ||
+                filial.getCnpj() == null || filial.getCnpj().trim().isEmpty()) {
+                
+                resp.put("sucesso", false);
+                resp.put("erro", "Preencha todos os campos obrigatórios, incluindo Origem e Sufixo.");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            } else {
                 boolean origemExiste = dao.existePorOrigemCodigo(filial.getOrigemCodigo());
                 boolean sufixoExiste = dao.existePorSufixo(filial.getSufixo());
 
@@ -90,7 +117,6 @@ public class FilialServlet extends HttpServlet {
                     resp.put("erro", "Já existe um cadastro com o sufixo (" + filial.getSufixo() + ") no banco de dados.");
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 } else {
-                    // Se nenhuma das restrições existir, realiza o cadastro (INSERT)
                     boolean sucesso = dao.inserir(filial);
 
                     if (sucesso) {
@@ -104,6 +130,7 @@ public class FilialServlet extends HttpServlet {
                     }
                 }
             }
+         }
             out.print(gson.toJson(resp));
         } catch (Exception e) {
             e.printStackTrace();

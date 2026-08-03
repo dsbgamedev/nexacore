@@ -14,6 +14,25 @@ document.addEventListener("DOMContentLoaded", function () {
     const inputDddTel2 = document.getElementById("dddTelefone2");
     const inputTel2 = document.getElementById("telefone2");
 
+    // --- Comportamento de ENTER funcionando como TAB ---
+    if (formEmpresa) {
+        const inputsForm = formEmpresa.querySelectorAll("input, select, textarea");
+        inputsForm.forEach((input, index) => {
+            input.addEventListener("keydown", function(event) {
+                if (event.key === "Enter") {
+                    event.preventDefault(); // Impede o envio do form ao pressionar Enter
+                    const nextInput = inputsForm[index + 1];
+                    if (nextInput) {
+                        nextInput.focus();
+                        if (nextInput.tagName === "INPUT" && nextInput.type === "text") {
+                            nextInput.select();
+                        }
+                    }
+                }
+            });
+        });
+    }
+
     // --- Máscara de CNPJ (00.000.000/0000-00) ---
     if (inputCnpj) {
         inputCnpj.setAttribute('maxlength', '18');
@@ -54,21 +73,33 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // --- Máscaras de Telefones/Celulares ---
-    [inputTel1, inputTel2].forEach(input => {
-        if (input) {
-            input.setAttribute('maxlength', '10');
-            input.addEventListener('input', function(e) {
-                let value = e.target.value.replace(/\D/g, '');
-                if (value.length > 9) value = value.slice(0, 9);
-                
-                if (value.length > 5) {
-                    value = value.replace(/^(\d{4,5})(\d{1,4})$/, '$1-$2');
-                }
-                e.target.value = value;
-            });
-        }
-    });
+    // --- Máscara de Telefone Fixo (XXXX-XXXX) ---
+    if (inputTel1) {
+        inputTel1.setAttribute('maxlength', '9');
+        inputTel1.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 8) value = value.slice(0, 8);
+            
+            if (value.length > 4) {
+                value = value.replace(/^(\d{4})(\d{1,4})$/, '$1-$2');
+            }
+            e.target.value = value;
+        });
+    }
+
+    // --- Máscara de Celular (XXXXX-XXXX) ---
+    if (inputTel2) {
+        inputTel2.setAttribute('maxlength', '10');
+        inputTel2.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 9) value = value.slice(0, 9);
+            
+            if (value.length > 5) {
+                value = value.replace(/^(\d{5})(\d{1,4})$/, '$1-$2');
+            }
+            e.target.value = value;
+        });
+    }
 
     // --- Máscara e Consulta Automática de CEP ---
     if (inputCep) {
@@ -149,32 +180,67 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // Evento de envio do formulário (Salvar / Atualizar)
-	if (formEmpresa) {
-        formEmpresa.addEventListener("submit", function (event) {
+    if (formEmpresa) {
+        formEmpresa.addEventListener("submit", async function (event) {
             event.preventDefault();
             
+            const origemCodigoVal = document.getElementById("origemCodigo").value.trim();
+            const sufixoVal = document.getElementById("sufixo").value.trim();
+            const nomeEmpresaVal = document.getElementById("nomeEmpresa").value.trim();
+            const cnpjVal = document.getElementById("cnpj").value.trim();
+            const inscricaoEstadualVal = document.getElementById("inscricaoEstadual").value.trim();
+            const cepVal = document.getElementById("cep").value.trim();
+            const enderecoVal = document.getElementById("endereco").value.trim();
+            const numeroVal = document.getElementById("numero").value.trim();
+            const bairroVal = document.getElementById("bairro").value.trim();
+            const municipioVal = document.getElementById("municipio").value.trim();
+            const dddTel1Val = document.getElementById("dddTelefone1").value.trim();
+            const tel1Val = document.getElementById("telefone1").value.trim();
+
+            // Validação de campos obrigatórios (apenas com asterisco vermelho na tela)
+            if (!origemCodigoVal || !sufixoVal || !nomeEmpresaVal || !cnpjVal || !inscricaoEstadualVal || 
+                !cepVal || !enderecoVal || !numeroVal || !bairroVal || !municipioVal || !dddTel1Val || !tel1Val) {
+                
+                const msgErro = "Por favor, preencha todos os campos obrigatórios marcados com asterisco (*), com destaque para a Origem e o Sufixo.";
+                if (typeof ModalService !== 'undefined') {
+                    await ModalService.error("Campos Obrigatórios", msgErro);
+                } else {
+                    alert(msgErro);
+                }
+                return; // Interrompe o envio
+            }
+
+            const idFilialVal = document.getElementById("idFilial") && document.getElementById("idFilial").value ? document.getElementById("idFilial").value : "";
+            
             const empresaData = {
-                origemCodigo: parseInt(document.getElementById("origemCodigo").value) || 0,
-                sufixo: document.getElementById("sufixo").value,
-                nomeEmpresa: document.getElementById("nomeEmpresa").value,
-                cnpj: document.getElementById("cnpj").value,
-                inscricaoEstadual: document.getElementById("inscricaoEstadual").value,
-                endereco: document.getElementById("endereco").value,
-                numero: document.getElementById("numero").value,
-                bairro: document.getElementById("bairro").value,
-                municipio: document.getElementById("municipio").value,
+                idFilial: idFilialVal ? parseInt(idFilialVal) : null,
+                origemCodigo: parseInt(origemCodigoVal) || 0,
+                sufixo: sufixoVal,
+                nomeEmpresa: nomeEmpresaVal,
+                cnpj: cnpjVal,
+                inscricaoEstadual: inscricaoEstadualVal,
+                endereco: enderecoVal,
+                numero: numeroVal,
+                bairro: bairroVal,
+                municipio: municipioVal,
                 uf: document.getElementById("uf").value,
-                cep: document.getElementById("cep").value,
-                dddTelefone1: document.getElementById("dddTelefone1").value,
-                telefone1: document.getElementById("telefone1").value,
-                dddTelefone2: document.getElementById("dddTelefone2").value,
-                telefone2: document.getElementById("telefone2").value,
-                email: document.getElementById("email").value
+                cep: cepVal,
+                dddTelefone1: dddTel1Val,
+                telefone1: tel1Val,
+                dddTelefone2: document.getElementById("dddTelefone2").value.trim(),
+                telefone2: document.getElementById("telefone2").value.trim(),
+                email: document.getElementById("email").value.trim()
             };
 
             const basePath = typeof contextPath !== 'undefined' ? contextPath : '';
 
-            fetch(`${basePath}/api/empresas/`, {
+            // Se idFilial estiver preenchido, envia com ?acao=atualizar. Caso contrário, faz o cadastro novo.
+            const isEdicao = Boolean(idFilialVal);
+            const urlEndpoint = isEdicao 
+                ? `${basePath}/api/empresas/?acao=atualizar` 
+                : `${basePath}/api/empresas/`;
+
+            fetch(urlEndpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -189,7 +255,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     } else {
                         alert(body.mensagem);
                     }
-                    formEmpresa.reset();
+                    limparFormularioCompleto();
                 } else {
                     if (typeof ModalService !== 'undefined') {
                         await ModalService.error("Erro", body.erro || "Não foi possível salvar os dados.");
@@ -209,26 +275,30 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Ação do Botão Novo
-    if (btnNovo) {
-        btnNovo.addEventListener("click", function () {
+    // Função unificada para resetar/limpar o formulário e liberar os campos para Novo Cadastro
+    function limparFormularioCompleto() {
+        if (formEmpresa) {
             formEmpresa.reset();
-            document.getElementById("origemCodigo").focus();
-        });
+        }
+        const inputIdFilial = document.getElementById("idFilial");
+        if (inputIdFilial) inputIdFilial.value = "";
+
+        const inputOrigem = document.getElementById("origemCodigo");
+        if (inputOrigem) {
+            inputOrigem.readOnly = false; // Libera o campo de código de origem para cadastro novo
+            inputOrigem.focus();
+        }
     }
 
-	// Ação do Botão Limpar
-	if (btnCancelar) {
-	    btnCancelar.addEventListener("click", function () {
-	        if (formEmpresa) {
-	            formEmpresa.reset();
-	        }
-	        const inputOrigem = document.getElementById("origemCodigo");
-	        if (inputOrigem) {
-	            inputOrigem.focus();
-	        }
-	    });
-	}
+    // Ação do Botão Novo
+    if (btnNovo) {
+        btnNovo.addEventListener("click", limparFormularioCompleto);
+    }
+
+    // Ação do Botão Limpar / Cancelar
+    if (btnCancelar) {
+        btnCancelar.addEventListener("click", limparFormularioCompleto);
+    }
 
     // Ação do Botão Excluir
     if (btnExcluir) {
@@ -261,11 +331,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 .then(({ status, body }) => {
                     if (status === 200 && body.sucesso) {
                         if (typeof ModalService !== 'undefined') {
-                            ModalService.success("Excluído", body.mensagem);
+                            ModalService.error("Excluído", body.mensagem);
                         } else {
                             alert(body.mensagem);
                         }
-                        formEmpresa.reset();
+                        limparFormularioCompleto();
                     } else {
                         if (typeof ModalService !== 'undefined') {
                             ModalService.error("Erro", body.erro || "Registro não encontrado.");
@@ -340,7 +410,18 @@ async function abrirModalBusca() {
 }
 
 function preencherFormularioComEmpresa(emp) {
-    document.getElementById("origemCodigo").value = emp.origemCodigo || emp.origem || "";
+    // Seta o ID interno para o backend identificar que é uma atualização (UPDATE)
+    const inputIdFilial = document.getElementById("idFilial");
+    if (inputIdFilial) {
+        inputIdFilial.value = emp.idFilial || emp.id || "";
+    }
+
+    const inputOrigem = document.getElementById("origemCodigo");
+    if (inputOrigem) {
+        inputOrigem.value = emp.origemCodigo || emp.origem || "";
+        inputOrigem.readOnly = true; // Bloqueia para evitar duplicidade de chave no banco
+    }
+
     document.getElementById("nomeEmpresa").value = emp.nomeEmpresa || "";
     document.getElementById("cnpj").value = emp.cnpj || "";
     document.getElementById("inscricaoEstadual").value = emp.inscricaoEstadual || "";
@@ -352,8 +433,17 @@ function preencherFormularioComEmpresa(emp) {
     document.getElementById("uf").value = emp.uf || "SP - São Paulo";
     document.getElementById("sufixo").value = emp.sufixo || "";
     document.getElementById("dddTelefone1").value = emp.dddTelefone1 || "";
-    document.getElementById("telefone1").value = emp.telefone1 || "";
+    
+    // Formatação ao carregar dados existentes no formulário
+    let t1 = (emp.telefone1 || "").replace(/\D/g, "");
+    if (t1.length > 4) t1 = t1.replace(/^(\d{4})(\d{1,4})$/, '$1-$2');
+    document.getElementById("telefone1").value = t1;
+
     document.getElementById("dddTelefone2").value = emp.dddTelefone2 || "";
-    document.getElementById("telefone2").value = emp.telefone2 || "";
+
+    let t2 = (emp.telefone2 || "").replace(/\D/g, "");
+    if (t2.length > 5) t2 = t2.replace(/^(\d{5})(\d{1,4})$/, '$1-$2');
+    document.getElementById("telefone2").value = t2;
+
     document.getElementById("email").value = emp.email || "";
 }

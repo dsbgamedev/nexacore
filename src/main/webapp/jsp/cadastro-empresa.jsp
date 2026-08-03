@@ -21,6 +21,9 @@
         </div>
 
         <form id="formEmpresa">
+            <!-- Campo oculto para armazenar o ID interno da filial (chave primária real para edição) -->
+            <input type="hidden" id="idFilial" value="">
+
             <div class="row g-4">
                 <!-- COLUNA ESQUERDA: Formulário Principal de Cadastro -->
                 <div class="col-lg-9">
@@ -179,10 +182,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <!--  <div class="col-md-6">
-                                <label class="form-label small fw-bold text-secondary">Nota Fiscal</label>
-                                <input type="text" class="form-control form-control-sm" placeholder="">
-                            </div>-->
                         </div>
                     </div>
                 </div>
@@ -302,37 +301,39 @@
             </div>
         </div>
     </div>
-<!-- Modal de Pesquisa / Seleção de Empresa -->
-<div class="modal fade" id="modalBuscaEmpresa" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white py-2">
-                <h5 class="modal-title fs-6 fw-bold"><i class="fa fa-search me-1"></i> Pesquisar Empresa</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
-            </div>
-            <div class="modal-body bg-light">
-                <div class="mb-3">
-                    <input type="text" id="filtroTextoBusca" class="form-control form-control-sm" placeholder="Digite o nome ou código da empresa para filtrar...">
+
+    <!-- Modal de Pesquisa / Seleção de Empresa -->
+    <div class="modal fade" id="modalBuscaEmpresa" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white py-2">
+                    <h5 class="modal-title fs-6 fw-bold"><i class="fa fa-search me-1"></i> Pesquisar Empresa</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
-                <div class="table-responsive bg-white rounded shadow-sm" style="max-height: 350px; overflow-y: auto;">
-                    <table class="table table-hover table-sm align-middle mb-0" id="tabelaResultadosBuscaEmpresa">
-                        <thead class="table-light sticky-top">
-                            <tr>
-                                <th class="ps-3">Origem</th>
-                                <th>Nome da Empresa</th>
-                                <th>CNPJ</th>
-                                <th class="text-center" style="width: 100px;">Ação</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Preenchido via JavaScript -->
-                        </tbody>
-                    </table>
+                <div class="modal-body bg-light">
+                    <div class="mb-3">
+                        <input type="text" id="filtroTextoBusca" class="form-control form-control-sm" placeholder="Digite o nome ou código da empresa para filtrar...">
+                    </div>
+                    <div class="table-responsive bg-white rounded shadow-sm" style="max-height: 350px; overflow-y: auto;">
+                        <table class="table table-hover table-sm align-middle mb-0" id="tabelaResultadosBuscaEmpresa">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-3">Origem</th>
+                                    <th>Nome da Empresa</th>
+                                    <th>CNPJ</th>
+                                    <th class="text-center" style="width: 100px;">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Preenchido via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+
     <!-- Seus scripts existentes -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>   
