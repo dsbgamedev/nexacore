@@ -1,6 +1,6 @@
 package dao;
 
-import conexao.Conexao; // Importa a sua classe de conexão
+import conexao.Conexao;
 import model.Equipamento;
 
 import java.sql.*;
@@ -9,78 +9,81 @@ import java.util.List;
 
 public class EquipamentoDAO {
 
-    public boolean inserir(Equipamento eq) throws SQLException {
-        // Se o idSistema veio vazio ou nulo da tela, gera na hora
-        if (eq.getIdSistema() == null || eq.getIdSistema().trim().isEmpty()) {
-            eq.setIdSistema(gerarProximoIdSistema());
-        }
+	public boolean inserir(Equipamento eq) throws SQLException {
+	    if (eq.getIdSistema() == null || eq.getIdSistema().trim().isEmpty()) {
+	        eq.setIdSistema(gerarProximoIdSistema());
+	    }
 
-        // Alterado de 'origem_filial' para 'origem_codigo' (Integer)
-        String sql = "INSERT INTO equipamentos (id_produto, id_sistema, patrimonio, numero_serie, nome_identificador, origem_codigo, ip_atual, status_atual, usuario_atual, departamento_id, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        
-        // Tenta inserir até 3 vezes caso ocorra colisão simultânea de id_sistema
-        int tentativas = 3;
-        for (int i = 0; i < tentativas; i++) {
-            try {
-                conn = Conexao.conectar();
-                stmt = conn.prepareStatement(sql);
-                
-                stmt.setInt(1, eq.getIdProduto());
-                stmt.setString(2, eq.getIdSistema());
-                stmt.setString(3, eq.getPatrimonio());
-                stmt.setString(4, eq.getNumeroSerie());
-                stmt.setString(5, eq.getNomeIdentificador());
-                
-                
-                // Tratando o origem_codigo como Integer (aceita null se não selecionado)
-                if (eq.getOrigemCodigo() != null && eq.getOrigemCodigo() > 0) {
-                    stmt.setInt(6, eq.getOrigemCodigo());
-                } else {
-                    stmt.setNull(6, Types.INTEGER);
-                }
-                
-                stmt.setString(7, eq.getIpAtual());
-                stmt.setString(8, eq.getStatusAtual());
-                stmt.setString(9, eq.getUsuarioAtual());
-                
-                // Tratando o departamento_id como Integer (aceita null se não selecionado)
-                if (eq.getDepartamentoId() != null) {
-                    stmt.setInt(10, eq.getDepartamentoId());
-                } else {
-                    stmt.setNull(10, Types.INTEGER);
-                }
-                
-                stmt.setString(11, eq.getObservacoes());
-                
-                return stmt.executeUpdate() > 0;
-                
-            } catch (SQLException e) {
-                // Código SQLSTATE '23505' indica violação de Unique Constraint (chave duplicada no Postgres)
-                if ("23505".equals(e.getSQLState()) && i < tentativas - 1) {
-                    // Alguém pegou esse ID no mesmo milissegundo. Gera o próximo e tenta de novo.
-                    eq.setIdSistema(gerarProximoIdSistema());
-                    Conexao.fechar(null, stmt, conn);
-                } else {
-                    throw e; // Outro tipo de erro, repassa a exceção
-                }
-            } finally {
-                Conexao.fechar(null, stmt, conn);
-            }
-        }
-        return false;
-    }
-
+	    String sql = "INSERT INTO equipamentos (id_produto, id_sistema, patrimonio, numero_serie, nome_identificador, origem_codigo, ip_atual, status_id, situacao_id, usuario_atual, departamento_id, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	    
+	    Connection conn = null;
+	    PreparedStatement stmt = null;
+	    
+	    int tentativas = 3;
+	    for (int i = 0; i < tentativas; i++) {
+	        try {
+	            conn = Conexao.conectar();
+	            stmt = conn.prepareStatement(sql);
+	            
+	            stmt.setInt(1, eq.getIdProduto());
+	            stmt.setString(2, eq.getIdSistema());
+	            stmt.setString(3, eq.getPatrimonio());
+	            stmt.setString(4, eq.getNumeroSerie());
+	            stmt.setString(5, eq.getNomeIdentificador());
+	            
+	            // Tratativa corrigida para buscar o código real da filial
+	            if (eq.getOrigemCodigo() != null && eq.getOrigemCodigo() > 0) {
+	                Integer codigoReal = buscarOrigemCodigoPorIdFilial(conn, eq.getOrigemCodigo());
+	                stmt.setInt(6, codigoReal);
+	            } else {
+	                stmt.setNull(6, Types.INTEGER);
+	            }
+	            
+	            stmt.setString(7, eq.getIpAtual());
+	            
+	            // Status do Equipamento
+	            stmt.setInt(8, eq.getStatusId() > 0 ? eq.getStatusId() : 1);
+	            
+	            // Situação do Equipamento
+	            stmt.setInt(9, eq.getSituacaoId() > 0 ? eq.getSituacaoId() : 1);
+	            
+	            stmt.setString(10, eq.getUsuarioAtual());
+	            
+	            if (eq.getDepartamentoId() != null) {
+	                stmt.setInt(11, eq.getDepartamentoId());
+	            } else {
+	                stmt.setNull(11, Types.INTEGER);
+	            }
+	            
+	            stmt.setString(12, eq.getObservacoes());
+	            
+	            return stmt.executeUpdate() > 0;
+	            
+	        } catch (SQLException e) {
+	            if ("23505".equals(e.getSQLState()) && i < tentativas - 1) {
+	                eq.setIdSistema(gerarProximoIdSistema());
+	                Conexao.fechar(null, stmt, conn);
+	            } else {
+	                throw e;
+	            }
+	        } finally {
+	            Conexao.fechar(null, stmt, conn);
+	        }
+	    }
+	    return false;
+	}
     public List<Equipamento> listar() throws SQLException {
         List<Equipamento> lista = new ArrayList<>();
-        // Expandido o JOIN para trazer também Marca, Modelo, Tipo e Fabricante do produto associado
-        String sql = "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, t.nome as nome_tipo " +
+        String sql = "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, t.nome as nome_tipo, " +
+                     "se.nome AS status_nome, se.cor AS status_cor, " +
+                     "sit.nome AS situacao_nome, " +
+                     "CASE WHEN m.nome_marca IS NOT NULL AND m.nome_marca <> '' THEN m.nome_marca || ' - ' || p.modelo ELSE p.modelo END AS produto_completo " +
                      "FROM equipamentos e " +
                      "INNER JOIN produtos p ON e.id_produto = p.id " +
                      "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
                      "LEFT JOIN tipos_produto t ON p.tipo_id = t.id " +
+                     "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
+                     "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
                      "ORDER BY e.id_equipamento DESC";
         
         Connection conn = null;
@@ -97,21 +100,27 @@ public class EquipamentoDAO {
                 eq.setIdEquipamento(rs.getInt("id_equipamento"));
                 eq.setIdProduto(rs.getInt("id_produto"));
                 eq.setCodigoCatalogo(rs.getString("codigo_catalogo"));
+                eq.setNomeProduto(rs.getString("produto_completo"));
                 
                 eq.setIdSistema(rs.getString("id_sistema"));
                 eq.setPatrimonio(rs.getString("patrimonio"));
                 eq.setNumeroSerie(rs.getString("numero_serie"));
                 eq.setNomeIdentificador(rs.getString("nome_identificador"));
                 
-                // Mapeando o código da origem numérico corretamente
                 int origemCod = rs.getInt("origem_codigo");
                 eq.setOrigemCodigo(rs.wasNull() ? null : origemCod);
 
                 eq.setIpAtual(rs.getString("ip_atual"));
-                eq.setStatusAtual(rs.getString("status_atual"));
+                
+                // Mapeando os novos IDs e Nomes de Status e Situação
+                eq.setStatusId(rs.getInt("status_id"));
+                eq.setSituacaoId(rs.getInt("situacao_id"));
+                eq.setStatusNome(rs.getString("status_nome"));
+                eq.setStatusCor(rs.getString("status_cor"));
+                eq.setSituacaoNome(rs.getString("situacao_nome"));
+
                 eq.setUsuarioAtual(rs.getString("usuario_atual"));
                 
-                // Mapeando o ID do departamento corretamente
                 int depId = rs.getInt("departamento_id");
                 eq.setDepartamentoId(rs.wasNull() ? null : depId);
 
@@ -126,18 +135,24 @@ public class EquipamentoDAO {
         return lista;
     }
     
-    public List<Equipamento> listarComFiltros(String pesquisaGlobal, String idSistema, String patrimonio, String serial, String origem, String departamento, String status, String produto, String usuario) throws SQLException {
+    public List<Equipamento> listarComFiltros(String pesquisaGlobal, String idSistema, String patrimonio, String serial, String origem, String departamento, String statusIdFiltro, String situacaoIdFiltro, String produto, String usuario) throws SQLException {
         List<Equipamento> lista = new ArrayList<>();
         
         StringBuilder sql = new StringBuilder(
-            "SELECT e.*, p.codigo_catalogo, p.modelo, " +
-            "f.nome_empresa as nome_origem, d.nome_departamento as nome_departamento " +
-            "FROM equipamentos e " +
-            "INNER JOIN produtos p ON e.id_produto = p.id " +
-            "LEFT JOIN filiais f ON e.origem_codigo = f.origem_codigo " +
-            "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
-            "WHERE 1=1"
-        );
+                "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, " +
+                "se.nome AS status_nome, se.cor AS status_cor, " +
+                "sit.nome AS situacao_nome, " +
+                "CASE WHEN m.nome_marca IS NOT NULL AND m.nome_marca <> '' THEN m.nome_marca || ' - ' || p.modelo ELSE p.modelo END AS produto_completo, " +
+                "f.nome_empresa as nome_origem, d.nome_departamento as nome_departamento " +
+                "FROM equipamentos e " +
+                "INNER JOIN produtos p ON e.id_produto = p.id " +
+                "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+                "LEFT JOIN filiais f ON e.origem_codigo = f.origem_codigo " +
+                "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
+                "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
+                "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
+                "WHERE 1=1"
+            );
         
         List<Object> parametros = new ArrayList<>();
 
@@ -169,9 +184,14 @@ public class EquipamentoDAO {
             sql.append(" AND e.departamento_id = ?");
             parametros.add(Integer.parseInt(departamento));
         }
-        if (status != null && !status.trim().isEmpty()) {
-            sql.append(" AND e.status_atual = ?");
-            parametros.add(status.trim());
+        if (statusIdFiltro != null && !statusIdFiltro.trim().isEmpty()) {
+            sql.append(" AND e.status_id = ?");
+            parametros.add(Integer.parseInt(statusIdFiltro));
+        }
+        // Novo filtro de Situação adicionado
+        if (situacaoIdFiltro != null && !situacaoIdFiltro.trim().isEmpty()) {
+            sql.append(" AND e.situacao_id = ?");
+            parametros.add(Integer.parseInt(situacaoIdFiltro));
         }
         if (produto != null && !produto.trim().isEmpty()) {
             sql.append(" AND (p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ?)");
@@ -204,7 +224,7 @@ public class EquipamentoDAO {
                 eq.setIdEquipamento(rs.getInt("id_equipamento"));
                 eq.setIdProduto(rs.getInt("id_produto"));
                 eq.setCodigoCatalogo(rs.getString("codigo_catalogo"));
-                eq.setNomeProduto(rs.getString("modelo")); 
+                eq.setNomeProduto(rs.getString("produto_completo")); 
                 eq.setIdSistema(rs.getString("id_sistema"));
                 eq.setPatrimonio(rs.getString("patrimonio"));
                 eq.setNumeroSerie(rs.getString("numero_serie"));
@@ -217,7 +237,11 @@ public class EquipamentoDAO {
                 eq.setDepartamentoId(rs.wasNull() ? null : depId);
 
                 eq.setIpAtual(rs.getString("ip_atual"));
-                eq.setStatusAtual(rs.getString("status_atual"));
+                eq.setStatusId(rs.getInt("status_id"));
+                eq.setSituacaoId(rs.getInt("situacao_id"));
+                eq.setStatusNome(rs.getString("status_nome"));
+                eq.setStatusCor(rs.getString("status_cor"));
+                eq.setSituacaoNome(rs.getString("situacao_nome"));
                 eq.setUsuarioAtual(rs.getString("usuario_atual"));
                 eq.setObservacoes(rs.getString("observacoes"));
                 
@@ -246,31 +270,33 @@ public class EquipamentoDAO {
             rs = stmt.executeQuery();
             
             if (rs.next()) {
-                String ultimoId = rs.getString("id_sistema"); // Ex: EQ0000000001
+                String ultimoId = rs.getString("id_sistema");
                 if (ultimoId != null && ultimoId.startsWith("EQ")) {
                     String apenasNumeros = ultimoId.replaceAll("\\D+", "");
                     proximoNumero = Long.parseLong(apenasNumeros) + 1;
                 }
             }
         } catch (Exception e) {
-            // Se tabela estiver vazia ou ocorrer erro, começa do 1
             proximoNumero = 1;
         } finally {
             Conexao.fechar(rs, stmt, conn);
         }
         
-        // Retorna formatado com 10 dígitos: EQ0000000001
         return String.format("EQ%010d", proximoNumero);
     }
     
+    
     public Equipamento buscarPorId(int idEquipamento) throws SQLException {
         String sql = "SELECT e.*, p.codigo_catalogo, p.modelo, p.descricao_catalogo, " +
-                     "m.nome_marca, t.nome as nome_tipo, d.nome_departamento " +
+                     "m.nome_marca, t.nome as nome_tipo, d.nome_departamento, " +
+                     "se.nome AS status_nome, se.cor AS status_cor, sit.nome AS situacao_nome " +
                      "FROM equipamentos e " +
                      "INNER JOIN produtos p ON e.id_produto = p.id " +
                      "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
                      "LEFT JOIN tipos_produto t ON p.tipo_id = t.id " +
                      "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
+                     "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
+                     "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
                      "WHERE e.id_equipamento = ?";
         
         Connection conn = null;
@@ -294,8 +320,6 @@ public class EquipamentoDAO {
                 eq.setModelo(rs.getString("modelo"));
                 eq.setNomeMarca(rs.getString("nome_marca"));
                 eq.setNomeTipo(rs.getString("nome_tipo"));
-                
-                // Usando a coluna correta que existe na tabela produtos:
                 eq.setDescricaoDetalhada(rs.getString("descricao_catalogo")); 
 
                 eq.setIdSistema(rs.getString("id_sistema"));
@@ -307,7 +331,11 @@ public class EquipamentoDAO {
                 eq.setOrigemCodigo(rs.wasNull() ? null : origemCod);
                 
                 eq.setIpAtual(rs.getString("ip_atual"));
-                eq.setStatusAtual(rs.getString("status_atual"));
+                eq.setStatusId(rs.getInt("status_id"));
+                eq.setSituacaoId(rs.getInt("situacao_id"));
+                eq.setStatusNome(rs.getString("status_nome"));
+                eq.setStatusCor(rs.getString("status_cor"));
+                eq.setSituacaoNome(rs.getString("situacao_nome"));
                 eq.setUsuarioAtual(rs.getString("usuario_atual"));
                 
                 int depId = rs.getInt("departamento_id");
@@ -321,8 +349,10 @@ public class EquipamentoDAO {
         }
         return eq;
     }
+
     public boolean atualizar(Equipamento eq) throws SQLException {
-        String sql = "UPDATE equipamentos SET id_produto = ?, patrimonio = ?, numero_serie = ?, nome_identificador = ?, origem_codigo = ?, ip_atual = ?, status_atual = ?, usuario_atual = ?, departamento_id = ?, observacoes = ? WHERE id_equipamento = ?";
+        // Atualizando os campos necessários incluindo status_id e situacao_id
+        String sql = "UPDATE equipamentos SET id_produto = ?, patrimonio = ?, numero_serie = ?, nome_identificador = ?, origem_codigo = ?, ip_atual = ?, status_id = ?, situacao_id = ?, usuario_atual = ?, departamento_id = ?, observacoes = ? WHERE id_equipamento = ?";
         
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -343,17 +373,18 @@ public class EquipamentoDAO {
             }
             
             stmt.setString(6, eq.getIpAtual());
-            stmt.setString(7, eq.getStatusAtual());
-            stmt.setString(8, eq.getUsuarioAtual());
+            stmt.setInt(7, eq.getStatusId() > 0 ? eq.getStatusId() : 1);
+            stmt.setInt(8, eq.getSituacaoId() > 0 ? eq.getSituacaoId() : 1);
+            stmt.setString(9, eq.getUsuarioAtual());
             
             if (eq.getDepartamentoId() != null) {
-                stmt.setInt(9, eq.getDepartamentoId());
+                stmt.setInt(10, eq.getDepartamentoId());
             } else {
-                stmt.setNull(9, Types.INTEGER);
+                stmt.setNull(10, Types.INTEGER);
             }
             
-            stmt.setString(10, eq.getObservacoes());
-            stmt.setInt(11, eq.getIdEquipamento());
+            stmt.setString(11, eq.getObservacoes());
+            stmt.setInt(12, eq.getIdEquipamento());
             
             return stmt.executeUpdate() > 0;
         } finally {
@@ -361,22 +392,13 @@ public class EquipamentoDAO {
         }
     }
     
-    /**
-     * Exclui um equipamento e suas dependências utilizando transação.
-     */
     public void excluirEquipamento(int idEquipamento) throws SQLException {
-        // Se houver tabelas filhas vinculadas ao equipamento (ex: histórico, manutenções, etc), adicione aqui:
-        // String sqlHistorico = "DELETE FROM equipamentos_historico WHERE equipamento_id = ?";
-        
         String sqlEquipamento = "DELETE FROM equipamentos WHERE id_equipamento = ?";
 
         try (Connection conn = Conexao.conectar()) {
-            conn.setAutoCommit(false); // Inicia a transação
+            conn.setAutoCommit(false); 
 
             try (PreparedStatement stmtEquipamento = conn.prepareStatement(sqlEquipamento)) {
-                
-                // Se tiver outras tabelas para limpar antes, faça o PreparedStatement delas aqui.
-
                 stmtEquipamento.setInt(1, idEquipamento);
                 int linhas = stmtEquipamento.executeUpdate();
 
@@ -384,11 +406,26 @@ public class EquipamentoDAO {
                     throw new SQLException("Equipamento não encontrado para exclusão.");
                 }
 
-                conn.commit(); // Confirma a transação se tudo deu certo
+                conn.commit(); 
             } catch (SQLException e) {
-                conn.rollback(); // Desfaz alterações caso ocorra qualquer erro
+                conn.rollback(); 
                 throw e;
             }
         }
+    }
+    private Integer buscarOrigemCodigoPorIdFilial(Connection conn, int idFilialOuCodigo) throws SQLException {
+        // Tenta primeiro ver se já é um código válido na tabela filiais. 
+        // Caso venha o ID da tela, buscamos o 'origem_codigo' correspondente.
+        String sql = "SELECT origem_codigo FROM filiais WHERE id_filial = ? OR origem_codigo = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, idFilialOuCodigo);
+            stmt.setInt(2, idFilialOuCodigo);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("origem_codigo");
+                }
+            }
+        }
+        return idFilialOuCodigo; // Fallback se não encontrar
     }
 }

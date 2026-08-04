@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const imgProduto = document.getElementById("img-produto");
     
     const inputIdSistema = document.getElementById("input-idsistema");
-    const selectDepartamento = document.getElementById("input-departamento"); // Elemento Select atualizado
+    const selectDepartamento = document.getElementById("input-departamento");
     const btnSalvar = document.getElementById("btn-salvar");
     const btnVoltar = document.getElementById("btn-voltar");
     const btnAbrirModal = document.getElementById("btn-abrir-modal-produto");
@@ -44,57 +44,56 @@ document.addEventListener("DOMContentLoaded", function() {
             inputIdSistema.value = "EQ0000000001";
         }
     }
-	
-	// Carrega as filiais cadastradas para o select de origem
-	    async function carregarFiliais() {
-	        try {
-	            const response = await fetch('/nexacore/api/empresas/');
-	            if (response.ok) {
-	                const filiais = await response.json();
-	                const selectOrigem = document.getElementById("input-origem");
-	                if (selectOrigem) {
-	                    selectOrigem.innerHTML = '<option value="">Selecione a origem...</option>';
-	                    filiais.forEach(f => {
-	                        const option = document.createElement("option");
-	                        // O value recebe o código numérico (ex: 161)
-	                        option.value = f.origemCodigo;
-	                        // O texto exibe no formato solicitado: Código - Sufixo (ex: 161 - ssa)
-	                        option.textContent = `${f.origemCodigo} - ${f.sufixo}`;
-	                        selectOrigem.appendChild(option);
-	                    });
-	                }
-	            }
-	        } catch (error) {
-	            console.error("Erro ao carregar filiais:", error);
-	        }
-	    }
-		
-	//2. Função para carregar os dados do equipamento caso venha um ID na URL (Modo Edição)
+    
+    // Carrega as filiais cadastradas para o select de origem
+    async function carregarFiliais() {
+        try {
+            const response = await fetch('/nexacore/api/empresas/');
+            if (response.ok) {
+                const filiais = await response.json();
+                const selectOrigem = document.getElementById("input-origem");
+                if (selectOrigem) {
+                    selectOrigem.innerHTML = '<option value="">Selecione a origem...</option>';
+                    filiais.forEach(f => {
+                        const option = document.createElement("option");
+                        option.value = f.origemCodigo;
+                        option.textContent = `${f.origemCodigo} - ${f.sufixo}`;
+                        selectOrigem.appendChild(option);
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao carregar filiais:", error);
+        }
+    }
+        
+    // 2. Função para carregar os dados do equipamento caso venha um ID na URL (Modo Edição)
     async function carregarEquipamentoParaEdicao() {
         const urlParams = new URLSearchParams(window.location.search);
         const idEquipamento = urlParams.get('id');
 
-        if (!idEquipamento) return; // Se não tem ID, é um cadastro novo (mantém fluxo normal)
+        if (!idEquipamento) return;
 
         try {
             const response = await fetch(`/nexacore/api/equipamentos?id=${idEquipamento}`);
             if (response.ok) {
                 const eq = await response.json();
                 
-                // Preenche o ID oculto para indicar edição
                 document.getElementById("input-id").value = eq.idEquipamento || eq.id || '';
                 
-                // Preenche os campos de texto comuns
                 inputIdSistema.value = eq.idSistema || '';
                 document.getElementById("input-patrimonio").value = eq.patrimonio || '';
                 document.getElementById("input-numeroserie").value = eq.numeroSerie || '';
                 document.getElementById("input-nomeidentificador").value = eq.nomeIdentificador || '';
                 document.getElementById("input-origem").value = eq.origemCodigo || '';
-                document.getElementById("input-status").value = eq.statusAtual || 'Ativo';
+                
+                // Atribuição correta dos campos separados de status e situação
+                document.getElementById("input-status").value = eq.statusId || '';
+                document.getElementById("input-situacao").value = eq.situacaoId || '';
+
                 document.getElementById("input-usuario").value = eq.usuarioAtual || '';
                 document.getElementById("input-observacoes").value = eq.observacoes || '';
 
-                // IP e Checkbox
                 if (eq.ipAtual) {
                     checkPossuiIp.checked = true;
                     inputIp.disabled = false;
@@ -107,12 +106,10 @@ document.addEventListener("DOMContentLoaded", function() {
                     inputIp.classList.add("bg-light");
                 }
 
-                // Departamento
                 if (selectDepartamento && eq.departamentoId) {
                     selectDepartamento.value = eq.departamentoId;
                 }
 
-                // Se o equipamento já estiver vinculado a um produto do catálogo, seleciona-o automaticamente
                 if (eq.idProduto && listaProdutosGlobal.length > 0) {
                     const produtoEncontrado = listaProdutosGlobal.find(p => p.id === eq.idProduto);
                     if (produtoEncontrado) {
@@ -146,7 +143,6 @@ document.addEventListener("DOMContentLoaded", function() {
             if (response.ok) {
                 const departamentos = await response.json();
                 if (selectDepartamento) {
-                    // Mantém apenas a primeira option padrão ("Selecione o setor...")
                     selectDepartamento.innerHTML = '<option value="">Selecione o setor...</option>';
                     departamentos.forEach(d => {
                         const option = document.createElement("option");
@@ -160,12 +156,68 @@ document.addEventListener("DOMContentLoaded", function() {
             console.error("Erro ao carregar departamentos:", error);
         }
     }
+    
+	// Carrega as opções para o select de Status do Equipamento
+	async function carregarStatusEquipamento() {
+	    try {
+	        // Atualizado para chamar o novo servlet dedicado
+	        const response = await fetch(`${contextPath}/api/status-equipamento`);
+	        if (response.ok) {
+	            const listaStatus = await response.json();
+	            const selectStatus = document.getElementById("input-status");
+	            if (selectStatus) {
+	                selectStatus.innerHTML = '<option value="">Selecione o status...</option>';
+	                if (Array.isArray(listaStatus)) {
+	                    listaStatus.forEach(s => {
+	                        if (s.id !== undefined && s.nome) {
+	                            const option = document.createElement("option");
+	                            option.value = s.id;
+	                            option.textContent = s.nome;
+	                            selectStatus.appendChild(option);
+	                        }
+	                    });
+	                }
+	            }
+	        }
+	    } catch (error) {
+	        console.error("Erro ao carregar status do equipamento:", error);
+	    }
+	}
 
+	// Carrega as opções para o select de Situação do Equipamento
+	async function carregarSituacaoEquipamento() {
+	    try {
+	        // Atualizado para chamar o novo servlet dedicado
+	        const response = await fetch(`${contextPath}/api/situacao-equipamento`);
+	        if (response.ok) {
+	            const listaSituacao = await response.json();
+	            const selectSituacao = document.getElementById("input-situacao");
+	            if (selectSituacao) {
+	                selectSituacao.innerHTML = '<option value="">Selecione a situação...</option>';
+	                if (Array.isArray(listaSituacao)) {
+	                    listaSituacao.forEach(sit => {
+	                        if (sit.id !== undefined && sit.nome) {
+	                            const option = document.createElement("option");
+	                            option.value = sit.id;
+	                            option.textContent = sit.nome;
+	                            selectSituacao.appendChild(option);
+	                        }
+	                    });
+	                }
+	            }
+	        }
+	    } catch (error) {
+	        console.error("Erro ao carregar situação do equipamento:", error);
+	    }
+	}
+
+    // Inicialização das requisições assíncronas da página
     carregarProximoId();
-    carregarProdutosCatalogo();
-    carregarDepartamentos(); // Executa o carregamento dos setores ao iniciar
-	carregarFiliais(); // <-- Adicionado aqui
-	// Carrega o catálogo e logo em seguida verifica se é edição
+    carregarDepartamentos();
+    carregarFiliais();
+    carregarStatusEquipamento();
+    carregarSituacaoEquipamento();
+    
     carregarProdutosCatalogo().then(() => {
         carregarEquipamentoParaEdicao();
     });
@@ -210,14 +262,12 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // Fecha a listagem se clicar fora
     document.addEventListener("click", function(e) {
         if (!inputBusca.contains(e.target) && !listaAutocomplete.contains(e.target)) {
             listaAutocomplete.style.display = "none";
         }
     });
 
-    // Botão de Limpar / Refresh da Busca de Produto (Coluna Esquerda)
     if (btnLimparBusca) {
         btnLimparBusca.addEventListener("click", function() {
             inputBusca.value = "";
@@ -234,7 +284,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // Controle do Checkbox de IP Atual (Ativa/Desativa o campo)
     if (checkPossuiIp && inputIp) {
         checkPossuiIp.addEventListener("change", function() {
             if (this.checked) {
@@ -248,7 +297,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // 6. Abertura do Modal de Pesquisa via Lupa
     if (btnAbrirModal && modalInstance) {
         btnAbrirModal.addEventListener("click", function() {
             renderizarTabelaModal(listaProdutosGlobal);
@@ -257,7 +305,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // Filtro dinâmico dentro do Modal
     if (modalInputFiltro) {
         modalInputFiltro.addEventListener("input", function() {
             const termo = this.value.toLowerCase().trim();
@@ -308,7 +355,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // 7. Selecionar o produto e preencher os campos
     function selecionarProduto(prod) {
         inputIdProduto.value = prod.id;
         inputBusca.value = prod.sku || prod.codigoCatalogo || `Produto #${prod.id}`;
@@ -425,7 +471,6 @@ document.addEventListener("DOMContentLoaded", function() {
         atualizarExibicaoImagem();
     }
 
-    // Botão Voltar
     if (btnVoltar) {
         btnVoltar.addEventListener("click", (e) => {
             e.preventDefault();
@@ -433,20 +478,20 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // Botão de Limpar Formulário (Coluna Direita)
     if (btnLimparForm) {
         btnLimparForm.addEventListener("click", function() {
+            document.getElementById("input-id").value = "";
             document.getElementById("input-patrimonio").value = "";
             document.getElementById("input-numeroserie").value = "";
             document.getElementById("input-nomeidentificador").value = "";
             document.getElementById("input-origem").value = "";
             document.getElementById("input-ip").value = "";
-            document.getElementById("input-status").value = "Ativo";
+            document.getElementById("input-status").value = "";
+            document.getElementById("input-situacao").value = "";
             document.getElementById("input-usuario").value = "";
-            if (selectDepartamento) selectDepartamento.value = ""; // Reseta o select
+            if (selectDepartamento) selectDepartamento.value = "";
             document.getElementById("input-observacoes").value = "";
             
-            // Restaura o checkbox e o campo de IP habilitado por padrão
             if (checkPossuiIp && inputIp) {
                 checkPossuiIp.checked = true;
                 inputIp.disabled = false;
@@ -457,13 +502,13 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // 8. Salvar Equipamento
     if (btnSalvar) {
-		btnSalvar.addEventListener("click", async function() {
+        btnSalvar.addEventListener("click", async function() {
+            const selectStatus = document.getElementById("input-status");
+            const selectSituacao = document.getElementById("input-situacao");
+
             const payload = {
-                // Captura o ID oculto (se for 0 ou vazio, o Java interpreta como INSERT, se tiver valor, faz UPDATE)
                 idEquipamento: document.getElementById("input-id").value ? parseInt(document.getElementById("input-id").value) : 0,
-                
                 idProduto: parseInt(inputIdProduto.value),
                 idSistema: inputIdSistema.value.trim(),
                 patrimonio: document.getElementById("input-patrimonio").value.trim(),
@@ -471,16 +516,21 @@ document.addEventListener("DOMContentLoaded", function() {
                 nomeIdentificador: document.getElementById("input-nomeidentificador").value.trim(),
                 origemCodigo: document.getElementById("input-origem").value ? parseInt(document.getElementById("input-origem").value) : null,
                 ipAtual: checkPossuiIp && checkPossuiIp.checked ? document.getElementById("input-ip").value.trim() : "",
-                statusAtual: document.getElementById("input-status").value,
+                
+                // Mapeando corretamente para o backend
+                statusId: selectStatus && selectStatus.value ? parseInt(selectStatus.value) : null,
+                situacaoId: selectSituacao && selectSituacao.value ? parseInt(selectSituacao.value) : null,
+
                 usuarioAtual: document.getElementById("input-usuario").value.trim(),
                 departamentoId: selectDepartamento && selectDepartamento.value ? parseInt(selectDepartamento.value) : null,
                 observacoes: document.getElementById("input-observacoes").value.trim()
             };
-            if (!payload.idProduto || !payload.idSistema || !payload.patrimonio || !payload.nomeIdentificador || !payload.origemCodigo) {
+
+            if (!payload.idProduto || !payload.idSistema || !payload.patrimonio || !payload.nomeIdentificador || !payload.origemCodigo || !payload.statusId || !payload.situacaoId) {
                 if (typeof ModalService !== 'undefined') {
-                    await ModalService.error("Campos Obrigatórios", "Por favor, selecione um produto e preencha os campos obrigatórios (*).");
+                    await ModalService.error("Campos Obrigatórios", "Por favor, selecione um produto, preencha os campos obrigatórios (*) e informe o status e a situação.");
                 } else {
-                    alert("Por favor, selecione um produto e preencha os campos obrigatórios (*).");
+                    alert("Por favor, selecione um produto, preencha os campos obrigatórios (*) e informe o status e a situação.");
                 }
                 return;
             }
@@ -500,8 +550,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     } else {
                         alert(result.mensagem);
                     }
-					// REDIRECIONA PARA A TELA DE CONSULTA APÓS SALVAR:
-					   window.location.href = '/nexacore/jsp/consulta-equipamento.jsp'; // (Ajuste o caminho exato da sua página de consulta se necessário)
+                    window.location.href = '/nexacore/jsp/consulta-equipamento.jsp';
                 } else {
                     if (typeof ModalService !== 'undefined') {
                         await ModalService.error("Erro", result.erro || "Não foi possível salvar o equipamento.");

@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Nexacore - Consulta de Equipamentos</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
@@ -31,8 +32,6 @@
                 <i class="fas fa-search"></i>
             </button>
         </div>
-        
-        
         
         <div>
             <a href="${pageContext.request.contextPath}/jsp/cadastro-equipamento.jsp" class="btn btn-success">
@@ -68,11 +67,11 @@
                 </div>
                 
                 <div class="col-md-3">
-				    <label class="form-label">Origem (Filial)</label>
-				    <select class="form-select form-select-sm" id="filtroOrigem">
-				        <option value="">Selecione...</option>
-				    </select>
-				</div>
+                    <label class="form-label">Origem (Filial)</label>
+                    <select class="form-select form-select-sm" id="filtroOrigem">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
                 <div class="col-md-3">
                     <label class="form-label">Departamento / Setor</label>
                     <select class="form-select form-select-sm" id="filtroDepartamento">
@@ -86,14 +85,15 @@
                 <div class="col-md-3">
                     <label class="form-label">Status</label>
                     <select class="form-select form-select-sm" id="filtroStatus">
-                    	<option value="">Selecione...</option>
-                        <option value="">Todos os status</option>
-                        <option value="Ativo">Ativo</option>
-                        <option value="Em Manutencao">Em Manutenção</option>
-                        <option value="Inativo">Inativo</option>
+                        <option value="">Selecione...</option>
                     </select>
                 </div>
-
+                <div class="col-md-3">
+                    <label class="form-label">Situação</label>
+                    <select class="form-select form-select-sm" id="filtroSituacao">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
                 <div class="col-12 d-flex justify-content-end gap-2 mt-3 pt-3 border-top">
                     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limparFiltros()">
                         <i class="fa fa-sync-alt me-1"></i> Limpar Filtros
@@ -135,13 +135,14 @@
                         <th>Usuário Atual</th>
                         <th>Departamento</th>
                         <th>Status</th>
+                        <th>Situação</th>
                         <th>Nº de Série</th>
                         <th class="text-center" style="width: 140px;">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tabelaEquipamentosBody">
                     <tr>
-                        <td colspan="10" class="text-center text-muted py-4">Utilize os filtros acima para consultar os equipamentos.</td>
+                        <td colspan="11" class="text-center text-muted py-4">Utilize os filtros acima para consultar os equipamentos.</td>
                     </tr>
                 </tbody>
             </table>
@@ -228,6 +229,7 @@
                             <p class="mb-1"><strong>IP Atual:</strong> <span id="det-eq-ip">-</span></p>
                             <p class="mb-1"><strong>Usuário Atual:</strong> <span id="det-eq-usuario">-</span></p>
                             <p class="mb-1"><strong>Status:</strong> <span id="det-eq-status">-</span></p>
+                            <p class="mb-1"><strong>Situação:</strong> <span id="det-eq-situacao">-</span></p>
                         </div>
                     </div>
 

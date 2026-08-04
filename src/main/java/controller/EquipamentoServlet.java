@@ -9,6 +9,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -20,8 +21,10 @@ import java.util.Map;
 @WebServlet(name = "EquipamentoServlet", urlPatterns = {"/api/equipamentos/*"})
 public class EquipamentoServlet extends HttpServlet {
 
-    private EquipamentoDAO dao = new EquipamentoDAO();
-    private Gson gson = new Gson();
+    private static final long serialVersionUID = 1L;
+    
+    private final EquipamentoDAO dao = new EquipamentoDAO();
+    private final Gson gson = new Gson();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -30,7 +33,7 @@ public class EquipamentoServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
-
+       
         // 1. Trata a requisição do ID automático para cadastro
         if ("proximo-id".equals(acao)) {
             try {
@@ -74,24 +77,28 @@ public class EquipamentoServlet extends HttpServlet {
             String origem = request.getParameter("origem");
             String departamento = request.getParameter("departamento");
             String usuario = request.getParameter("usuario");
-            String status = request.getParameter("status");
+            String status = request.getParameter("status"); // Passa o ID do status selecionado no filtro
+            String situacao = request.getParameter("situacao"); // <-- Adicionado parâmetro de situação
 
             List<Equipamento> lista;
 
             if ((pesquisaGlobal != null && !pesquisaGlobal.trim().isEmpty()) ||
-                (produto != null && !produto.trim().isEmpty()) ||
-                (idSistema != null && !idSistema.trim().isEmpty()) ||
-                (patrimonio != null && !patrimonio.trim().isEmpty()) ||
-                (serial != null && !serial.trim().isEmpty()) ||
-                (origem != null && !origem.trim().isEmpty()) ||
-                (departamento != null && !departamento.trim().isEmpty()) ||
-                (usuario != null && !usuario.trim().isEmpty()) ||
-                (status != null && !status.trim().isEmpty())) {
-                
-                lista = dao.listarComFiltros(pesquisaGlobal, idSistema, patrimonio, serial, origem, departamento, status, produto, usuario);
-            } else {
-                lista = dao.listar();
-            }
+            	    (produto != null && !produto.trim().isEmpty()) ||
+            	    (idSistema != null && !idSistema.trim().isEmpty()) ||
+            	    (patrimonio != null && !patrimonio.trim().isEmpty()) ||
+            	    (serial != null && !serial.trim().isEmpty()) ||
+            	    (origem != null && !origem.trim().isEmpty()) ||
+            	    (departamento != null && !departamento.trim().isEmpty()) ||
+            	    (usuario != null && !usuario.trim().isEmpty()) ||
+            	    (status != null && !status.trim().isEmpty()) ||
+            	    (situacao != null && !situacao.trim().isEmpty())) { 
+            		
+            	    // CHAMADA CORRIGIDA (seguindo a ordem exata do DAO):
+            	    // Ordem: pesquisaGlobal, idSistema, patrimonio, serial, origem, departamento, statusIdFiltro, situacaoIdFiltro, produto, usuario
+            	    lista = dao.listarComFiltros(pesquisaGlobal, idSistema, patrimonio, serial, origem, departamento, status, situacao, produto, usuario);
+            	} else {
+            	    lista = dao.listar();
+            	}
 
             out.print(gson.toJson(lista));
         } catch (Exception e) {
@@ -116,7 +123,7 @@ public class EquipamentoServlet extends HttpServlet {
             boolean sucesso;
             String mensagem;
 
-            // Se o objeto possui ID maior que 0, significa que estamos editando; caso contrário, inserindo
+            // Se o objeto possui ID maior que 0, significa edição; caso contrário, novo cadastro
             if (eq.getIdEquipamento() > 0) {
                 sucesso = dao.atualizar(eq);
                 mensagem = "Equipamento atualizado com sucesso!";
@@ -149,18 +156,23 @@ public class EquipamentoServlet extends HttpServlet {
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String idStr = request.getParameter("id");
-        if (idStr != null && !idStr.isEmpty()) {
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        if (idStr != null && !idStr.trim().isEmpty()) {
             try {
                 int id = Integer.parseInt(idStr);
-                EquipamentoDAO dao = new EquipamentoDAO();
                 dao.excluirEquipamento(id);
+                
                 response.setStatus(HttpServletResponse.SC_OK);
+                response.getWriter().write("{\"sucesso\": true, \"mensagem\": \"Equipamento excluído com sucesso!\"}");
             } catch (Exception e) {
                 response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                response.getWriter().write("Erro ao excluir: " + e.getMessage());
+                response.getWriter().write("{\"sucesso\": false, \"erro\": \"Erro ao excluir: " + e.getMessage() + "\"}");
             }
         } else {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().write("{\"sucesso\": false, \"erro\": \"ID do equipamento é obrigatório para exclusão.\"}");
         }
     }
 }

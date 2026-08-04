@@ -4,6 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Nexacore - Cadastro de Equipamento</title>
+    <!-- ADICIONE ESTE BLOCO LOGO NO INÍCIO -->
+    <script>
+        var contextPath = "<%= request.getContextPath() %>";
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
@@ -121,13 +125,18 @@
                             <input type="text" id="input-ip" class="form-control form-control-sm" placeholder="Ex: 192.168.0.50">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Status Atual *</label>
-                            <select class="form-select form-select-sm" id="input-status">
-                                <option value="Ativo">Ativo</option>
-                                <option value="Em Manutenção">Em Manutenção</option>
-                                <option value="Inativo">Inativo</option>
-                            </select>
-                        </div>
+						    <label class="form-label">Status Atual *</label>
+						    <select class="form-select form-select-sm" id="input-status" required>
+						        <option value="">Carregando status...</option>
+						    </select>
+						</div>
+						<!-- NOVO: Situação Atual -->
+					    <div class="col-md-4">
+					        <label class="form-label">Situação Atual *</label>
+					        <select class="form-select form-select-sm" id="input-situacao" required>
+					            <option value="">Carregando situação...</option>
+					        </select>
+					    </div>
                         <div class="col-md-4">
                             <label class="form-label">Usuário Atual</label>
                             <input type="text" id="input-usuario" class="form-control form-control-sm" placeholder="Ex: Carlos Alberto">
@@ -251,6 +260,7 @@
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+    
     <script src="${pageContext.request.contextPath}/assets/js/equipamento.js"></script>
 </body>
 </html>

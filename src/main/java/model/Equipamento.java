@@ -18,8 +18,18 @@ public class Equipamento {
     private Integer origemCodigo; 
     
     private String ipAtual;
-    private String statusAtual;
     private String usuarioAtual;
+    
+    
+  //Status equipamentos
+    private Integer statusId;    // Novo: ID da tabela status_equipamento
+    private Integer situacaoId;
+    
+    //Novo status situacao cor
+    private String statusNome;
+    private String statusCor;
+    private String situacaoNome;
+
     
     // Substituído o texto antigo pelo ID do departamento
     private Integer departamentoId; 
@@ -36,7 +46,8 @@ public class Equipamento {
     private String modelo;
     private String descricaoDetalhada;
     private String imagemUrl;
-
+    
+    
     /**
      * @return the idEquipamento
      */
@@ -159,18 +170,7 @@ public class Equipamento {
     public void setIpAtual(String ipAtual) {
         this.ipAtual = ipAtual;
     }
-    /**
-     * @return the statusAtual
-     */
-    public String getStatusAtual() {
-        return statusAtual;
-    }
-    /**
-     * @param statusAtual the statusAtual to set
-     */
-    public void setStatusAtual(String statusAtual) {
-        this.statusAtual = statusAtual;
-    }
+    
     /**
      * @return the usuarioAtual
      */
@@ -183,8 +183,71 @@ public class Equipamento {
     public void setUsuarioAtual(String usuarioAtual) {
         this.usuarioAtual = usuarioAtual;
     }
-    
+        
     /**
+	 * @return the statusId
+	 */
+	public Integer getStatusId() {
+		return statusId;
+	}
+	/**
+	 * @param statusId the statusId to set
+	 */
+	public void setStatusId(Integer statusId) {
+		this.statusId = statusId;
+	}
+	/**
+	 * @return the situacaoId
+	 */
+	public Integer getSituacaoId() {
+		return situacaoId;
+	}
+	/**
+	 * @param situacaoId the situacaoId to set
+	 */
+	public void setSituacaoId(Integer situacaoId) {
+		this.situacaoId = situacaoId;
+	}
+	
+	
+	
+	/**
+	 * @return the statusNome
+	 */
+	public String getStatusNome() {
+		return statusNome;
+	}
+	/**
+	 * @param statusNome the statusNome to set
+	 */
+	public void setStatusNome(String statusNome) {
+		this.statusNome = statusNome;
+	}
+	/**
+	 * @return the statusCor
+	 */
+	public String getStatusCor() {
+		return statusCor;
+	}
+	/**
+	 * @param statusCor the statusCor to set
+	 */
+	public void setStatusCor(String statusCor) {
+		this.statusCor = statusCor;
+	}
+	/**
+	 * @return the situacaoNome
+	 */
+	public String getSituacaoNome() {
+		return situacaoNome;
+	}
+	/**
+	 * @param situacaoNome the situacaoNome to set
+	 */
+	public void setSituacaoNome(String situacaoNome) {
+		this.situacaoNome = situacaoNome;
+	}
+	/**
      * @return the departamentoId
      */
     public Integer getDepartamentoId() {

@@ -24,15 +24,38 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    // 4. Evento do botão de confirmar seleção dentro do modal
+    // 4. Evento do botão de confirmar seleção dentro do modal (Validando pelo idSistema)
     const btnConfirmarSelecao = document.getElementById("btnConfirmarSelecao");
     if (btnConfirmarSelecao) {
         btnConfirmarSelecao.addEventListener("click", function() {
             const checks = document.querySelectorAll(".check-equip:checked");
+            let itensDuplicados = [];
+
             checks.forEach(chk => {
                 const eq = JSON.parse(chk.getAttribute("data-json"));
-                equipamentosSelecionadosMap.set(eq.idEquipamento, eq);
+                
+                // Verifica se já existe na lista atual comparando o idSistema
+                let jaExiste = Array.from(equipamentosSelecionadosMap.values()).some(
+                    item => item.idSistema === eq.idSistema
+                );
+
+                if (jaExiste) {
+                    // Adiciona o idSistema na lista de duplicados para mostrar no alerta
+                    itensDuplicados.push(eq.idSistema);
+                } else {
+                    equipamentosSelecionadosMap.set(eq.idEquipamento, eq);
+                }
             });
+
+            // Se houver duplicados, exibe o alerta amigável
+            if (itensDuplicados.length > 0) {
+                let msg = `O(s) equipamento(s) com o ID de Sistema abaixo já foi(ram) lançado(s) nesta lista de envio:\n\n• ${itensDuplicados.join("\n• ")}`;
+                if (typeof ModalService !== 'undefined') {
+                    ModalService.warning("Equipamento já adicionado", msg);
+                } else {
+                    alert(msg);
+                }
+            }
 
             atualizarTabelaPrincipalItens();
             
@@ -50,8 +73,8 @@ document.addEventListener("DOMContentLoaded", function() {
             e.preventDefault();
 
             if (equipamentosSelecionadosMap.size === 0) {
-                if (typeof showAlert === 'function') {
-                    showAlert("Atenção", "Adicione pelo menos um equipamento ao envio.");
+                if (typeof ModalService !== 'undefined') {
+                    ModalService.warning("Atenção", "Adicione pelo menos um equipamento ao envio.");
                 } else {
                     alert("Adicione pelo menos um equipamento ao envio.");
                 }
@@ -78,8 +101,8 @@ document.addEventListener("DOMContentLoaded", function() {
             .then(res => res.json())
             .then(resposta => {
                 if (resposta.sucesso) {
-                    if (typeof showAlert === 'function') {
-                        showAlert("Sucesso", resposta.mensagem, () => {
+                    if (typeof ModalService !== 'undefined') {
+                        ModalService.success("Sucesso", resposta.mensagem).then(() => {
                             window.location.reload();
                         });
                     } else {
@@ -87,8 +110,8 @@ document.addEventListener("DOMContentLoaded", function() {
                         window.location.reload();
                     }
                 } else {
-                    if (typeof showAlert === 'function') {
-                        showAlert("Erro", resposta.mensagem);
+                    if (typeof ModalService !== 'undefined') {
+                        ModalService.error("Erro", resposta.mensagem);
                     } else {
                         alert(resposta.mensagem);
                     }
@@ -96,8 +119,8 @@ document.addEventListener("DOMContentLoaded", function() {
             })
             .catch(err => {
                 console.error("Erro:", err);
-                if (typeof showAlert === 'function') {
-                    showAlert("Erro", "Erro de comunicação ao efetuar o envio.");
+                if (typeof ModalService !== 'undefined') {
+                    ModalService.error("Erro", "Erro de comunicação ao efetuar o envio.");
                 } else {
                     alert("Erro de comunicação ao efetuar o envio.");
                 }
@@ -125,9 +148,9 @@ function carregarFiliais() {
         .catch(err => console.error("Erro ao carregar filiais:", err));
 }
 
-// Função para buscar equipamentos disponíveis (status Ativo) para o modal
+// Função para buscar equipamentos disponíveis para o modal
 function carregarEquipamentosDisponiveis() {
-    fetch(contextPath + '/api/equipamentos?status=Ativo')
+    fetch(contextPath + '/api/equipamentos')
         .then(res => res.json())
         .then(data => {
             const tbody = document.getElementById("tabelaModalEquipamentosBody");
@@ -140,10 +163,15 @@ function carregarEquipamentosDisponiveis() {
             }
 
             data.forEach(eq => {
+                // Aqui também filtramos pelo idEquipamento para nem mostrar no modal o que já foi selecionado
                 if (!equipamentosSelecionadosMap.has(eq.idEquipamento)) {
-                    // Mapeia possíveis variações vindas do backend
                     let nomeCpu = eq.nomeIdentificador || eq.nomeCpu || '-';
-                    let produto = eq.produtoNome || eq.nomeProduto || (eq.produto ? eq.produto.nome : '-') || '-';
+                    
+                    let produto = eq.produtoNome || eq.nomeProduto || eq.descricaoProduto || eq.nome 
+                                  || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
+                                  || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
+
+                    let statusBadge = eq.statusAtual || eq.status || 'Ativo';
 
                     let tr = document.createElement("tr");
                     tr.innerHTML = `
@@ -153,7 +181,7 @@ function carregarEquipamentosDisponiveis() {
                         <td>${nomeCpu}</td>
                         <td>${produto}</td>
                         <td>${eq.numeroSerie || '-'}</td>
-                        <td><span class="badge bg-success">${eq.status || 'Ativo'}</span></td>
+                        <td><span class="badge bg-success">${statusBadge}</span></td>
                     `;
                     tbody.appendChild(tr);
                 }
@@ -174,9 +202,11 @@ function atualizarTabelaPrincipalItens() {
     }
 
     equipamentosSelecionadosMap.forEach((eq, id) => {
-        // Mapeia possíveis variações vindas do backend
         let nomeCpu = eq.nomeIdentificador || eq.nomeCpu || '-';
-        let produto = eq.produtoNome || eq.nomeProduto || (eq.produto ? eq.produto.nome : '-') || '-';
+        
+        let produto = eq.produtoNome || eq.nomeProduto || eq.descricaoProduto || eq.nome 
+                      || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
+                      || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
 
         let tr = document.createElement("tr");
         tr.innerHTML = `
