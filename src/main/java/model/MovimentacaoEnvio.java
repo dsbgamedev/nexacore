@@ -1,6 +1,8 @@
 package model;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 public class MovimentacaoEnvio {
     private Long idEnvio;
@@ -13,16 +15,23 @@ public class MovimentacaoEnvio {
     private LocalDate dataPrevisaoEntrega;
     private String observacoes;
     
-    // Novos campos para exibir os nomes na tela de consulta
+    // Campo para o Número da Nota Fiscal
+    private String numeroNota;
+    
+    // Campos para exibir os nomes na tela de consulta
     private String nomeOrigem;
     private String nomeDestino;
 
-    // Novos campos para o controle do status da movimentação
+    // Campos para o controle do status da movimentação
     private Long statusId;
     private String statusNome;
     private String statusCor;
 
-    // Getters e Setters
+    // Novo campo para listar os produtos vinculados no modal de consulta
+    private List<Map<String, Object>> produtos;
+    private List<MovimentacaoHistorico> historico;
+
+    // Getters e Setters para os produtos vinculados
     public Long getIdEnvio() { return idEnvio; }
     public void setIdEnvio(Long idEnvio) { this.idEnvio = idEnvio; }
 
@@ -66,4 +75,13 @@ public class MovimentacaoEnvio {
 
     public String getStatusCor() { return statusCor; }
     public void setStatusCor(String statusCor) { this.statusCor = statusCor; }
+    
+    public String getNumeroNota() { return numeroNota; }
+    public void setNumeroNota(String numeroNota) { this.numeroNota = numeroNota; }
+
+    public List<Map<String, Object>> getProdutos() { return produtos; }
+    public void setProdutos(List<Map<String, Object>> produtos) { this.produtos = produtos; }
+    
+    public List<MovimentacaoHistorico> getHistorico() { return historico; }
+    public void setHistorico(List<MovimentacaoHistorico> historico) { this.historico = historico; }
 }

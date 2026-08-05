@@ -88,6 +88,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 responsavel: document.getElementById("responsavel").value,
                 transportadora: document.getElementById("transportadora").value,
                 codigoRastreio: document.getElementById("codigoRastreio").value,
+                numeroNota: document.getElementById("numeroNota") ? document.getElementById("numeroNota").value : null, // Captura o número da Nota Fiscal
                 dataPrevisaoEntrega: document.getElementById("dataPrevisao").value,
                 observacoes: document.getElementById("observacoes").value,
                 equipamentosIds: Array.from(equipamentosSelecionadosMap.keys())
@@ -168,8 +169,8 @@ function carregarEquipamentosDisponiveis() {
                     let nomeCpu = eq.nomeIdentificador || eq.nomeCpu || '-';
                     
                     let produto = eq.produtoNome || eq.nomeProduto || eq.descricaoProduto || eq.nome 
-                                  || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
-                                  || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
+                                || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
+                                || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
 
                     let statusBadge = eq.statusAtual || eq.status || 'Ativo';
 
@@ -205,8 +206,8 @@ function atualizarTabelaPrincipalItens() {
         let nomeCpu = eq.nomeIdentificador || eq.nomeCpu || '-';
         
         let produto = eq.produtoNome || eq.nomeProduto || eq.descricaoProduto || eq.nome 
-                      || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
-                      || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
+                    || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
+                    || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
 
         let tr = document.createElement("tr");
         tr.innerHTML = `

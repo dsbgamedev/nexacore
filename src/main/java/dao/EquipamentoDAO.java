@@ -72,8 +72,10 @@ public class EquipamentoDAO {
 	    }
 	    return false;
 	}
-    public List<Equipamento> listar() throws SQLException {
+
+	public List<Equipamento> listar() throws SQLException {
         List<Equipamento> lista = new ArrayList<>();
+        // Ajustado de status_id != 0 para status_id != 3 (Inativo)
         String sql = "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, t.nome as nome_tipo, " +
                      "se.nome AS status_nome, se.cor AS status_cor, " +
                      "sit.nome AS situacao_nome, " +
@@ -84,6 +86,7 @@ public class EquipamentoDAO {
                      "LEFT JOIN tipos_produto t ON p.tipo_id = t.id " +
                      "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
                      "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
+                     "WHERE e.status_id != 3 " + 
                      "ORDER BY e.id_equipamento DESC";
         
         Connection conn = null;
@@ -112,7 +115,6 @@ public class EquipamentoDAO {
 
                 eq.setIpAtual(rs.getString("ip_atual"));
                 
-                // Mapeando os novos IDs e Nomes de Status e Situação
                 eq.setStatusId(rs.getInt("status_id"));
                 eq.setSituacaoId(rs.getInt("situacao_id"));
                 eq.setStatusNome(rs.getString("status_nome"));
@@ -135,7 +137,7 @@ public class EquipamentoDAO {
         return lista;
     }
     
-    public List<Equipamento> listarComFiltros(String pesquisaGlobal, String idSistema, String patrimonio, String serial, String origem, String departamento, String statusIdFiltro, String situacaoIdFiltro, String produto, String usuario) throws SQLException {
+	public List<Equipamento> listarComFiltros(String pesquisaGlobal, String idSistema, String patrimonio, String serial, String origem, String departamento, String statusIdFiltro, String situacaoIdFiltro, String produto, String usuario) throws SQLException {
         List<Equipamento> lista = new ArrayList<>();
         
         StringBuilder sql = new StringBuilder(
@@ -155,6 +157,11 @@ public class EquipamentoDAO {
             );
         
         List<Object> parametros = new ArrayList<>();
+
+        // Se o usuário NÃO filtrou por um status específico, por padrão ocultamos os inativos (status_id != 3)
+        if (statusIdFiltro == null || statusIdFiltro.trim().isEmpty()) {
+            sql.append(" AND e.status_id != 3");
+        }
 
         if (pesquisaGlobal != null && !pesquisaGlobal.trim().isEmpty()) {
             sql.append(" AND (e.id_sistema ILIKE ? OR e.patrimonio ILIKE ? OR e.numero_serie ILIKE ? OR e.usuario_atual ILIKE ? OR e.nome_identificador ILIKE ? OR p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ? OR f.nome_empresa ILIKE ? OR d.nome_departamento ILIKE ?)");
@@ -188,7 +195,6 @@ public class EquipamentoDAO {
             sql.append(" AND e.status_id = ?");
             parametros.add(Integer.parseInt(statusIdFiltro));
         }
-        // Novo filtro de Situação adicionado
         if (situacaoIdFiltro != null && !situacaoIdFiltro.trim().isEmpty()) {
             sql.append(" AND e.situacao_id = ?");
             parametros.add(Integer.parseInt(situacaoIdFiltro));
@@ -256,7 +262,7 @@ public class EquipamentoDAO {
         return lista;
     }
     
-    public String gerarProximoIdSistema() throws SQLException {
+	public String gerarProximoIdSistema() throws SQLException {
         String sql = "SELECT id_sistema FROM equipamentos ORDER BY id_equipamento DESC LIMIT 1";
         Connection conn = null;
         PreparedStatement stmt = null;
@@ -285,8 +291,7 @@ public class EquipamentoDAO {
         return String.format("EQ%010d", proximoNumero);
     }
     
-    
-    public Equipamento buscarPorId(int idEquipamento) throws SQLException {
+	public Equipamento buscarPorId(int idEquipamento) throws SQLException {
         String sql = "SELECT e.*, p.codigo_catalogo, p.modelo, p.descricao_catalogo, " +
                      "m.nome_marca, t.nome as nome_tipo, d.nome_departamento, " +
                      "se.nome AS status_nome, se.cor AS status_cor, sit.nome AS situacao_nome " +
@@ -351,7 +356,6 @@ public class EquipamentoDAO {
     }
 
     public boolean atualizar(Equipamento eq) throws SQLException {
-        // Atualizando os campos necessários incluindo status_id e situacao_id
         String sql = "UPDATE equipamentos SET id_produto = ?, patrimonio = ?, numero_serie = ?, nome_identificador = ?, origem_codigo = ?, ip_atual = ?, status_id = ?, situacao_id = ?, usuario_atual = ?, departamento_id = ?, observacoes = ? WHERE id_equipamento = ?";
         
         Connection conn = null;
@@ -393,29 +397,22 @@ public class EquipamentoDAO {
     }
     
     public void excluirEquipamento(int idEquipamento) throws SQLException {
-        String sqlEquipamento = "DELETE FROM equipamentos WHERE id_equipamento = ?";
+        // Altera o status para Inativo (3) e a situação para Baixado/Inativo (ex: ID 7)
+        String sql = "UPDATE equipamentos SET status_id = 3, situacao_id = 7 WHERE id_equipamento = ?";
 
-        try (Connection conn = Conexao.conectar()) {
-            conn.setAutoCommit(false); 
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            try (PreparedStatement stmtEquipamento = conn.prepareStatement(sqlEquipamento)) {
-                stmtEquipamento.setInt(1, idEquipamento);
-                int linhas = stmtEquipamento.executeUpdate();
+            stmt.setInt(1, idEquipamento);
+            int linhas = stmt.executeUpdate();
 
-                if (linhas == 0) {
-                    throw new SQLException("Equipamento não encontrado para exclusão.");
-                }
-
-                conn.commit(); 
-            } catch (SQLException e) {
-                conn.rollback(); 
-                throw e;
+            if (linhas == 0) {
+                throw new SQLException("Equipamento não encontrado.");
             }
         }
     }
+
     private Integer buscarOrigemCodigoPorIdFilial(Connection conn, int idFilialOuCodigo) throws SQLException {
-        // Tenta primeiro ver se já é um código válido na tabela filiais. 
-        // Caso venha o ID da tela, buscamos o 'origem_codigo' correspondente.
         String sql = "SELECT origem_codigo FROM filiais WHERE id_filial = ? OR origem_codigo = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, idFilialOuCodigo);
@@ -426,6 +423,6 @@ public class EquipamentoDAO {
                 }
             }
         }
-        return idFilialOuCodigo; // Fallback se não encontrar
+        return idFilialOuCodigo;
     }
 }

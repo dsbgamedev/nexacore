@@ -158,21 +158,38 @@ public class EquipamentoServlet extends HttpServlet {
         String idStr = request.getParameter("id");
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
+        PrintWriter out = response.getWriter();
 
         if (idStr != null && !idStr.trim().isEmpty()) {
             try {
                 int id = Integer.parseInt(idStr);
-                dao.excluirEquipamento(id);
+                
+                // Validação opcional: impede inativar se estiver em trânsito
+                Equipamento eq = dao.buscarPorId(id);
+                if (eq != null && eq.getSituacaoId() != null && eq.getSituacaoId() == 2) {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.write("{\"sucesso\": false, \"mensagem\": \"Operação negada! Equipamentos em trânsito não podem ser inativados.\"}");
+                    return;
+                }
+
+                // Executa a inativação no DAO
+                dao.excluirEquipamento(id); // (Ou renomeie o método do DAO para inativarEquipamento)
                 
                 response.setStatus(HttpServletResponse.SC_OK);
-                response.getWriter().write("{\"sucesso\": true, \"mensagem\": \"Equipamento excluído com sucesso!\"}");
+                out.write("{\"sucesso\": true, \"mensagem\": \"Equipamento inativado com sucesso!\"}");
+                
             } catch (Exception e) {
-                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-                response.getWriter().write("{\"sucesso\": false, \"erro\": \"Erro ao excluir: " + e.getMessage() + "\"}");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                String mensagemErro = e.getMessage() != null && !e.getMessage().isEmpty() 
+                    ? e.getMessage() 
+                    : "Não foi possível inativar o equipamento.";
+                
+                e.printStackTrace();
+                out.write("{\"sucesso\": false, \"mensagem\": \"" + mensagemErro + "\"}");
             }
         } else {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            response.getWriter().write("{\"sucesso\": false, \"erro\": \"ID do equipamento é obrigatório para exclusão.\"}");
+            out.write("{\"sucesso\": false, \"mensagem\": \"ID do equipamento é obrigatório.\"}");
         }
     }
 }

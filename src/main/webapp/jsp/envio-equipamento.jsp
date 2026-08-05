@@ -29,31 +29,35 @@
     <!-- Formulário Principal de Envio -->
     <div class="card p-4 mb-4 shadow-sm">
         <form id="formEnvio">
-            <div class="row g-3">
+            <!-- PRIMEIRA LINHA: 4 CAMPOS -->
+            <div class="row g-3 mb-3">
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Data do Envio *</label>
+                    <label class="form-label fw-bold small">Data do Envio *</label>
                     <input type="date" class="form-control form-control-sm" id="dataEnvio" required>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Origem *</label>
+                    <label class="form-label fw-bold small">Origem *</label>
                     <select class="form-select form-select-sm" id="origemId" required>
                         <option value="">Selecione a origem...</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Destino *</label>
+                    <label class="form-label fw-bold small">Destino *</label>
                     <select class="form-select form-select-sm" id="destinoId" required>
                         <option value="">Selecione o destino...</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label fw-bold">Responsável pelo Envio *</label>
+                    <label class="form-label fw-bold small">Responsável pelo Envio *</label>
                     <input type="text" class="form-control form-control-sm" id="responsavel" placeholder="Nome do colaborador" required>
                 </div>
+            </div>
 
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">Transportadora</label>
-                    <select class="form-select form-select-sm" id="transportadora">
+            <!-- SEGUNDA LINHA: 4 CAMPOS -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold small">Transportadora *</label>
+                    <select class="form-select form-select-sm" id="transportadora" required>
                         <option value="">Selecione...</option>
                         <option value="Correios">Correios</option>
                         <option value="Jadlog">Jadlog</option>
@@ -61,19 +65,24 @@
                         <option value="Outra">Outra</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">Código de Rastreio</label>
-                    <input type="text" class="form-control form-control-sm" id="codigoRastreio" placeholder="Ex: AA123456789BR">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold small">Nº da Nota Fiscal *</label>
+                    <input type="text" class="form-control form-control-sm" id="numeroNota" name="numeroNota" placeholder="Ex: 000123456" required>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">Data Prevista de Entrega</label>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold small">Código de Rastreio *</label>
+                    <input type="text" class="form-control form-control-sm" id="codigoRastreio" placeholder="Ex: AA123456789BR" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold small">Data Prevista de Entrega</label>
                     <input type="date" class="form-control form-control-sm" id="dataPrevisao">
                 </div>
+            </div>
 
-                <div class="col-12">
-                    <label class="form-label fw-bold">Observações</label>
-                    <textarea class="form-control form-control-sm" id="observacoes" rows="2" placeholder="Detalhes adicionais sobre o envio..."></textarea>
-                </div>
+            <!-- TERCEIRA LINHA: OBSERVAÇÕES -->
+            <div class="mb-4">
+                <label class="form-label fw-bold small">Observações</label>
+                <textarea class="form-control form-control-sm" id="observacoes" rows="2" placeholder="Detalhes adicionais sobre o envio..."></textarea>
             </div>
 
             <hr class="my-4">

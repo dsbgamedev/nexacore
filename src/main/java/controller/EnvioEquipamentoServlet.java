@@ -17,6 +17,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
@@ -47,6 +48,25 @@ public class EnvioEquipamentoServlet extends HttpServlet {
                 return str != null ? LocalDate.parse(str, formatter) : null;
             }
         })
+        // Adicionado TypeAdapter para LocalDateTime para suportar a classe MovimentacaoHistorico
+        .registerTypeAdapter(LocalDateTime.class, new TypeAdapter<LocalDateTime>() {
+            private final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
+            @Override
+            public void write(JsonWriter out, LocalDateTime value) throws IOException {
+                if (value == null) {
+                    out.nullValue();
+                } else {
+                    out.value(formatter.format(value));
+                }
+            }
+
+            @Override
+            public LocalDateTime read(JsonReader in) throws IOException {
+                String str = in.nextString();
+                return str != null ? LocalDateTime.parse(str, formatter) : null;
+            }
+        })
         .disableHtmlEscaping()
         .create();
 
@@ -57,9 +77,10 @@ public class EnvioEquipamentoServlet extends HttpServlet {
         public String responsavel;
         public String transportadora;
         public String codigoRastreio;
+        public String numeroNota; // Adicionado para receber a Nota Fiscal do Front-end
         public String dataPrevisaoEntrega;
         public String observacoes;
-        public Long statusId; // Adicionado para suportar a tabela movimentacao_status
+        public Long statusId; 
         public List<Long> equipamentosIds;
     }
 
@@ -70,8 +91,27 @@ public class EnvioEquipamentoServlet extends HttpServlet {
         PrintWriter out = resp.getWriter();
 
         try {
+            String idEnvioParam = req.getParameter("idEnvio");
+            
+            // Se vier o parâmetro idEnvio, podemos retornar apenas os detalhes/produtos daquele envio específico
+            if (idEnvioParam != null && !idEnvioParam.isEmpty()) {
+                Long idEnvio = Long.parseLong(idEnvioParam);
+                // Opcional: crie um método no DAO que busca o envio por ID com seus produtos, 
+                // ou filtre da lista geral. Para simplificar, vamos buscar na lista geral:
+                List<MovimentacaoEnvio> lista = dao.listarTodos();
+                MovimentacaoEnvio envioEncontrado = lista.stream()
+                    .filter(e -> e.getIdEnvio().equals(idEnvio))
+                    .findFirst()
+                    .orElse(null);
+                    
+                out.print(gson.toJson(envioEncontrado));
+                return;
+            }
+
+            // Comportamento padrão: lista todos
             List<MovimentacaoEnvio> lista = dao.listarTodos();
             out.print(gson.toJson(lista));
+            
         } catch (Exception e) {
             e.printStackTrace();
             resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -98,6 +138,8 @@ public class EnvioEquipamentoServlet extends HttpServlet {
             envio.setResponsavel(payload.responsavel);
             envio.setTransportadora(payload.transportadora);
             envio.setCodigoRastreio(payload.codigoRastreio);
+            envio.setNumeroNota(payload.numeroNota); // Seta o número da nota fiscal vindo do payload
+            
             if (payload.dataPrevisaoEntrega != null && !payload.dataPrevisaoEntrega.isEmpty()) {
                 envio.setDataPrevisaoEntrega(LocalDate.parse(payload.dataPrevisaoEntrega));
             }
