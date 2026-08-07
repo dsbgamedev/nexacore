@@ -417,6 +417,16 @@ public class EquipamentoDAO {
         }
     }
     
+    public boolean atualizarSituacao(int idEquipamento, int novoSituacaoId) throws SQLException {
+        String sql = "UPDATE equipamentos SET situacao_id = ? WHERE id_equipamento = ?";
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, novoSituacaoId);
+            stmt.setInt(2, idEquipamento);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+    
     public void excluirEquipamento(int idEquipamento) throws SQLException {
         // Altera o status para Inativo (3) e a situação para Baixado/Inativo (ex: ID 7)
         String sql = "UPDATE equipamentos SET status_id = 3, situacao_id = 7 WHERE id_equipamento = ?";

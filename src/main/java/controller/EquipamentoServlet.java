@@ -128,14 +128,62 @@ public class EquipamentoServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
 
+        String pathInfo = request.getPathInfo(); // Captura o que vem depois de /api/equipamentos
+
         try {
+            // TRATAMENTO DA ROTA DE DEVOLUÇÃO
+            if ("/devolver".equals(pathInfo)) {
+                BufferedReader reader = request.getReader();
+                Map<String, Object> payload = gson.fromJson(reader, Map.class);
+                
+                // Extrai o ID do equipamento enviado pelo front-end
+                Double idDouble = (Double) payload.get("idEquipamento");
+                if (idDouble == null) {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.print("{\"sucesso\": false, \"mensagem\": \"ID do equipamento não informado.\"}");
+                    return;
+                }
+                int idEquipamento = idDouble.intValue();
+
+                // Busca o equipamento
+                Equipamento eq = dao.buscarPorId(idEquipamento);
+                if (eq == null) {
+                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    out.print("{\"sucesso\": false, \"mensagem\": \"Equipamento não encontrado.\"}");
+                    return;
+                }
+
+                // Validação: Se já estiver em trânsito (ex: ID 2), impede nova ação
+                if (eq.getSituacaoId() != null && eq.getSituacaoId() == 2) {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.print("{\"sucesso\": false, \"mensagem\": \"Este equipamento já está em trânsito!\"}");
+                    return;
+                }
+
+                // Atualiza a situação para "Em Trânsito" (ID 2 - ajuste conforme o ID da sua tabela situacao_equipamento)
+                boolean atualizado = dao.atualizarSituacao(idEquipamento, 2); 
+
+                Map<String, Object> resp = new HashMap<>();
+                if (atualizado) {
+                    resp.put("sucesso", true);
+                    resp.put("mensagem", "Devolução iniciada com sucesso! Equipamento em trânsito.");
+                    response.setStatus(HttpServletResponse.SC_OK);
+                } else {
+                    resp.put("sucesso", false);
+                    resp.put("mensagem", "Não foi possível atualizar a situação do equipamento.");
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                }
+                out.print(gson.toJson(resp));
+                return;
+            }
+
+            // FLUXO NORMAL DE CADASTRO / EDIÇÃO
             BufferedReader reader = request.getReader();
             Equipamento eq = gson.fromJson(reader, Equipamento.class);
 
             boolean sucesso;
             String mensagem;
 
-            // Se o objeto possui ID maior que 0, significa edição; caso contrário, novo cadastro
             if (eq.getIdEquipamento() > 0) {
                 sucesso = dao.atualizar(eq);
                 mensagem = "Equipamento atualizado com sucesso!";
@@ -155,16 +203,16 @@ public class EquipamentoServlet extends HttpServlet {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             }
             out.print(gson.toJson(resp));
+
         } catch (Exception e) {
             e.printStackTrace();
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             Map<String, Object> resp = new HashMap<>();
             resp.put("sucesso", false);
-            resp.put("erro", "Erro técnico ao salvar: " + e.getMessage());
+            resp.put("erro", "Erro técnico: " + e.getMessage());
             out.print(gson.toJson(resp));
         }
     }
-    
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String idStr = request.getParameter("id");

@@ -35,13 +35,10 @@ document.addEventListener("DOMContentLoaded", function () {
             .then(response => response.json())
             .then(data => {
                 if (data.sucesso) {
-                    // Substitui o alert pelo ModalService.success padronizado
-                    ModalService.success("Sucesso", data.mensagem || "Recebimento confirmado e estoque atualizado com sucesso!").then(() => {
-                        // Atualiza a tabela localmente mudando o status para "Recebido"
+                    ModalService.success("Sucesso", data.mensagem || "Operação realizada com sucesso!").then(() => {
                         marcarItensComoRecebidosNaTabela();
-                        
-                        // Opcional: Recarrega a lista de trânsito para o select atualizar
                         carregarEnviosEmTransito();
+                        limparCampos();
                     });
                 } else {
                     ModalService.error("Atenção", "Erro: " + data.mensagem);
@@ -49,7 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
             })
             .catch(error => {
                 console.error('Erro:', error);
-                ModalService.error("Erro Técnico", "Erro de conexão ao processar o recebimento.");
+                ModalService.error("Erro Técnico", "Erro de conexão ao processar a operação.");
             });
         });
     }
@@ -86,6 +83,23 @@ function buscarDetalhesEnvio(idEnvio) {
 
             const rastreioInput = document.getElementById('codigoRastreio');
             if (rastreioInput) rastreioInput.value = data.codigoRastreio || '';
+
+            // --- ALTERAÇÃO DINÂMICA (DEVOLUÇÃO VS ENVIO) ---
+            const tituloPagina = document.querySelector('.recebimento-titulo, h2, h1'); // Ajuste conforme a tag do título da sua página
+            const botaoSubmit = document.querySelector('#formRecebimento button[type="submit"], .btn-success');
+            
+            // Verifica se é uma devolução pelo código de rastreio (ex: começa com DEV-) ou observação
+            const ehDevolucao = (data.codigoRastreio && data.codigoRastreio.startsWith('DEV-')) || 
+                                (data.observacoes && data.observacoes.includes('Devolução'));
+
+            if (ehDevolucao) {
+                if (tituloPagina) tituloPagina.innerText = "Recebimento de Devolução";
+                if (botaoSubmit) botaoSubmit.innerText = "Confirmar Devolução";
+            } else {
+                if (tituloPagina) tituloPagina.innerText = "Recebimento de Equipamentos";
+                if (botaoSubmit) botaoSubmit.innerText = "Confirmar Recebimento";
+            }
+            // ----------------------------------------------
 
             const tbody = document.querySelector('#tabelaItensRecebimento tbody');
             if (!tbody) return;
@@ -131,6 +145,12 @@ function limparCampos() {
 
     const rastreioInput = document.getElementById('codigoRastreio');
     if (rastreioInput) rastreioInput.value = '';
+
+    // Reseta o título e botão para o padrão caso limpe a seleção
+    const tituloPagina = document.querySelector('.recebimento-titulo, h2, h1');
+    const botaoSubmit = document.querySelector('#formRecebimento button[type="submit"], .btn-success');
+    if (tituloPagina) tituloPagina.innerText = "Recebimento de Equipamentos";
+    if (botaoSubmit) botaoSubmit.innerText = "Confirmar Recebimento";
 
     const tbody = document.querySelector('#tabelaItensRecebimento tbody');
     if (tbody) {

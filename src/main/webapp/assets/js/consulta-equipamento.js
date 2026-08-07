@@ -231,7 +231,7 @@ async function pesquisarEquipamentos() {
 	        // Resolução flexível para Situação
 	        const situacaoTexto = eq.situacaoAtual || eq.situacaoNome || eq.situacaoDescricao || (eq.situacao && eq.situacao.nome) || '-';
 
-	        // VALIDAÇÃO DE SEGURANÇA: Identifica se está em trânsito (por texto ou ID da situação/status)
+			// VALIDAÇÃO DE SEGURANÇA: Identifica se está em trânsito (por texto ou ID da situação/status)
 	        const emTransito = situacaoTexto.toLowerCase().includes('trânsito') || situacaoTexto.toLowerCase().includes('transito') || eq.situacaoId === 2;
 
 	        // Montagem inteligente dos botões de Ação
@@ -247,8 +247,11 @@ async function pesquisarEquipamentos() {
 	                <span class="badge bg-warning text-dark" title="Equipamento em trânsito: Edição e exclusão bloqueadas">Bloqueado</span>
 	            `;
 	        } else {
-	            // Caso contrário, libera os botões de Editar e Excluir normalmente
+	            // Adiciona o botão de Devolução rápida e mantém Editar/Excluir
 	            acoesHtml += `
+	                <button type="button" class="btn btn-sm btn-outline-warning me-1" title="Devolver para Origem" onclick="iniciarDevolucaoEquipamento(${eq.idEquipamento})">
+	                    <i class="fas fa-undo"></i>
+	                </button>
 	                <a href="${contextPath}/jsp/cadastro-equipamento.jsp?id=${eq.idEquipamento}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
 	                    <i class="fas fa-pen"></i>
 	                </a>
@@ -413,6 +416,40 @@ async function visualizarDetalhesEquipamento(idEquipamento) {
             ModalService.error("Erro", "Não foi possível carregar os detalhes do equipamento.");
         } else {
             alert("Não foi possível carregar os detalhes do equipamento.");
+        }
+    }
+}
+
+async function iniciarDevolucaoEquipamento(idEquipamento) {
+    const confirmado = await ModalService.confirm(
+        "Confirmar Devolução", 
+        "Deseja iniciar o processo de devolução deste equipamento para a filial de origem? Ele entrará em trânsito para retorno."
+    );
+    
+    if (confirmado) {
+        try {
+            const response = await fetch(`${contextPath}/api/equipamentos/devolver`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idEquipamento: idEquipamento })
+            });
+
+            const resultado = await response.json();
+
+            if (!response.ok || !resultado.sucesso) {
+                throw new Error(resultado.mensagem || "Não foi possível iniciar a devolução.");
+            }
+
+            ModalService.success("Sucesso", resultado.mensagem || "Devolução iniciada com sucesso!");
+            pesquisarEquipamentos(); // Atualiza a tabela
+            
+        } catch (error) {
+            console.error("Erro na devolução:", error);
+            if (typeof ModalService !== 'undefined' && ModalService.error) {
+                ModalService.error("Atenção", error.message);
+            } else {
+                alert(error.message);
+            }
         }
     }
 }
