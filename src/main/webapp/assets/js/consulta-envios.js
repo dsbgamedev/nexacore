@@ -37,7 +37,6 @@ function carregarEnvios() {
     .catch(error => {
         console.error("Erro detalhado ao carregar envios:", error);
         
-        // Mostra o erro exato no corpo da tabela para facilitar a visualização sem precisar abrir o console
         const tbody = document.querySelector("#tabelaEnvios tbody");
         if (tbody) {
             tbody.innerHTML = `<tr><td colspan="11" class="text-center text-danger py-4"><strong>Erro ao carregar dados:</strong> ${error.message}</td></tr>`;
@@ -78,21 +77,26 @@ function renderizarTabela(dados) {
         let nomeStatus = envio.statusNome || 'Enviado';
         let corStatus = envio.statusCor || '#0d6efd'; 
         
-        // Badge em formato pílula com Soft UI
+        // Badge em formato pílula com Soft UI idêntico ao layout padrão
         let badgeHtml = `<span class="badge rounded-pill px-3 py-2" style="background-color: ${corStatus}20; color: ${corStatus}; font-weight: 600;">${nomeStatus}</span>`;
 
-        // Botões de Ação Modernos (Visualizar + Cancelar se status permitir, sem três pontos)
+        // Identifica a quantidade real de produtos vinculados (suporta várias chaves que a API possa retornar)
+        let listaProdutosEnvio = envio.produtos || envio.equipamentos || envio.itens || envio.listaEquipamentos || [];
+        let qtdProdutos = listaProdutosEnvio.length;
+        let textoProdutos = qtdProdutos === 1 ? "1 produto" : `${qtdProdutos} produtos`;
+
+        // Botões de Ação Modernos
         let acoesHtml = `
             <div class="d-flex justify-content-center gap-1">
                 <button class="btn btn-light btn-sm text-secondary" title="Visualizar Detalhes" onclick="visualizarEnvio(${envio.idEnvio})">
-                    <i class="bi bi-eye"></i>
+                    <i class="fa fa-eye"></i>
                 </button>
         `;
 
-        if (envio.statusId === 2) {
+        if (envio.statusId === 2 || nomeStatus.toLowerCase().includes('andamento') || nomeStatus.toLowerCase().includes('enviado')) {
             acoesHtml += `
                 <button class="btn btn-light btn-sm text-danger" title="Cancelar Envio" onclick="cancelarEnvio(${envio.idEnvio})">
-                    <i class="bi bi-x-circle"></i>
+                    <i class="fa fa-xmark"></i>
                 </button>
             `;
         }
@@ -100,7 +104,7 @@ function renderizarTabela(dados) {
 
         // Rastreio com link externo estilizado
         let rastreioHtml = envio.codigoRastreio && envio.codigoRastreio !== '-' 
-            ? `<a href="#" class="text-decoration-none text-primary fw-semibold">${envio.codigoRastreio} <i class="bi bi-box-arrow-up-right small"></i></a>` 
+            ? `<a href="#" class="text-decoration-none text-primary fw-semibold">${envio.codigoRastreio} <i class="fa fa-arrow-up-right-from-square small"></i></a>` 
             : '-';
 
         let tr = document.createElement("tr");
@@ -109,7 +113,7 @@ function renderizarTabela(dados) {
             <td>${formatarDataBR(envio.dataEnvio)}</td>
             <td class="text-truncate" style="max-width: 180px;" title="${origemTexto}">${origemTexto}</td>
             <td class="text-truncate" style="max-width: 180px;" title="${destinoTexto}">${destinoTexto}</td>
-            <td><span class="badge bg-light text-dark border">1 produto</span></td>
+            <td><span class="badge bg-light text-dark border">${textoProdutos}</span></td>
             <td class="font-monospace">${envio.numeroNota || '-'}</td>
             <td>${envio.transportadora || '-'}</td>
             <td>${rastreioHtml}</td>
@@ -141,36 +145,31 @@ function filtrarEnvios(termo) {
 }
 
 function visualizarEnvio(idEnvio) {
-    // 1. Encontra o envio na lista global já carregada na tabela
     const envio = listaGlobalEnvios.find(e => e.idEnvio === idEnvio || e.id === idEnvio);
 
-    // 2. Preenche os campos básicos no modal
-    document.getElementById("tituloModalDetalhes").innerHTML = `<i class="bi bi-info-circle me-2"></i>ENVIO #${idEnvio}`;
+    document.getElementById("tituloModalDetalhes").innerHTML = `<i class="fa fa-info-circle me-2"></i>Detalhes do Envio #${idEnvio}`;
     document.getElementById("detalheOrigem").innerText = envio ? (envio.nomeOrigem || envio.origem || '-') : '-';
     document.getElementById("detalheDestino").innerText = envio ? (envio.nomeDestino || envio.destino || '-') : '-';
     document.getElementById("detalheTransportadora").innerText = envio ? (envio.transportadora || '-') : '-';
     document.getElementById("detalheNota").innerText = envio ? (envio.numeroNota || envio.notaFiscal || '-') : '-';
     
     let rastreio = envio && envio.codigoRastreio && envio.codigoRastreio !== '-' ? envio.codigoRastreio : '-';
-    document.getElementById("detalheRastreio").innerHTML = rastreio !== '-' ? `<a href="#" class="text-decoration-none text-primary fw-semibold">${rastreio} <i class="bi bi-box-arrow-up-right small"></i></a>` : '-';
+    document.getElementById("detalheRastreio").innerHTML = rastreio !== '-' ? `<a href="#" class="text-decoration-none text-primary fw-semibold">${rastreio} <i class="fa fa-arrow-up-right-from-square small"></i></a>` : '-';
 
     const tbodyProdutos = document.getElementById("tabelaProdutosDetalhe");
     const listaHistorico = document.getElementById("listaHistoricoEnvio");
 
-    // Abre o modal imediatamente
     const modalElement = document.getElementById('modalDetalhesEnvio');
     if (modalElement) {
         const modalInstance = new bootstrap.Modal(modalElement, { backdrop: 'static', keyboard: true });
         modalInstance.show();
     }
 
-    // 3. Verifica se os produtos já vieram embutidos no objeto
     const produtosEmbutidos = envio ? (envio.produtos || envio.equipamentos || envio.itens || envio.listaEquipamentos) : null;
 
     if (produtosEmbutidos && produtosEmbutidos.length > 0) {
         preencherTabelaProdutosDetalhe(produtosEmbutidos);
     } else {
-        // Se não vieram embutidos, busca os detalhes do envio na API
         tbodyProdutos.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Carregando produtos...</td></tr>`;
 
         fetch(`${contextPath}/api/envios/detalhes?idEnvio=${idEnvio}`, {
@@ -191,44 +190,37 @@ function visualizarEnvio(idEnvio) {
         });
     }
 
-	// Preenche o histórico dinamicamente baseado nos dados reais do envio com cores dinâmicas
-		if (envio && envio.historico && envio.historico.length > 0) {
-		    listaHistorico.innerHTML = "";
-		    envio.historico.forEach(hist => {
-		        let dataHoraFormatada = hist.dataHora ? hist.dataHora.replace('T', ' ') : '-';
-		        let nomeStatusHist = hist.statusNome || 'Atualizado';
-		        let descricaoHist = hist.observacao || '';
-		        
-		        // Pega a cor dinâmica que veio do banco (ex: red, blue, green, orange) ou usa cinza como fallback
-		        let corStatusHist = hist.statusCor || '#6c757d';
-		        
-		        listaHistorico.innerHTML += `
-		            <li class="mb-2 pb-2 border-bottom d-flex align-items-center">
-		                <span class="text-muted fw-semibold me-2">${dataHoraFormatada}</span> 
-		                <span class="badge me-2" style="background-color: ${corStatusHist}; color: #fff;">${nomeStatusHist}</span> 
-		                <span>${descricaoHist}</span>
-		            </li>
-		        `;
-		    });
-		} else {
-			    // Monta o histórico padrão para registros antigos, puxando a cor real do status atual do envio
-			    let dataFormatada = formatarDataBR(envio ? envio.dataEnvio : null) || '-';
-			    let nomeStatus = envio ? (envio.statusNome || 'Enviado') : 'Criado';
-			    
-			    // Pega a cor do status atual do objeto do envio (ex: o vermelho do cancelado)
-			    let corStatusAtual = envio && envio.statusCor ? envio.statusCor : '#6c757d';
+    if (envio && envio.historico && envio.historico.length > 0) {
+        listaHistorico.innerHTML = "";
+        envio.historico.forEach(hist => {
+            let dataHoraFormatada = hist.dataHora ? hist.dataHora.replace('T', ' ') : '-';
+            let nomeStatusHist = hist.statusNome || 'Atualizado';
+            let descricaoHist = hist.observacao || '';
+            let corStatusHist = hist.statusCor || '#6c757d';
+            
+            listaHistorico.innerHTML += `
+                <li class="mb-2 pb-2 border-bottom d-flex align-items-center">
+                    <span class="text-muted fw-semibold me-2">${dataHoraFormatada}</span> 
+                    <span class="badge me-2" style="background-color: ${corStatusHist}; color: #fff;">${nomeStatusHist}</span> 
+                    <span>${descricaoHist}</span>
+                </li>
+            `;
+        });
+    } else {
+        let dataFormatada = formatarDataBR(envio ? envio.dataEnvio : null) || '-';
+        let nomeStatus = envio ? (envio.statusNome || 'Enviado') : 'Criado';
+        let corStatusAtual = envio && envio.statusCor ? envio.statusCor : '#0d6efd';
 
-			    listaHistorico.innerHTML = `
-			        <li class="mb-2 pb-2 border-bottom d-flex align-items-center">
-			            <span class="text-muted fw-semibold me-2">${dataFormatada}</span> 
-			            <span class="badge me-2" style="background-color: ${corStatusAtual}; color: #fff;">${nomeStatus}</span> 
-			            <span>Envio ID #${idEnvio} registrado no sistema.</span>
-			        </li>
-			    `;
-			}
+        listaHistorico.innerHTML = `
+            <li class="mb-2 pb-2 border-bottom d-flex align-items-center">
+                <span class="text-muted fw-semibold me-2">${dataFormatada}</span> 
+                <span class="badge me-2" style="background-color: ${corStatusAtual}; color: #fff;">${nomeStatus}</span> 
+                <span>Envio ID #${idEnvio} registrado no sistema.</span>
+            </li>
+        `;
+    }
 }
 
-// Função de preenchimento adaptada exatamente para as 4 colunas do seu JSP
 function preencherTabelaProdutosDetalhe(lista) {
     const tbodyProdutos = document.getElementById("tabelaProdutosDetalhe");
     if (!tbodyProdutos) return;
@@ -254,17 +246,6 @@ function preencherTabelaProdutosDetalhe(lista) {
     }
 }
 
-function preencherHistoricoPadrao(idEnvio) {
-    const listaHistorico = document.getElementById("listaHistoricoEnvio");
-    if (!listaHistorico) return;
-    
-    listaHistorico.innerHTML = `
-        <li class="mb-2 pb-2 border-bottom">
-            <span class="text-muted fw-semibold ne-2">04/08/2026</span> 
-            <span class="badge bg-secondary text-white me-2">Criado</span> Envio ID #${idEnvio} registrado no sistema.
-        </li>
-    `;
-}
 async function cancelarEnvio(idEnvio) {
     const confirmado = await ModalService.confirm(
         "Cancelar Envio", 

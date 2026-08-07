@@ -68,61 +68,94 @@ document.addEventListener("DOMContentLoaded", function() {
     }
         
     // 2. Função para carregar os dados do equipamento caso venha um ID na URL (Modo Edição)
-    async function carregarEquipamentoParaEdicao() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const idEquipamento = urlParams.get('id');
+	async function carregarEquipamentoParaEdicao() {
+	        const urlParams = new URLSearchParams(window.location.search);
+	        const idEquipamento = urlParams.get('id');
 
-        if (!idEquipamento) return;
+	        if (!idEquipamento) return;
 
-        try {
-            const response = await fetch(`/nexacore/api/equipamentos?id=${idEquipamento}`);
-            if (response.ok) {
-                const eq = await response.json();
-                
-                document.getElementById("input-id").value = eq.idEquipamento || eq.id || '';
-                
-                inputIdSistema.value = eq.idSistema || '';
-                document.getElementById("input-patrimonio").value = eq.patrimonio || '';
-                document.getElementById("input-numeroserie").value = eq.numeroSerie || '';
-                document.getElementById("input-nomeidentificador").value = eq.nomeIdentificador || '';
-                document.getElementById("input-origem").value = eq.origemCodigo || '';
-                
-                // Atribuição correta dos campos separados de status e situação
-                document.getElementById("input-status").value = eq.statusId || '';
-                document.getElementById("input-situacao").value = eq.situacaoId || '';
+	        try {
+	            const response = await fetch(`/nexacore/api/equipamentos?id=${idEquipamento}`);
+	            if (response.ok) {
+	                const eq = await response.json();
+	                
+	                document.getElementById("input-id").value = eq.idEquipamento || eq.id || '';
+	                
+	                inputIdSistema.value = eq.idSistema || '';
+	                document.getElementById("input-patrimonio").value = eq.patrimonio || '';
+	                document.getElementById("input-numeroserie").value = eq.numeroSerie || '';
+	                document.getElementById("input-nomeidentificador").value = eq.nomeIdentificador || '';
+	                
+	                const selectOrigem = document.getElementById("input-origem");
+	                if (selectOrigem) {
+	                    selectOrigem.value = eq.origemCodigo || '';
 
-                document.getElementById("input-usuario").value = eq.usuarioAtual || '';
-                document.getElementById("input-observacoes").value = eq.observacoes || '';
+	                    // ----------------------------------------------------
+	                    // REGRA DE BLOQUEIO DA ORIGEM:
+	                    // Se o status indica que está baixado em outra filial/trânsito e 
+	                    // ainda não retornou para a origem de origem original (conforme sua regra de negócio),
+	                    // bloqueamos o campo. Se a API retornar a flag `bloquearOrigem` ou se 
+	                    // a situação/status atual for de equipamento transferido/baixado externamente:
+	                    // ----------------------------------------------------
+	                    if (eq.bloquearOrigem === true || eq.statusMovimentacao === 'EM_DESTINO_EXTERNO') {
+	                        selectOrigem.disabled = true;
+	                        selectOrigem.classList.add("bg-light");
 
-                if (eq.ipAtual) {
-                    checkPossuiIp.checked = true;
-                    inputIp.disabled = false;
-                    inputIp.value = eq.ipAtual;
-                    inputIp.classList.remove("bg-light");
-                } else {
-                    checkPossuiIp.checked = false;
-                    inputIp.disabled = true;
-                    inputIp.value = "";
-                    inputIp.classList.add("bg-light");
-                }
+	                        // Adiciona aviso visual explicativo se já não existir
+	                        let avisoOrigem = document.getElementById('avisoBloqueioOrigem');
+	                        if (!avisoOrigem) {
+	                            avisoOrigem = document.createElement('div');
+	                            avisoOrigem.id = 'avisoBloqueioOrigem';
+	                            avisoOrigem.className = 'form-text text-danger mt-1';
+	                            avisoOrigem.style.fontSize = '0.75rem';
+	                            avisoOrigem.innerHTML = '<i class="fa fa-lock me-1"></i> A origem está bloqueada porque o equipamento foi recebido em outra filial. Só será liberada após o retorno oficial e confirmação de recebimento na origem.';
+	                            selectOrigem.parentNode.appendChild(avisoOrigem);
+	                        }
+	                    } else {
+	                        // Liberado para alteração caso tenha retornado à origem e confirmado
+	                        selectOrigem.disabled = false;
+	                        selectOrigem.classList.remove("bg-light");
+	                        const aviso = document.getElementById('avisoBloqueioOrigem');
+	                        if (aviso) aviso.remove();
+	                    }
+	                }
+	                
+	                // Atribuição correta dos campos separados de status e situação
+	                document.getElementById("input-status").value = eq.statusId || '';
+	                document.getElementById("input-situacao").value = eq.situacaoId || '';
 
-                if (selectDepartamento && eq.departamentoId) {
-                    selectDepartamento.value = eq.departamentoId;
-                }
+	                document.getElementById("input-usuario").value = eq.usuarioAtual || '';
+	                document.getElementById("input-observacoes").value = eq.observacoes || '';
 
-                if (eq.idProduto && listaProdutosGlobal.length > 0) {
-                    const produtoEncontrado = listaProdutosGlobal.find(p => p.id === eq.idProduto);
-                    if (produtoEncontrado) {
-                        selecionarProduto(produtoEncontrado);
-                    }
-                }
-            } else {
-                console.error("Não foi possível carregar os dados do equipamento para edição.");
-            }
-        } catch (error) {
-            console.error("Erro ao buscar equipamento por ID:", error);
-        }
-    }
+	                if (eq.ipAtual) {
+	                    checkPossuiIp.checked = true;
+	                    inputIp.disabled = false;
+	                    inputIp.value = eq.ipAtual;
+	                    inputIp.classList.remove("bg-light");
+	                } else {
+	                    checkPossuiIp.checked = false;
+	                    inputIp.disabled = true;
+	                    inputIp.value = "";
+	                    inputIp.classList.add("bg-light");
+	                }
+
+	                if (selectDepartamento && eq.departamentoId) {
+	                    selectDepartamento.value = eq.departamentoId;
+	                }
+
+	                if (eq.idProduto && listaProdutosGlobal.length > 0) {
+	                    const produtoEncontrado = listaProdutosGlobal.find(p => p.id === eq.idProduto);
+	                    if (produtoEncontrado) {
+	                        selecionarProduto(produtoEncontrado);
+	                    }
+	                }
+	            } else {
+	                console.error("Não foi possível carregar os dados do equipamento para edição.");
+	            }
+	        } catch (error) {
+	            console.error("Erro ao buscar equipamento por ID:", error);
+	        }
+	    }
 
     // 3. Carrega todos os produtos para a busca rápida local e para o modal
     async function carregarProdutosCatalogo() {
@@ -184,11 +217,11 @@ document.addEventListener("DOMContentLoaded", function() {
 	    }
 	}
 
-	// Carrega as opções para o select de Situação do Equipamento
+	// Carrega as opções para o select de Situação do Equipamento (Apenas Edição Direta)
 	async function carregarSituacaoEquipamento() {
 	    try {
-	        // Atualizado para chamar o novo servlet dedicado
-	        const response = await fetch(`${contextPath}/api/situacao-equipamento`);
+	        // Chamada direcionada para a ação que filtra apenas as situações com permite_edicao_direta = true
+	        const response = await fetch('/nexacore/api/equipamentos/?acaoSituacoes=edicao-direta');
 	        if (response.ok) {
 	            const listaSituacao = await response.json();
 	            const selectSituacao = document.getElementById("input-situacao");

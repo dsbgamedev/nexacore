@@ -5,7 +5,9 @@ import model.Equipamento;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class EquipamentoDAO {
 
@@ -258,6 +260,25 @@ public class EquipamentoDAO {
             }
         } finally {
             Conexao.fechar(rs, stmt, conn);
+        }
+        return lista;
+    }
+	
+	// Lista apenas as situações que permitem alteração/cadastro direto (ocultando as de fluxo automático)
+    public List<Map<String, Object>> listarSituacoesEdicaoDireta() throws SQLException {
+        List<Map<String, Object>> lista = new ArrayList<>();
+        String sql = "SELECT id, nome FROM situacao_equipamento WHERE permite_edicao_direta = true ORDER BY nome";
+        
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                Map<String, Object> sit = new HashMap<>();
+                sit.put("id", rs.getInt("id"));
+                sit.put("nome", rs.getString("nome"));
+                lista.add(sit);
+            }
         }
         return lista;
     }

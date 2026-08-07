@@ -33,7 +33,19 @@ public class EquipamentoServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
-       
+     // 0. Trata a listagem de situações permitidas para edição direta
+        String acaoSituacoes = request.getParameter("acaoSituacoes");
+        if ("edicao-direta".equals(acaoSituacoes)) {
+            try {
+                List<Map<String, Object>> listaSituacoes = dao.listarSituacoesEdicaoDireta();
+                out.print(gson.toJson(listaSituacoes));
+            } catch (SQLException e) {
+                e.printStackTrace();
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                out.print("{\"erro\": \"Erro ao listar situações: " + e.getMessage() + "\"}");
+            }
+            return;
+        }       
         // 1. Trata a requisição do ID automático para cadastro
         if ("proximo-id".equals(acao)) {
             try {
