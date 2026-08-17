@@ -71,16 +71,18 @@ function renderizarTabela(dados) {
     }
 
     dados.forEach(envio => {
-        let origemTexto = envio.nomeOrigem ? envio.nomeOrigem : ('ID: ' + envio.origemId);
-        let destinoTexto = envio.nomeDestino ? envio.nomeDestino : ('ID: ' + envio.destinoId);
+        // Proteção caso algum objeto venha nulo no array
+        if (!envio) return;
 
-        let nomeStatus = envio.statusNome || 'Enviado';
+        let idEnvio = envio.idEnvio || envio.id || 0;
+        let origemTexto = envio.nomeOrigem ? envio.nomeOrigem : ('ID: ' + (envio.origemId || '-'));
+        let destinoTexto = envio.nomeDestino ? envio.nomeDestino : ('ID: ' + (envio.destinoId || '-'));
+
+        let nomeStatus = envio.statusNome || envio.status || 'Enviado';
         let corStatus = envio.statusCor || '#0d6efd'; 
         
-        // Badge em formato pílula com Soft UI idêntico ao layout padrão
         let badgeHtml = `<span class="badge rounded-pill px-3 py-2" style="background-color: ${corStatus}20; color: ${corStatus}; font-weight: 600;">${nomeStatus}</span>`;
 
-        // Identifica a quantidade real de produtos vinculados (suporta várias chaves que a API possa retornar)
         let listaProdutosEnvio = envio.produtos || envio.equipamentos || envio.itens || envio.listaEquipamentos || [];
         let qtdProdutos = listaProdutosEnvio.length;
         let textoProdutos = qtdProdutos === 1 ? "1 produto" : `${qtdProdutos} produtos`;
@@ -88,33 +90,41 @@ function renderizarTabela(dados) {
         // Botões de Ação Modernos
         let acoesHtml = `
             <div class="d-flex justify-content-center gap-1">
-                <button class="btn btn-light btn-sm text-secondary" title="Visualizar Detalhes" onclick="visualizarEnvio(${envio.idEnvio})">
+                <button class="btn btn-light btn-sm text-secondary" title="Visualizar Detalhes" onclick="visualizarEnvio(${idEnvio})">
                     <i class="fa fa-eye"></i>
                 </button>
         `;
 
-        if (envio.statusId === 2 || nomeStatus.toLowerCase().includes('andamento') || nomeStatus.toLowerCase().includes('enviado')) {
+        // Botão para efetivar envio caso esteja aguardando (statusId === 1)
+        if (envio.statusId === 1 || String(nomeStatus).toLowerCase().includes('aguardando')) {
             acoesHtml += `
-                <button class="btn btn-light btn-sm text-danger" title="Cancelar Envio" onclick="cancelarEnvio(${envio.idEnvio})">
+                <button class="btn btn-light btn-sm text-success" title="Efetivar Envio (Colocar em Trânsito)" onclick="efetivarEnvio(${idEnvio})">
+                    <i class="fa fa-truck-fast"></i>
+                </button>
+            `;
+        }
+
+        if (envio.statusId === 2 || String(nomeStatus).toLowerCase().includes('andamento') || String(nomeStatus).toLowerCase().includes('enviado')) {
+            acoesHtml += `
+                <button class="btn btn-light btn-sm text-danger" title="Cancelar Envio" onclick="cancelarEnvio(${idEnvio})">
                     <i class="fa fa-xmark"></i>
                 </button>
             `;
         }
         acoesHtml += `</div>`;
 
-        // Rastreio com link externo estilizado
         let rastreioHtml = envio.codigoRastreio && envio.codigoRastreio !== '-' 
             ? `<a href="#" class="text-decoration-none text-primary fw-semibold">${envio.codigoRastreio} <i class="fa fa-arrow-up-right-from-square small"></i></a>` 
             : '-';
 
         let tr = document.createElement("tr");
         tr.innerHTML = `
-            <td class="ps-3 fw-bold text-dark">#${envio.idEnvio}</td>
-            <td>${formatarDataBR(envio.dataEnvio)}</td>
+            <td class="ps-3 fw-bold text-dark">#${idEnvio}</td>
+            <td>${formatarDataBR(envio.dataEnvio || envio.data)}</td>
             <td class="text-truncate" style="max-width: 180px;" title="${origemTexto}">${origemTexto}</td>
             <td class="text-truncate" style="max-width: 180px;" title="${destinoTexto}">${destinoTexto}</td>
             <td><span class="badge bg-light text-dark border">${textoProdutos}</span></td>
-            <td class="font-monospace">${envio.numeroNota || '-'}</td>
+            <td class="font-monospace">${envio.numeroNota || envio.notaFiscal || '-'}</td>
             <td>${envio.transportadora || '-'}</td>
             <td>${rastreioHtml}</td>
             <td>${badgeHtml}</td>
@@ -279,5 +289,31 @@ async function cancelarEnvio(idEnvio) {
     .catch(error => {
         console.error("Erro na requisição de cancelamento:", error);
         ModalService.error("Erro Técnico", "Erro ao cancelar o envio: " + error.message);
+    });
+}
+async function efetivarEnvio(idEnvio) {
+    const confirmado = await ModalService.confirm(
+        "Efetivar Envio", 
+        "Deseja realmente despachar este envio? Os equipamentos passarão para o status 'Em Trânsito'."
+    );
+
+    if (!confirmado) return;
+
+    fetch(`${contextPath}/api/envios?idEnvio=${idEnvio}&acao=efetivar`, {
+        method: 'PUT'
+    })
+    .then(res => res.json())
+    .then(resposta => {
+        if (resposta.sucesso) {
+            ModalService.success("Sucesso", resposta.mensagem).then(() => {
+                carregarEnvios(); // Recarrega a tabela atualizando o status visual
+            });
+        } else {
+            ModalService.error("Erro", resposta.mensagem);
+        }
+    })
+    .catch(err => {
+        console.error("Erro:", err);
+        ModalService.error("Erro", "Erro de comunicação ao efetivar o envio.");
     });
 }

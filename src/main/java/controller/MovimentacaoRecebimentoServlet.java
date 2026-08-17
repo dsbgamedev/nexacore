@@ -13,7 +13,14 @@ import java.io.PrintWriter;
 import java.util.Map;
 import java.util.List;
 
-@WebServlet(urlPatterns = {"/api/envios/transito", "/api/envios/detalhes", "/api/envios/receber"})
+@WebServlet(urlPatterns = {
+    "/api/envios/transito", 
+    "/api/envios/detalhes", 
+    "/api/envios/receber",
+    "/api/devolucoes/transito",
+    "/api/devolucoes/detalhes",
+    "/api/devolucoes/receber" // <--- Adicionado aqui para mapear a URL de recebimento de devolução
+})
 public class MovimentacaoRecebimentoServlet extends HttpServlet {
 
     private final MovimentacaoRecebimentoDAO dao = new MovimentacaoRecebimentoDAO();
@@ -29,11 +36,26 @@ public class MovimentacaoRecebimentoServlet extends HttpServlet {
         if ("/api/envios/transito".equals(path)) {
             List<Map<String, Object>> lista = dao.listarEnviosEmTransito();
             out.write(gson.toJson(lista));
+            
         } else if ("/api/envios/detalhes".equals(path)) {
             String idStr = request.getParameter("id");
             if (idStr != null && !idStr.isEmpty()) {
                 int idEnvio = Integer.parseInt(idStr);
                 Map<String, Object> detalhes = dao.buscarDetalhesEnvio(idEnvio);
+                out.write(gson.toJson(detalhes));
+            } else {
+                out.write("{}");
+            }
+            
+        } else if ("/api/devolucoes/transito".equals(path)) {
+            List<Map<String, Object>> lista = dao.listarDevolucoesEmTransito();
+            out.write(gson.toJson(lista));
+            
+        } else if ("/api/devolucoes/detalhes".equals(path)) {
+            String idStr = request.getParameter("id");
+            if (idStr != null && !idStr.isEmpty()) {
+                int idDevolucao = Integer.parseInt(idStr);
+                Map<String, Object> detalhes = dao.buscarDetalhesDevolucao(idDevolucao);
                 out.write(gson.toJson(detalhes));
             } else {
                 out.write("{}");
@@ -48,20 +70,38 @@ public class MovimentacaoRecebimentoServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
 
-        if ("/api/envios/receber".equals(path)) {
+        // Trata tanto o endpoint de envios quanto o de devoluções no POST
+        if ("/api/envios/receber".equals(path) || "/api/devolucoes/receber".equals(path)) {
             try {
-                String idEnvioStr = request.getParameter("idEnvio");
+                // Se a URL for explicitamente de devolução, força o tipoOperacao para 'devolucao'
+                String tipoOperacao = request.getParameter("tipoOperacao");
+                if ("/api/devolucoes/receber".equals(path)) {
+                    tipoOperacao = "devolucao";
+                }
+
+                String idEnvioStr = request.getParameter("idMovimentacao"); 
+                
+                if (idEnvioStr == null || idEnvioStr.isEmpty()) {
+                    idEnvioStr = request.getParameter("idEnvio");
+                }
+
                 String dataRecebimento = request.getParameter("dataRecebimento");
                 String responsavel = request.getParameter("responsavel");
                 String condicaoGeral = request.getParameter("condicaoGeral");
 
                 if (idEnvioStr == null || idEnvioStr.isEmpty()) {
-                    out.write("{\"sucesso\": false, \"mensagem\": \"ID do envio não informado.\"}");
+                    out.write("{\"sucesso\": false, \"mensagem\": \"ID da movimentação não informado.\"}");
                     return;
                 }
 
-                int idEnvio = Integer.parseInt(idEnvioStr);
-                boolean sucesso = dao.registrarRecebimento(idEnvio, dataRecebimento, responsavel, condicaoGeral);
+                int idMovimentacao = Integer.parseInt(idEnvioStr);
+                boolean sucesso = false;
+
+                if ("devolucao".equals(tipoOperacao)) {
+                    sucesso = dao.registrarRecebimentoDevolucao(idMovimentacao, dataRecebimento, responsavel, condicaoGeral);
+                } else {
+                    sucesso = dao.registrarRecebimento(idMovimentacao, dataRecebimento, responsavel, condicaoGeral);
+                }
 
                 if (sucesso) {
                     out.write("{\"sucesso\": true, \"mensagem\": \"Recebimento confirmado e estoque atualizado com sucesso!\"}");
@@ -74,4 +114,5 @@ public class MovimentacaoRecebimentoServlet extends HttpServlet {
             }
         }
     }
+
 }

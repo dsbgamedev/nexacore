@@ -142,7 +142,14 @@ public class EquipamentoDAO {
 	public List<Equipamento> listarComFiltros(String pesquisaGlobal, String idSistema, String patrimonio, String serial, String origem, String departamento, String statusIdFiltro, String situacaoIdFiltro, String produto, String usuario) throws SQLException {
         List<Equipamento> lista = new ArrayList<>();
         
-        StringBuilder sql = new StringBuilder(
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = Conexao.conectar();
+
+            StringBuilder sql = new StringBuilder(
                 "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, " +
                 "se.nome AS status_nome, se.cor AS status_cor, " +
                 "sit.nome AS situacao_nome, " +
@@ -157,68 +164,67 @@ public class EquipamentoDAO {
                 "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
                 "WHERE 1=1"
             );
-        
-        List<Object> parametros = new ArrayList<>();
+            
+            List<Object> parametros = new ArrayList<>();
 
-        // Se o usuário NÃO filtrou por um status específico, por padrão ocultamos os inativos (status_id != 3)
-        if (statusIdFiltro == null || statusIdFiltro.trim().isEmpty()) {
-            sql.append(" AND e.status_id != 3");
-        }
-
-        if (pesquisaGlobal != null && !pesquisaGlobal.trim().isEmpty()) {
-            sql.append(" AND (e.id_sistema ILIKE ? OR e.patrimonio ILIKE ? OR e.numero_serie ILIKE ? OR e.usuario_atual ILIKE ? OR e.nome_identificador ILIKE ? OR p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ? OR f.nome_empresa ILIKE ? OR d.nome_departamento ILIKE ?)");
-            String termoGlobal = "%" + pesquisaGlobal.trim() + "%";
-            for (int i = 0; i < 9; i++) {
-                parametros.add(termoGlobal);
+            if (statusIdFiltro == null || statusIdFiltro.trim().isEmpty()) {
+                sql.append(" AND e.status_id != 3");
             }
-        }
 
-        if (idSistema != null && !idSistema.trim().isEmpty()) {
-            sql.append(" AND e.id_sistema ILIKE ?");
-            parametros.add("%" + idSistema.trim() + "%");
-        }
-        if (patrimonio != null && !patrimonio.trim().isEmpty()) {
-            sql.append(" AND e.patrimonio ILIKE ?");
-            parametros.add("%" + patrimonio.trim() + "%");
-        }
-        if (serial != null && !serial.trim().isEmpty()) {
-            sql.append(" AND e.numero_serie ILIKE ?");
-            parametros.add("%" + serial.trim() + "%");
-        }
-        if (origem != null && !origem.trim().isEmpty()) {
-            sql.append(" AND e.origem_codigo = ?");
-            parametros.add(Integer.parseInt(origem));
-        }
-        if (departamento != null && !departamento.trim().isEmpty()) {
-            sql.append(" AND e.departamento_id = ?");
-            parametros.add(Integer.parseInt(departamento));
-        }
-        if (statusIdFiltro != null && !statusIdFiltro.trim().isEmpty()) {
-            sql.append(" AND e.status_id = ?");
-            parametros.add(Integer.parseInt(statusIdFiltro));
-        }
-        if (situacaoIdFiltro != null && !situacaoIdFiltro.trim().isEmpty()) {
-            sql.append(" AND e.situacao_id = ?");
-            parametros.add(Integer.parseInt(situacaoIdFiltro));
-        }
-        if (produto != null && !produto.trim().isEmpty()) {
-            sql.append(" AND (p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ?)");
-            parametros.add("%" + produto.trim() + "%");
-            parametros.add("%" + produto.trim() + "%");
-        }
-        if (usuario != null && !usuario.trim().isEmpty()) {
-            sql.append(" AND e.usuario_atual ILIKE ?");
-            parametros.add("%" + usuario.trim() + "%");
-        }
+            if (pesquisaGlobal != null && !pesquisaGlobal.trim().isEmpty()) {
+                sql.append(" AND (e.id_sistema ILIKE ? OR e.patrimonio ILIKE ? OR e.numero_serie ILIKE ? OR e.usuario_atual ILIKE ? OR e.nome_identificador ILIKE ? OR p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ? OR f.nome_empresa ILIKE ? OR d.nome_departamento ILIKE ?)");
+                String termoGlobal = "%" + pesquisaGlobal.trim() + "%";
+                for (int i = 0; i < 9; i++) {
+                    parametros.add(termoGlobal);
+                }
+            }
 
-        sql.append(" ORDER BY e.id_equipamento DESC");
+            if (idSistema != null && !idSistema.trim().isEmpty()) {
+                sql.append(" AND e.id_sistema ILIKE ?");
+                parametros.add("%" + idSistema.trim() + "%");
+            }
+            if (patrimonio != null && !patrimonio.trim().isEmpty()) {
+                sql.append(" AND e.patrimonio ILIKE ?");
+                parametros.add("%" + patrimonio.trim() + "%");
+            }
+            if (serial != null && !serial.trim().isEmpty()) {
+                sql.append(" AND e.numero_serie ILIKE ?");
+                parametros.add("%" + serial.trim() + "%");
+            }
+            if (origem != null && !origem.trim().isEmpty()) {
+                try {
+                    int valorOrigem = Integer.parseInt(origem.trim());
+                    Integer codigoReal = buscarOrigemCodigoPorIdFilial(conn, valorOrigem);
+                    sql.append(" AND e.origem_codigo = ?");
+                    parametros.add(codigoReal != null ? codigoReal : valorOrigem);
+                } catch (NumberFormatException e) {
+                    // Se não for um número válido, ignora o filtro de origem para não quebrar a listagem
+                }
+            }
+            if (departamento != null && !departamento.trim().isEmpty()) {
+                sql.append(" AND e.departamento_id = ?");
+                parametros.add(Integer.parseInt(departamento));
+            }
+            if (statusIdFiltro != null && !statusIdFiltro.trim().isEmpty()) {
+                sql.append(" AND e.status_id = ?");
+                parametros.add(Integer.parseInt(statusIdFiltro));
+            }
+            if (situacaoIdFiltro != null && !situacaoIdFiltro.trim().isEmpty()) {
+                sql.append(" AND e.situacao_id = ?");
+                parametros.add(Integer.parseInt(situacaoIdFiltro));
+            }
+            if (produto != null && !produto.trim().isEmpty()) {
+                sql.append(" AND (p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ?)");
+                parametros.add("%" + produto.trim() + "%");
+                parametros.add("%" + produto.trim() + "%");
+            }
+            if (usuario != null && !usuario.trim().isEmpty()) {
+                sql.append(" AND e.usuario_atual ILIKE ?");
+                parametros.add("%" + usuario.trim() + "%");
+            }
 
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
+            sql.append(" ORDER BY e.id_equipamento DESC");
 
-        try {
-            conn = Conexao.conectar();
             stmt = conn.prepareStatement(sql.toString());
 
             for (int i = 0; i < parametros.size(); i++) {
@@ -310,6 +316,57 @@ public class EquipamentoDAO {
         }
         
         return String.format("EQ%010d", proximoNumero);
+    }
+	
+	public List<Equipamento> listarDisponiveisPorOrigem(long origemCodigo) throws SQLException {
+        List<Equipamento> lista = new ArrayList<>();
+        String sql = "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, " +
+                     "se.nome AS status_nome, se.cor AS status_cor, " +
+                     "sit.nome AS situacao_nome, " +
+                     "CASE WHEN m.nome_marca IS NOT NULL AND m.nome_marca <> '' THEN m.nome_marca || ' - ' || p.modelo ELSE p.modelo END AS produto_completo " +
+                     "FROM equipamentos e " +
+                     "INNER JOIN produtos p ON e.id_produto = p.id " +
+                     "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+                     "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
+                     "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
+                     "WHERE e.origem_codigo = ? AND e.status_id != 3 AND e.situacao_id = 1 " +
+                     "ORDER BY p.modelo ASC";
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setLong(1, origemCodigo);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Equipamento eq = new Equipamento();
+                    eq.setIdEquipamento(rs.getInt("id_equipamento"));
+                    eq.setIdProduto(rs.getInt("id_produto"));
+                    eq.setCodigoCatalogo(rs.getString("codigo_catalogo"));
+                    eq.setNomeProduto(rs.getString("produto_completo"));
+                    eq.setIdSistema(rs.getString("id_sistema"));
+                    eq.setPatrimonio(rs.getString("patrimonio"));
+                    eq.setNumeroSerie(rs.getString("numero_serie"));
+                    eq.setNomeIdentificador(rs.getString("nome_identificador"));
+                    eq.setOrigemCodigo(rs.getInt("origem_codigo"));
+                    eq.setIpAtual(rs.getString("ip_atual"));
+                    eq.setStatusId(rs.getInt("status_id"));
+                    eq.setSituacaoId(rs.getInt("situacao_id"));
+                    eq.setStatusNome(rs.getString("status_nome"));
+                    eq.setStatusCor(rs.getString("status_cor"));
+                    eq.setSituacaoNome(rs.getString("situacao_nome"));
+                    eq.setUsuarioAtual(rs.getString("usuario_atual"));
+                    
+                    int depId = rs.getInt("departamento_id");
+                    eq.setDepartamentoId(rs.wasNull() ? null : depId);
+
+                    eq.setObservacoes(rs.getString("observacoes"));
+                    eq.setDataCadastro(rs.getString("data_cadastro"));
+                    
+                    lista.add(eq);
+                }
+            }
+        }
+        return lista;
     }
     
 	public Equipamento buscarPorId(int idEquipamento) throws SQLException {

@@ -10,107 +10,102 @@ import java.util.Map;
 public class MovimentacaoEnvioDAO {
 
 	public Long inserir(MovimentacaoEnvio envio, List<Long> idsEquipamentos) throws SQLException {
-        String sqlVerificaEmTransito = "SELECT id_sistema FROM equipamentos " +
-                                     "WHERE id_equipamento = ? AND situacao_id = 3";
+	    String sqlEnvio = "INSERT INTO movimentacao_envio (data_envio, origem_id, destino_id, responsavel, transportadora, codigo_rastreio, data_previsa_entrega, observacoes, status_id, numero_nota) " +
+	                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_envio";
+	    
+	    // Busca a descrição da situação atual do equipamento
+	    String sqlBuscaSituacao = "SELECT s.nome FROM equipamentos e JOIN situacao_equipamento s ON e.situacao_id = s.id WHERE e.id_equipamento = ?";
+	    
+	    // Inclui a coluna status_equipamento_momento no insert
+	    String sqlItem = "INSERT INTO movimentacao_envio_itens (id_envio, id_equipamento, status_equipamento_momento) VALUES (?, ?, ?)";
 
-        String sqlEnvio = "INSERT INTO movimentacao_envio (data_envio, origem_id, destino_id, responsavel, transportadora, codigo_rastreio, data_previsa_entrega, observacoes, status_id, numero_nota) " +
-                          "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_envio";
-        
-        String sqlItem = "INSERT INTO movimentacao_envio_itens (id_envio, id_equipamento) VALUES (?, ?)";
-        
-        String sqlUpdateEquipamento = "UPDATE equipamentos SET situacao_id = 3 WHERE id_equipamento = ?";
+	    // Atualiza a situação do equipamento para 9 (Aguardando Envio)
+	    String sqlAtualizaEquip = "UPDATE equipamentos SET situacao_id = 9 WHERE id_equipamento = ?";
 
-        Connection conn = null;
-        PreparedStatement stmtVerifica = null;
-        PreparedStatement stmtEnvio = null;
-        PreparedStatement stmtItem = null;
-        PreparedStatement stmtUpdate = null;
-        ResultSet rs = null;
-        Long idEnvioGerado = null;
+	    Connection conn = null;
+	    PreparedStatement stmtEnvio = null;
+	    PreparedStatement stmtBuscaSit = null;
+	    PreparedStatement stmtItem = null;
+	    PreparedStatement stmtAtualizaEquip = null;
+	    ResultSet rs = null;
+	    Long idEnvioGerado = null;
 
-        try {
-            conn = Conexao.conectar();
-            conn.setAutoCommit(false);
+	    try {
+	        conn = Conexao.conectar();
+	        conn.setAutoCommit(false);
 
-            // Validação de equipamentos em trânsito
-            stmtVerifica = conn.prepareStatement(sqlVerificaEmTransito);
-            for (Long idEquipamento : idsEquipamentos) {
-                stmtVerifica.setLong(1, idEquipamento);
-                try (ResultSet rsVerifica = stmtVerifica.executeQuery()) {
-                    if (rsVerifica.next()) {
-                        String idSistemaEncontrado = rsVerifica.getString("id_sistema");
-                        throw new SQLException("Atenção: O equipamento com o ID de Sistema '" + idSistemaEncontrado + "' já está em trânsito!");
-                    }
-                }
-            }
+	        stmtEnvio = conn.prepareStatement(sqlEnvio);
+	        stmtEnvio.setDate(1, Date.valueOf(envio.getDataEnvio()));
+	        stmtEnvio.setLong(2, envio.getOrigemId());
+	        stmtEnvio.setLong(3, envio.getDestinoId());
+	        stmtEnvio.setString(4, envio.getResponsavel());
+	        stmtEnvio.setString(5, envio.getTransportadora());
+	        stmtEnvio.setString(6, envio.getCodigoRastreio());
+	        if (envio.getDataPrevisaoEntrega() != null) {
+	            stmtEnvio.setDate(7, Date.valueOf(envio.getDataPrevisaoEntrega()));
+	        } else {
+	            stmtEnvio.setNull(7, Types.DATE);
+	        }
+	        stmtEnvio.setString(8, envio.getObservacoes());
+	        stmtEnvio.setLong(9, envio.getStatusId() != null ? envio.getStatusId() : 1L);
+	        stmtEnvio.setString(10, envio.getNumeroNota());
 
-            stmtEnvio = conn.prepareStatement(sqlEnvio);
-            stmtEnvio.setDate(1, Date.valueOf(envio.getDataEnvio()));
-            stmtEnvio.setLong(2, envio.getOrigemId());
-            stmtEnvio.setLong(3, envio.getDestinoId());
-            stmtEnvio.setString(4, envio.getResponsavel());
-            stmtEnvio.setString(5, envio.getTransportadora());
-            stmtEnvio.setString(6, envio.getCodigoRastreio());
-            if (envio.getDataPrevisaoEntrega() != null) {
-                stmtEnvio.setDate(7, Date.valueOf(envio.getDataPrevisaoEntrega()));
-            } else {
-                stmtEnvio.setNull(7, Types.DATE);
-            }
-            stmtEnvio.setString(8, envio.getObservacoes());
-            stmtEnvio.setLong(9, envio.getStatusId() != null ? envio.getStatusId() : 2L);
-            stmtEnvio.setString(10, envio.getNumeroNota());
+	        rs = stmtEnvio.executeQuery();
+	        if (rs.next()) {
+	            idEnvioGerado = rs.getLong(1);
+	        }
+	        
+	        // Grava o histórico inicial
+	        String sqlHistInserir = "INSERT INTO movimentacao_historico (id_envio, status_id, observacao) VALUES (?, ?, ?)";
+	        try (PreparedStatement stmtHist = conn.prepareStatement(sqlHistInserir)) {
+	            stmtHist.setLong(1, idEnvioGerado);
+	            stmtHist.setLong(2, envio.getStatusId() != null ? envio.getStatusId() : 1L);
+	            stmtHist.setString(3, "Envio ID #" + idEnvioGerado + " criado e aguardando envio.");
+	            stmtHist.executeUpdate();
+	        }
 
-            rs = stmtEnvio.executeQuery();
-            if (rs.next()) {
-                idEnvioGerado = rs.getLong(1);
-            }
-            
-            // Grava o histórico inicial
-            String sqlHistInserir = "INSERT INTO movimentacao_historico (id_envio, status_id, observacao) VALUES (?, ?, ?)";
-            try (PreparedStatement stmtHist = conn.prepareStatement(sqlHistInserir)) {
-                stmtHist.setLong(1, idEnvioGerado);
-                stmtHist.setLong(2, envio.getStatusId() != null ? envio.getStatusId() : 2L);
-                stmtHist.setString(3, "Envio ID #" + idEnvioGerado + " registrado e enviado.");
-                stmtHist.executeUpdate();
-            }
+	        stmtBuscaSit = conn.prepareStatement(sqlBuscaSituacao);
+	        stmtItem = conn.prepareStatement(sqlItem);
+	        stmtAtualizaEquip = conn.prepareStatement(sqlAtualizaEquip);
 
-            stmtItem = conn.prepareStatement(sqlItem);
-            stmtUpdate = conn.prepareStatement(sqlUpdateEquipamento);
+	        for (Long idEquipamento : idsEquipamentos) {
+	            // 1. Descobre o nome da situação atual em que o equipamento se encontrava
+	            stmtBuscaSit.setLong(1, idEquipamento);
+	            String situacaoMomento = "Disponível";
+	            try (ResultSet rsSit = stmtBuscaSit.executeQuery()) {
+	                if (rsSit.next()) {
+	                    situacaoMomento = rsSit.getString("nome");
+	                }
+	            }
 
-            for (Long idEquipamento : idsEquipamentos) {
-                stmtItem.setLong(1, idEnvioGerado);
-                stmtItem.setLong(2, idEquipamento);
-                stmtItem.addBatch();
+	            // 2. Insere na tabela de itens gravando o status do momento
+	            stmtItem.setLong(1, idEnvioGerado);
+	            stmtItem.setLong(2, idEquipamento);
+	            stmtItem.setString(3, situacaoMomento);
+	            stmtItem.addBatch();
 
-                stmtUpdate.setLong(1, idEquipamento);
-                stmtUpdate.addBatch();
-            }
+	            // 3. Atualiza o status do equipamento para 9 (Aguardando Envio)
+	            stmtAtualizaEquip.setLong(1, idEquipamento);
+	            stmtAtualizaEquip.addBatch();
+	        }
 
-            stmtItem.executeBatch();
-            stmtUpdate.executeBatch();
+	        stmtItem.executeBatch();
+	        stmtAtualizaEquip.executeBatch();
+	        
+	        conn.commit();
+	        
+	    } catch (SQLException e) {
+	        if (conn != null) { try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); } }
+	        throw e;
+	    } finally {
+	        if (stmtBuscaSit != null) try { stmtBuscaSit.close(); } catch (Exception e) {}
+	        if (stmtItem != null) try { stmtItem.close(); } catch (Exception e) {}
+	        if (stmtAtualizaEquip != null) try { stmtAtualizaEquip.close(); } catch (Exception e) {}
+	        if (conn != null) { try { conn.setAutoCommit(true); conn.close(); } catch (SQLException e) { e.printStackTrace(); } }
+	    }
 
-            conn.commit();
-        } catch (SQLException e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
-            }
-            throw e;
-        } finally {
-            try { if (rs != null) rs.close(); } catch (SQLException e) { e.printStackTrace(); }
-            try { if (stmtVerifica != null) stmtVerifica.close(); } catch (SQLException e) { e.printStackTrace(); }
-            try { if (stmtEnvio != null) stmtEnvio.close(); } catch (SQLException e) { e.printStackTrace(); }
-            try { if (stmtItem != null) stmtItem.close(); } catch (SQLException e) { e.printStackTrace(); }
-            try { if (stmtUpdate != null) stmtUpdate.close(); } catch (SQLException e) { e.printStackTrace(); }
-            try {
-                if (conn != null) {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                }
-            } catch (SQLException e) { e.printStackTrace(); }
-        }
-
-        return idEnvioGerado;
-    }
+	    return idEnvioGerado;
+	}
     
 	public List<MovimentacaoEnvio> listarTodos() throws SQLException {
 	    String sql = "SELECT e.*, " +
@@ -207,67 +202,71 @@ public class MovimentacaoEnvioDAO {
 	    }
 	    return lista;
 	}
-    public void confirmarRecebimento(Long idEnvio, Long destinoId) throws SQLException {
-        String sqlBuscaCodigoFilial = "SELECT origem_codigo FROM filiais WHERE id_filial = ?";
-        String sqlBuscaItens = "SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?";
-        String sqlAtualizaEnvioStatus = "UPDATE movimentacao_envio SET status_id = 3 WHERE id_envio = ?";
-        String sqlAtualizaEquipamento = "UPDATE equipamentos SET situacao_id = 1, origem_codigo = ? WHERE id_equipamento = ?";
+	public void confirmarRecebimento(Long idEnvio, Long destinoId) throws SQLException {
+	    // 1. Busca o 'origem_codigo' real da filial de destino para atualizar o equipamento corretamente
+	    String sqlBuscaCodigoFilial = "SELECT origem_codigo FROM filiais WHERE id_filial = ?";
+	    String sqlBuscaItens = "SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?";
+	    String sqlAtualizaEnvioStatus = "UPDATE movimentacao_envio SET status_id = 3 WHERE id_envio = ?"; // 3 = Recebido
+	    
+	    // 2. Atualiza a situação para 1 (Disponível na nova filial) ou 2 (Em Uso) e atualiza o 'origem_codigo' para o código da nova filial
+	    String sqlAtualizaEquipamento = "UPDATE equipamentos SET situacao_id = 1, origem_codigo = ? WHERE id_equipamento = ?";
 
-        Connection conn = null;
-        try {
-            conn = Conexao.conectar();
-            conn.setAutoCommit(false);
+	    Connection conn = null;
+	    try {
+	        conn = Conexao.conectar();
+	        conn.setAutoCommit(false);
 
-            Long origemCodigoReal = null;
-            try (PreparedStatement stmtFilial = conn.prepareStatement(sqlBuscaCodigoFilial)) {
-                stmtFilial.setLong(1, destinoId);
-                try (ResultSet rs = stmtFilial.executeQuery()) {
-                    if (rs.next()) {
-                        origemCodigoReal = rs.getLong("origem_codigo");
-                    } else {
-                        throw new SQLException("Filial de destino não encontrada.");
-                    }
-                }
-            }
+	        Long origemCodigoDestino = null;
+	        try (PreparedStatement stmtFilial = conn.prepareStatement(sqlBuscaCodigoFilial)) {
+	            stmtFilial.setLong(1, destinoId);
+	            try (ResultSet rs = stmtFilial.executeQuery()) {
+	                if (rs.next()) {
+	                    origemCodigoDestino = rs.getLong("origem_codigo");
+	                } else {
+	                    throw new SQLException("Filial de destino não encontrada.");
+	                }
+	            }
+	        }
 
-            try (PreparedStatement stmtUpEnvio = conn.prepareStatement(sqlAtualizaEnvioStatus)) {
-                stmtUpEnvio.setLong(1, idEnvio);
-                stmtUpEnvio.executeUpdate();
-            }
+	        // Atualiza o status do envio para Recebido (ID 3)
+	        try (PreparedStatement stmtUpEnvio = conn.prepareStatement(sqlAtualizaEnvioStatus)) {
+	            stmtUpEnvio.setLong(1, idEnvio);
+	            stmtUpEnvio.executeUpdate();
+	        }
 
-            // Registra a baixa no histórico
-            String sqlHistRecebimento = "INSERT INTO movimentacao_historico (id_envio, status_id, observacao) VALUES (?, ?, ?)";
-            try (PreparedStatement stmtHist = conn.prepareStatement(sqlHistRecebimento)) {
-                stmtHist.setLong(1, idEnvio);
-                stmtHist.setLong(2, 3L); 
-                stmtHist.setString(3, "Recebimento do envio ID #" + idEnvio + " confirmado.");
-                stmtHist.executeUpdate();
-            }
+	        // Registra a baixa no histórico
+	        String sqlHistRecebimento = "INSERT INTO movimentacao_historico (id_envio, status_id, observacao) VALUES (?, ?, ?)";
+	        try (PreparedStatement stmtHist = conn.prepareStatement(sqlHistRecebimento)) {
+	            stmtHist.setLong(1, idEnvio);
+	            stmtHist.setLong(2, 3L); 
+	            stmtHist.setString(3, "Recebimento do envio ID #" + idEnvio + " confirmado com sucesso na filial.");
+	            stmtHist.executeUpdate();
+	        }
 
-            try (PreparedStatement stmtBusca = conn.prepareStatement(sqlBuscaItens);
-                 PreparedStatement stmtUpEq = conn.prepareStatement(sqlAtualizaEquipamento)) {
-                
-                stmtBusca.setLong(1, idEnvio);
-                try (ResultSet rs = stmtBusca.executeQuery()) {
-                    while (rs.next()) {
-                        Long idEquipamento = rs.getLong("id_equipamento");
-                        stmtUpEq.setLong(1, origemCodigoReal);
-                        stmtUpEq.setLong(2, idEquipamento);
-                        stmtUpEq.addBatch();
-                    }
-                    stmtUpEq.executeBatch();
-                }
-            }
+	        // Atualiza cada item vinculado ao envio
+	        try (PreparedStatement stmtBusca = conn.prepareStatement(sqlBuscaItens);
+	             PreparedStatement stmtUpEq = conn.prepareStatement(sqlAtualizaEquipamento)) {
+	            
+	            stmtBusca.setLong(1, idEnvio);
+	            try (ResultSet rs = stmtBusca.executeQuery()) {
+	                while (rs.next()) {
+	                    Long idEquipamento = rs.getLong("id_equipamento");
+	                    stmtUpEq.setLong(1, origemCodigoDestino); // Aplica o novo origem_codigo da filial de destino
+	                    stmtUpEq.setLong(2, idEquipamento);
+	                    stmtUpEq.addBatch();
+	                }
+	                stmtUpEq.executeBatch();
+	            }
+	        }
 
-            conn.commit();
-        } catch (SQLException e) {
-            if (conn != null) { try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); } }
-            throw e;
-        } finally {
-            if (conn != null) { try { conn.setAutoCommit(true); conn.close(); } catch (SQLException e) { e.printStackTrace(); } }
-        }
-    }
-
+	        conn.commit();
+	    } catch (SQLException e) {
+	        if (conn != null) { try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); } }
+	        throw e;
+	    } finally {
+	        if (conn != null) { try { conn.setAutoCommit(true); conn.close(); } catch (SQLException e) { e.printStackTrace(); } }
+	    }
+	}
     public void cancelarEnvio(Long idEnvio) throws SQLException {
         String sqlBuscaEnvio = "SELECT origem_id FROM movimentacao_envio WHERE id_envio = ?";
         String sqlBuscaCodigoFilial = "SELECT origem_codigo FROM filiais WHERE id_filial = ?";
@@ -341,4 +340,37 @@ public class MovimentacaoEnvioDAO {
             if (conn != null) { try { conn.setAutoCommit(true); conn.close(); } catch (SQLException e) { e.printStackTrace(); } }
         }
     }
+    
+    public void efetivarEnvio(Long idEnvio) throws SQLException {
+        String sqlUpdateEnvio = "UPDATE movimentacao_envio SET status_id = 2 WHERE id_envio = ?";
+        String sqlUpdateEquip = "UPDATE equipamentos SET situacao_id = 3 WHERE id_equipamento IN (SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?)";
+        String sqlHist = "INSERT INTO movimentacao_historico (id_envio, status_id, observacao) VALUES (?, 2, ?)";
+
+        try (Connection conn = Conexao.conectar()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement stmt1 = conn.prepareStatement(sqlUpdateEnvio);
+                 PreparedStatement stmt2 = conn.prepareStatement(sqlUpdateEquip);
+                 PreparedStatement stmt3 = conn.prepareStatement(sqlHist)) {
+                
+                // 1. Muda status do envio para 2 (Em Trânsito)
+                stmt1.setLong(1, idEnvio);
+                stmt1.executeUpdate();
+                
+                // 2. Muda situação dos equipamentos para 3 (Em Trânsito)
+                stmt2.setLong(1, idEnvio);
+                stmt2.executeUpdate();
+                
+                // 3. Registra no histórico
+                stmt3.setLong(1, idEnvio);
+                stmt3.setString(2, "Envio efetivado. Equipamentos em trânsito.");
+                stmt3.executeUpdate();
+                
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+        }
+    }
+    
 }

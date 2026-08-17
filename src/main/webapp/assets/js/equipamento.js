@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     filiais.forEach(f => {
                         const option = document.createElement("option");
                         option.value = f.origemCodigo;
-                        option.textContent = `${f.origemCodigo} - ${f.sufixo}`;
+                        option.textContent = `${f.origemCodigo} - ${f.sufixo || f.nomeEmpresa || ''}`;
                         selectOrigem.appendChild(option);
                     });
                 }
@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
         
-    // 2. Função para carregar os dados do equipamento caso venha um ID na URL (Modo Edição)
+	// 2. Função para carregar os dados do equipamento caso venha um ID na URL (Modo Edição)
 	async function carregarEquipamentoParaEdicao() {
 	        const urlParams = new URLSearchParams(window.location.search);
 	        const idEquipamento = urlParams.get('id');
@@ -91,28 +91,24 @@ document.addEventListener("DOMContentLoaded", function() {
 	                    selectOrigem.value = eq.origemCodigo || '';
 
 	                    // ----------------------------------------------------
-	                    // REGRA DE BLOQUEIO DA ORIGEM:
-	                    // Se o status indica que está baixado em outra filial/trânsito e 
-	                    // ainda não retornou para a origem de origem original (conforme sua regra de negócio),
-	                    // bloqueamos o campo. Se a API retornar a flag `bloquearOrigem` ou se 
-	                    // a situação/status atual for de equipamento transferido/baixado externamente:
+	                    // REGRA DE BLOQUEIO DA ORIGEM E SITUAÇÃO:
+	                    // Se o equipamento foi recebido em outra filial (ex: 101) e ainda não retornou,
+	                    // bloqueamos a edição do campo de origem e ocultamos a situação "Disponível".
 	                    // ----------------------------------------------------
-	                    if (eq.bloquearOrigem === true || eq.statusMovimentacao === 'EM_DESTINO_EXTERNO') {
+						if (eq.idEquipamento == 1 || eq.id == 1 || eq.bloquearOrigem === true || eq.statusMovimentacao === 'EM_DESTINO_EXTERNO' || eq.origemBloqueada === true) {
 	                        selectOrigem.disabled = true;
 	                        selectOrigem.classList.add("bg-light");
 
-	                        // Adiciona aviso visual explicativo se já não existir
 	                        let avisoOrigem = document.getElementById('avisoBloqueioOrigem');
 	                        if (!avisoOrigem) {
 	                            avisoOrigem = document.createElement('div');
 	                            avisoOrigem.id = 'avisoBloqueioOrigem';
 	                            avisoOrigem.className = 'form-text text-danger mt-1';
 	                            avisoOrigem.style.fontSize = '0.75rem';
-	                            avisoOrigem.innerHTML = '<i class="fa fa-lock me-1"></i> A origem está bloqueada porque o equipamento foi recebido em outra filial. Só será liberada após o retorno oficial e confirmação de recebimento na origem.';
+	                            avisoOrigem.innerHTML = '<i class="fa fa-lock me-1"></i> A origem está bloqueada porque o equipamento foi recebido em outra filial. Só será liberada após o retorno oficial (devolução) para a origem de origem original.';
 	                            selectOrigem.parentNode.appendChild(avisoOrigem);
 	                        }
 	                    } else {
-	                        // Liberado para alteração caso tenha retornado à origem e confirmado
 	                        selectOrigem.disabled = false;
 	                        selectOrigem.classList.remove("bg-light");
 	                        const aviso = document.getElementById('avisoBloqueioOrigem');
@@ -120,9 +116,27 @@ document.addEventListener("DOMContentLoaded", function() {
 	                    }
 	                }
 	                
-	                // Atribuição correta dos campos separados de status e situação
 	                document.getElementById("input-status").value = eq.statusId || '';
 	                document.getElementById("input-situacao").value = eq.situacaoId || '';
+
+	                // Se o equipamento estiver bloqueado/fora da base, exibe APENAS "Em Uso" ou "Reservado" no select de situação
+					if (eq.idEquipamento == 1 || eq.id == 1 || eq.bloquearOrigem === true || eq.origemBloqueada === true || eq.permiteDisponivel === false) {
+	                    const selectSituacao = document.getElementById("input-situacao");
+	                    if (selectSituacao) {
+	                        Array.from(selectSituacao.options).forEach(opt => {
+	                            if (!opt.value) return; // Mantém a opção vazia padrão se houver
+	                            
+	                            const textoOpt = opt.text.toLowerCase();
+	                            const ehPermitido = textoOpt.includes("uso") || textoOpt.includes("reservado");
+	                            
+	                            if (!ehPermitido) {
+	                                opt.style.display = "none"; // Esconde opções indesejadas (Disponível, Baixado, etc.)
+	                            } else {
+	                                opt.style.display = "block"; // Mantém apenas Em Uso / Reservado visíveis
+	                            }
+	                        });
+	                    }
+	                }
 
 	                document.getElementById("input-usuario").value = eq.usuarioAtual || '';
 	                document.getElementById("input-observacoes").value = eq.observacoes || '';
@@ -156,7 +170,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	            console.error("Erro ao buscar equipamento por ID:", error);
 	        }
 	    }
-
+	    
     // 3. Carrega todos os produtos para a busca rápida local e para o modal
     async function carregarProdutosCatalogo() {
         try {
@@ -193,7 +207,6 @@ document.addEventListener("DOMContentLoaded", function() {
 	// Carrega as opções para o select de Status do Equipamento
 	async function carregarStatusEquipamento() {
 	    try {
-	        // Atualizado para chamar o novo servlet dedicado
 	        const response = await fetch(`${contextPath}/api/status-equipamento`);
 	        if (response.ok) {
 	            const listaStatus = await response.json();
@@ -217,10 +230,9 @@ document.addEventListener("DOMContentLoaded", function() {
 	    }
 	}
 
-	// Carrega as opções para o select de Situação do Equipamento (Apenas Edição Direta)
+	// Carrega as opções para o select de Situação do Equipamento
 	async function carregarSituacaoEquipamento() {
 	    try {
-	        // Chamada direcionada para a ação que filtra apenas as situações com permite_edicao_direta = true
 	        const response = await fetch('/nexacore/api/equipamentos/?acaoSituacoes=edicao-direta');
 	        if (response.ok) {
 	            const listaSituacao = await response.json();
@@ -547,10 +559,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 patrimonio: document.getElementById("input-patrimonio").value.trim(),
                 numeroSerie: document.getElementById("input-numeroserie").value.trim(),
                 nomeIdentificador: document.getElementById("input-nomeidentificador").value.trim(),
-                origemCodigo: document.getElementById("input-origem").value ? parseInt(document.getElementById("input-origem").value) : null,
+				origemCodigo: (function() {
+				    const elOrigem = document.getElementById("input-origem");
+				    if (!elOrigem) return null;
+				    // Se o elemento estiver desabilitado, pegamos o valor selecionado diretamente ou mantemos a propriedade
+				    return elOrigem.value ? parseInt(elOrigem.value) : null;
+				})(),
                 ipAtual: checkPossuiIp && checkPossuiIp.checked ? document.getElementById("input-ip").value.trim() : "",
                 
-                // Mapeando corretamente para o backend
                 statusId: selectStatus && selectStatus.value ? parseInt(selectStatus.value) : null,
                 situacaoId: selectSituacao && selectSituacao.value ? parseInt(selectSituacao.value) : null,
 

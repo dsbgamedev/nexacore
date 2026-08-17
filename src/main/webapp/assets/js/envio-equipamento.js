@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", function() {
         inputDataEnvio.value = hoje;
     }
 
-    // 2. Carregar o select de Filiais (Origem e Destino)
+	// 2. Carregar o select de Filiais (Origem e Destino)
     carregarFiliais();
 
     // 3. Evento do botão que abre o modal de seleção de equipamentos
@@ -40,9 +40,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	        checks.forEach(chk => {
 	            const eq = JSON.parse(chk.getAttribute("data-json"));
 	            
-	            // CAPTURA DIRETA DA CHAVE CORRETA ENCONTRADA NO CONSOLE: origemCodigo
 	            let filialEq = eq.origemCodigo || eq.idFilialOrigem || eq.filialId || eq.empresaId || eq.idFilial || eq.idEmpresa;
-
 	            eq.filialIdPadrao = filialEq;
 
 	            if (primeiraFilialEquipamento && filialEq && primeiraFilialEquipamento !== filialEq) {
@@ -75,10 +73,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
 	        atualizarTabelaPrincipalItens();
 
-	        // AUTOMATIZAÇÃO E PREENCHIMENTO DA ORIGEM
 	        const selectOrigem = document.getElementById("origemId");
 	        if (selectOrigem && primeiraFilialEquipamento) {
-	            // Percorre as opções do select para encontrar a que corresponde ao código da origem (ex: "161")
 	            for (let i = 0; i < selectOrigem.options.length; i++) {
 	                let optText = selectOrigem.options[i].text;
 	                let optVal = selectOrigem.options[i].value;
@@ -90,12 +86,11 @@ document.addEventListener("DOMContentLoaded", function() {
 	            }
 	            
 	            if (selectOrigem.value) {
-	                selectOrigem.disabled = true; // TRAVA O CAMPO PARA NINGUÉM MEXER
+	                selectOrigem.disabled = true;
 	                selectOrigem.dispatchEvent(new Event('change'));
 	            }
 	        }
 	        
-	        // Fechar modal
 	        const modalEl = document.getElementById('modalSelecionarEquipamento');
 	        const modal = bootstrap.Modal.getInstance(modalEl);
 	        if (modal) modal.hide();
@@ -179,7 +174,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 // Função para buscar filiais e popular os selects de origem e destino
 function carregarFiliais() {
-    fetch(contextPath + '/api/empresas')
+    return fetch(contextPath + '/api/empresas')
         .then(res => res.json())
         .then(data => {
             const selectOrigem = document.getElementById("origemId");
@@ -196,27 +191,52 @@ function carregarFiliais() {
         .catch(err => console.error("Erro ao carregar filiais:", err));
 }
 
-// Função para buscar equipamentos disponíveis para o modal
+// Função para buscar equipamentos disponíveis ou o item específico de devolução para o modal
 function carregarEquipamentosDisponiveis() {
-    fetch(contextPath + '/api/equipamentos')
+    const urlParams = new URLSearchParams(window.location.search);
+    const tipo = urlParams.get('tipo');
+    const idEquipamentoDevolucao = urlParams.get('idEquipamento');
+
+    let endpoint = contextPath + '/api/equipamentos';
+    
+    // Se for uma devolução, busca estritamente o equipamento específico pelo ID da URL
+    if (tipo === 'devolucao' && idEquipamentoDevolucao) {
+        endpoint = `${contextPath}/api/equipamentos?id=${idEquipamentoDevolucao}`;
+    }
+
+    fetch(endpoint)
         .then(res => res.json())
         .then(data => {
             const tbody = document.getElementById("tabelaModalEquipamentosBody");
             if (!tbody) return;
             tbody.innerHTML = "";
 
-            if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhum equipamento disponível encontrado.</td></tr>';
+            const lista = Array.isArray(data) ? data : [data];
+
+            if (!lista || lista.length === 0 || !lista[0]) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhum equipamento encontrado.</td></tr>';
                 return;
             }
 
-            const equipamentosValidos = data.filter(eq => {
-                const situacao = eq.situacaoId !== undefined ? eq.situacaoId : eq.idSituacao;
-                return situacao !== 3 && situacao !== 7;
+            // Filtragem rigorosa para o modal de Envio e Devolução
+            const equipamentosValidos = lista.filter(eq => {
+                if (tipo === 'devolucao' && idEquipamentoDevolucao) {
+                    return eq.idEquipamento == idEquipamentoDevolucao;
+                }
+                
+                // Mapeia o ID e o texto da situação do equipamento de forma segura
+                const situacaoId = eq.situacaoId !== undefined ? Number(eq.situacaoId) : (eq.situacao && eq.situacao.id ? Number(eq.situacao.id) : 0);
+                const situacaoTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && eq.situacao.nome) || '').toLowerCase();
+
+                // Regra estrita para o Envio: Deve ser obrigatoriamente Disponível 
+                // (ID 1 ou texto contendo 'disponível', garantindo que não contenha 'uso' ou 'reservado')
+                const ehDisponivel = (situacaoId === 1) || (situacaoTexto.includes("disponível") && !situacaoTexto.includes("uso") && !situacaoTexto.includes("reservado"));
+
+                return ehDisponivel;
             });
 
             if (equipamentosValidos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhum equipamento disponível para envio no momento.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhum equipamento com situação Disponível encontrado para esta operação.</td></tr>';
                 return;
             }
 
@@ -228,9 +248,9 @@ function carregarEquipamentosDisponiveis() {
                                 || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
                                 || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
 
-                    let statusBadge = eq.statusAtual || eq.status || 'Ativo';
+                    let statusBadge = (tipo === 'devolucao') ? 'Em Devolução' : (eq.statusAtual || eq.status || 'Ativo');
+                    let badgeClass = (tipo === 'devolucao') ? 'bg-warning text-dark' : 'bg-success';
 
-                    // ATRIBUIÇÃO DA PROPRIEDADE CORRETA CAPTURADA DO LOG (`origemCodigo`)
                     eq.filialIdPadrao = eq.origemCodigo || eq.idFilialOrigem || eq.filialId || eq.empresaId;
 
                     let tr = document.createElement("tr");
@@ -241,7 +261,7 @@ function carregarEquipamentosDisponiveis() {
                         <td>${nomeCpu}</td>
                         <td>${produto}</td>
                         <td>${eq.numeroSerie || '-'}</td>
-                        <td><span class="badge bg-success">${statusBadge}</span></td>
+                        <td><span class="badge ${badgeClass}">${statusBadge}</span></td>
                     `;
                     tbody.appendChild(tr);
                 }
@@ -275,7 +295,7 @@ function atualizarTabelaPrincipalItens() {
             <td>${nomeCpu}</td>
             <td>${produto}</td>
             <td>${eq.numeroSerie || '-'}</td>
-            <td><span class="badge bg-warning text-dark">Em Trânsito (Previsto)</span></td>
+            <td><span class="badge bg-warning text-dark">Aguardando Envio</span></td>
             <td class="text-center">
                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="removerItemEnvio(${id})">
                     <i class="fa fa-trash"></i>

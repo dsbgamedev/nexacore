@@ -130,6 +130,11 @@ public class EnvioEquipamentoServlet extends HttpServlet {
         try {
             BufferedReader reader = req.getReader();
             EnvioPayload payload = gson.fromJson(reader, EnvioPayload.class);
+            if (payload == null) {
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                out.print("{\"sucesso\": false, \"mensagem\": \"Dados do envio não informados (Payload vazio).\"}");
+                return;
+            }
 
             MovimentacaoEnvio envio = new MovimentacaoEnvio();
             envio.setDataEnvio(LocalDate.parse(payload.dataEnvio));
@@ -146,7 +151,7 @@ public class EnvioEquipamentoServlet extends HttpServlet {
             envio.setObservacoes(payload.observacoes);
             
             // Define o status da movimentação (Se não vier preenchido do front, assume 2 = Enviado por padrão)
-            envio.setStatusId(payload.statusId != null ? payload.statusId : 2L);
+            envio.setStatusId(payload.statusId != null ? payload.statusId : 1L);
 
             Long idGerado = dao.inserir(envio, payload.equipamentosIds);
 
@@ -164,25 +169,42 @@ public class EnvioEquipamentoServlet extends HttpServlet {
         }
     }
 
-    // 3. PUT: Realiza a baixa / confirmação de recebimento do envio
+ // 3. PUT: Realiza a efetivação do envio (em trânsito) ou baixa/confirmação de recebimento
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         resp.setContentType("application/json;charset=UTF-8");
         PrintWriter out = resp.getWriter();
 
         try {
+            String acao = req.getParameter("acao");
             String idEnvioStr = req.getParameter("idEnvio");
-            String destinoIdStr = req.getParameter("destinoId");
 
-            if (idEnvioStr == null || destinoIdStr == null) {
+            if (idEnvioStr == null || idEnvioStr.isEmpty()) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                out.print("{\"sucesso\": false, \"mensagem\": \"Parâmetros inválidos para baixa.\"}");
+                out.print("{\"sucesso\": false, \"mensagem\": \"ID do envio não informado.\"}");
                 return;
             }
 
             Long idEnvio = Long.parseLong(idEnvioStr);
-            Long destinoId = Long.parseLong(destinoIdStr);
 
+            // Cenário 1: Efetivar Envio (Coloca em trânsito e muda status dos equipamentos)
+            if ("efetivar".equals(acao)) {
+                dao.efetivarEnvio(idEnvio);
+
+                resp.setStatus(HttpServletResponse.SC_OK);
+                out.print("{\"sucesso\": true, \"mensagem\": \"Envio efetivado com sucesso! Os equipamentos estão em trânsito.\"}");
+                return;
+            }
+
+            // Cenário 2: Confirmar Recebimento / Baixa final na filial de destino
+            String destinoIdStr = req.getParameter("destinoId");
+            if (destinoIdStr == null || destinoIdStr.isEmpty()) {
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                out.print("{\"sucesso\": false, \"mensagem\": \"Parâmetros inválidos para baixa. Destino não informado.\"}");
+                return;
+            }
+
+            Long destinoId = Long.parseLong(destinoIdStr);
             dao.confirmarRecebimento(idEnvio, destinoId);
 
             resp.setStatus(HttpServletResponse.SC_OK);
@@ -191,7 +213,7 @@ public class EnvioEquipamentoServlet extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
             resp.setStatus(HttpServletResponse.SC_OK);
-            String msg = e.getMessage() != null ? e.getMessage().replace("\"", "'") : "Erro ao confirmar recebimento";
+            String msg = e.getMessage() != null ? e.getMessage().replace("\"", "'") : "Erro na operação";
             out.print("{\"sucesso\": false, \"mensagem\": \"" + msg + "\"}");
         }
     }
