@@ -267,18 +267,32 @@ public class MovimentacaoEnvioDAO {
 	        if (conn != null) { try { conn.setAutoCommit(true); conn.close(); } catch (SQLException e) { e.printStackTrace(); } }
 	    }
 	}
-    public void cancelarEnvio(Long idEnvio) throws SQLException {
+	public void cancelarEnvio(Long idEnvio) throws SQLException {
+        // 1. Busca a origem_id do envio e os dados dos itens vinculados (incluindo o status que o equipamento tinha no momento)
         String sqlBuscaEnvio = "SELECT origem_id FROM movimentacao_envio WHERE id_envio = ?";
-        String sqlBuscaCodigoFilial = "SELECT origem_codigo FROM filiais WHERE id_filial = ?";
-        String sqlBuscaItens = "SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?";
-        String sqlVoltaEquip = "UPDATE equipamentos SET situacao_id = 1, origem_codigo = ? WHERE id_equipamento = ?";
+        String sqlBuscaItensEnvio = "SELECT iei.id_equipamento, iei.status_equipamento_momento, e.origem_codigo as origem_atual " +
+                                     "FROM movimentacao_envio_itens iei " +
+                                     "JOIN equipamentos e ON iei.id_equipamento = e.id_equipamento " +
+                                     "WHERE iei.id_envio = ?";
+        
+        // 2. Busca a situação (id) na tabela situacao_equipamento com base no nome salvo no momento do envio
+        String sqlBuscaIdSituacaoPorNome = "SELECT id FROM situacao_equipamento WHERE LOWER(nome) = LOWER(?)";
+        
+        // 3. Atualiza o equipamento de volta para a situação e filial de origem originais
+        String sqlVoltaEquip = "UPDATE equipamentos SET situacao_id = ?, origem_codigo = ? WHERE id_equipamento = ?";
+        
+        // 4. Cancela o status do envio (ex: status_id = 4 para Cancelado)
         String sqlCancelaEnvioStatus = "UPDATE movimentacao_envio SET status_id = 4 WHERE id_envio = ?";
+        
+        // 5. Registra o histórico
+        String sqlHistCancelamento = "INSERT INTO movimentacao_historico (id_envio, status_id, observacao) VALUES (?, ?, ?)";
 
         Connection conn = null;
         try {
             conn = Conexao.conectar();
             conn.setAutoCommit(false);
 
+            // Descobre a filial de origem do envio
             Long origemIdOriginal = null;
             try (PreparedStatement stmtOrigem = conn.prepareStatement(sqlBuscaEnvio)) {
                 stmtOrigem.setLong(1, idEnvio);
@@ -291,7 +305,9 @@ public class MovimentacaoEnvioDAO {
                 }
             }
 
+            // Descobre o código da filial de origem (origem_codigo) para retornar o equipamento para o lugar certo
             Long origemCodigoReal = null;
+            String sqlBuscaCodigoFilial = "SELECT origem_codigo FROM filiais WHERE id_filial = ?";
             try (PreparedStatement stmtFilial = conn.prepareStatement(sqlBuscaCodigoFilial)) {
                 stmtFilial.setLong(1, origemIdOriginal);
                 try (ResultSet rs = stmtFilial.executeQuery()) {
@@ -303,32 +319,49 @@ public class MovimentacaoEnvioDAO {
                 }
             }
 
-            try (PreparedStatement stmtBuscaItens = conn.prepareStatement(sqlBuscaItens);
+            // Restaura cada equipamento para o status que ele tinha ANTES do envio
+            try (PreparedStatement stmtBuscaItens = conn.prepareStatement(sqlBuscaItensEnvio);
+                 PreparedStatement stmtBuscaSitId = conn.prepareStatement(sqlBuscaIdSituacaoPorNome);
                  PreparedStatement stmtVolta = conn.prepareStatement(sqlVoltaEquip)) {
                 
                 stmtBuscaItens.setLong(1, idEnvio);
-                try (ResultSet rs = stmtBuscaItens.executeQuery()) {
-                    while (rs.next()) {
-                        Long idEquipamento = rs.getLong("id_equipamento");
-                        stmtVolta.setLong(1, origemCodigoReal);
-                        stmtVolta.setLong(2, idEquipamento);
+                try (ResultSet rsItens = stmtBuscaItens.executeQuery()) {
+                    while (rsItens.next()) {
+                        Long idEquipamento = rsItens.getLong("id_equipamento");
+                        String statusMomento = rsItens.getString("status_equipamento_momento"); // Ex: "Disponível", "Em Uso", etc.
+                        
+                        // Descobre o ID numérico da situação original pelo nome
+                        Long situacaoIdOriginal = 1L; // Fallback padrão caso não ache
+                        if (statusMomento != null && !statusMomento.isEmpty()) {
+                            stmtBuscaSitId.setString(1, statusMomento);
+                            try (ResultSet rsSit = stmtBuscaSitId.executeQuery()) {
+                                if (rsSit.next()) {
+                                    situacaoIdOriginal = rsSit.getLong("id");
+                                }
+                            }
+                        }
+
+                        // Aplica o estorno: devolve para a situação original e para a filial de origem correta
+                        stmtVolta.setLong(1, situacaoIdOriginal);
+                        stmtVolta.setLong(2, origemCodigoReal);
+                        stmtVolta.setLong(3, idEquipamento);
                         stmtVolta.addBatch();
                     }
                     stmtVolta.executeBatch();
                 }
             }
 
+            // Altera o status do envio para Cancelado (ID 4)
             try (PreparedStatement stmtCancela = conn.prepareStatement(sqlCancelaEnvioStatus)) {
                 stmtCancela.setLong(1, idEnvio);
                 stmtCancela.executeUpdate();
             }
 
-            // Registra o cancelamento no histórico
-            String sqlHistCancelamento = "INSERT INTO movimentacao_historico (id_envio, status_id, observacao) VALUES (?, ?, ?)";
+            // Registra no histórico do envio
             try (PreparedStatement stmtHist = conn.prepareStatement(sqlHistCancelamento)) {
                 stmtHist.setLong(1, idEnvio);
                 stmtHist.setLong(2, 4L); 
-                stmtHist.setString(3, "Envio ID #" + idEnvio + " foi cancelado.");
+                stmtHist.setString(3, "Envio ID #" + idEnvio + " foi cancelado e os equipamentos retornaram à origem.");
                 stmtHist.executeUpdate();
             }
 
@@ -340,7 +373,6 @@ public class MovimentacaoEnvioDAO {
             if (conn != null) { try { conn.setAutoCommit(true); conn.close(); } catch (SQLException e) { e.printStackTrace(); } }
         }
     }
-    
     public void efetivarEnvio(Long idEnvio) throws SQLException {
         String sqlUpdateEnvio = "UPDATE movimentacao_envio SET status_id = 2 WHERE id_envio = ?";
         String sqlUpdateEquip = "UPDATE equipamentos SET situacao_id = 3 WHERE id_equipamento IN (SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?)";

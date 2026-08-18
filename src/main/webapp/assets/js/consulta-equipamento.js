@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (inputDataEnvio) {
         inputDataEnvio.value = hoje;
     }
+	
 
 	// 2. Carregar o select de Filiais (Origem e Destino)
     carregarFiliais();
@@ -371,18 +372,19 @@ async function pesquisarEquipamentos() {
                     </button>
                 `;
 
-				// O botão de devolução só aparece se o equipamento já foi recebido/alocado em outra ponta 
-				// O botão de devolução só aparece estritamente se o equipamento estiver Baixado (ID 7), 
-                // indicando que o recebimento na outra filial foi confirmado.
-                const ID_SITUACAO_BAIXADO = 7; 
+				// O botão de devolução aparece se estiver "Em Uso" E a origem NÃO for a Matriz (161)
+				const ID_SITUACAO_EM_USO = 2; 
+				const ehEmUso = (sitId === ID_SITUACAO_EM_USO) || (situacaoTexto.toLowerCase().includes('em uso'));
+				const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : 0;
+				const ehMatriz161 = (codigoOrigemAtual === 161);
 
-                if (sitId === ID_SITUACAO_BAIXADO) {
-                    acoesHtml += `
-                        <button type="button" class="btn btn-sm btn-outline-warning" title="Iniciar Devolução" onclick="iniciarDevolucao(${eq.idEquipamento})">
-                            <i class="fas fa-undo"></i>
-                        </button>
-                    `;
-                }
+				if (ehEmUso && !ehMatriz161) {
+				    acoesHtml += `
+				        <button type="button" class="btn btn-sm btn-outline-warning ms-1" title="Iniciar Devolução" onclick="iniciarDevolucao(${eq.idEquipamento})">
+				            <i class="fas fa-undo"></i>
+				        </button>
+				    `;
+				}
             }
 
             const row = `<tr>
@@ -408,108 +410,89 @@ async function pesquisarEquipamentos() {
     }
 }
 
-function carregarFiliais() {
-    return fetch(contextPath + '/api/empresas')
+function carregarEquipamentosDisponiveis() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tipo = urlParams.get('tipo');
+    const idEquipamentoDevolucao = urlParams.get('idEquipamento');
+
+    const selectOrigem = document.getElementById("origemId");
+    let origemCodigoSelecionada = selectOrigem ? selectOrigem.value : "";
+
+    let endpoint = contextPath + '/api/equipamentos?acao=disponiveis-origem';
+    if (origemCodigoSelecionada) {
+        endpoint += `&origemCodigo=${origemCodigoSelecionada}`;
+    }
+
+    if (tipo === 'devolucao' && idEquipamentoDevolucao) {
+        endpoint = `${contextPath}/api/equipamentos?id=${idEquipamentoDevolucao}`;
+    }
+
+    fetch(endpoint)
         .then(res => res.json())
         .then(data => {
-            const selectOrigem = document.getElementById("origemId");
-            const selectDestino = document.getElementById("destinoId");
-            
-            if (!selectOrigem || !selectDestino) return;
+            const tbody = document.getElementById("tabelaModalEquipamentosBody");
+            if (!tbody) return;
+            tbody.innerHTML = "";
 
-            data.forEach(filial => {
-                let texto = filial.origemCodigo + " - " + filial.nomeEmpresa;
-                selectOrigem.add(new Option(texto, filial.idFilial));
-                selectDestino.add(new Option(texto, filial.idFilial));
+            const lista = Array.isArray(data) ? data : [data];
+
+            if (!lista || lista.length === 0 || !lista[0]) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhum equipamento disponível encontrado para esta origem.</td></tr>';
+                return;
+            }
+
+            // -------------------------------------------------------------------------
+            // FILTRAGEM CORRIGIDA: Permite itens Disponíveis (mesmo sem histórico) 
+            // ou itens que venham do fluxo específico de devolução.
+            // -------------------------------------------------------------------------
+            const listaApenasDisponiveis = lista.filter(eq => {
+                if (tipo === 'devolucao') return true; 
+
+                const sitId = eq.situacaoId !== undefined ? eq.situacaoId : (eq.situacao ? eq.situacao.id : null);
+                const sitTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && eq.situacao.nome) || '').toLowerCase();
+
+                // Considera válido para envio se a situação for "Disponível" (ID 1 ou texto)
+                const ehDisponivel = (sitId == 1) || sitTexto.includes("disponível");
+
+                // Garante que o equipamento não está bloqueado ou em trânsito externo atual
+                const naoEstaBloqueado = !eq.bloquearOrigem && !eq.origemBloqueada && eq.statusMovimentacao !== 'EM_DESTINO_EXTERNO';
+
+                return ehDisponivel && naoEstaBloqueado;
+            });
+
+            if (listaApenasDisponiveis.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhum equipamento com status Disponível encontrado.</td></tr>';
+                return;
+            }
+
+            listaApenasDisponiveis.forEach(eq => {
+                if (!equipamentosSelecionadosMap.has(eq.idEquipamento)) {
+                    let nomeCpu = eq.nomeIdentificador || eq.nomeCpu || '-';
+                    let produto = eq.produtoNome || eq.nomeProduto || eq.descricaoProduto || eq.nome 
+                                || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
+                                || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
+
+                    let statusBadge = (tipo === 'devolucao') ? 'Em Devolução' : (eq.statusNome || eq.statusAtual || 'Ativo');
+                    let badgeClass = (tipo === 'devolucao') ? 'bg-warning text-dark' : 'bg-success';
+
+                    eq.filialIdPadrao = eq.origemCodigo || eq.idFilialOrigem || eq.filialId || eq.empresaId;
+
+                    let tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td class="text-center"><input type="checkbox" class="form-check-input check-equip" value="${eq.idEquipamento}" data-json='${JSON.stringify(eq)}'></td>
+                        <td>${eq.idSistema || '-'}</td>
+                        <td>${eq.patrimonio || '-'}</td>
+                        <td>${nomeCpu}</td>
+                        <td>${produto}</td>
+                        <td>${eq.numeroSerie || '-'}</td>
+                        <td><span class="badge ${badgeClass}">${statusBadge}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                }
             });
         })
-        .catch(err => console.error("Erro ao carregar filiais:", err));
+        .catch(err => console.error("Erro ao carregar equipamentos para seleção:", err));
 }
-
-function carregarEquipamentosDisponiveis() {
-const urlParams = new URLSearchParams(window.location.search);
-const tipo = urlParams.get('tipo');
-const idEquipamentoDevolucao = urlParams.get('idEquipamento');
-
-const selectOrigem = document.getElementById("origemId");
-let origemCodigoSelecionada = selectOrigem ? selectOrigem.value : "";
-
-let endpoint = contextPath + '/api/equipamentos?acao=disponiveis-origem';
-if (origemCodigoSelecionada) {
-    endpoint += `&origemCodigo=${origemCodigoSelecionada}`;
-}
-
-if (tipo === 'devolucao' && idEquipamentoDevolucao) {
-    endpoint = `${contextPath}/api/equipamentos?id=${idEquipamentoDevolucao}`;
-}
-
-fetch(endpoint)
-    .then(res => res.json())
-    .then(data => {
-        const tbody = document.getElementById("tabelaModalEquipamentosBody");
-        if (!tbody) return;
-        tbody.innerHTML = "";
-
-        const lista = Array.isArray(data) ? data : [data];
-
-        if (!lista || lista.length === 0 || !lista[0]) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhum equipamento disponível encontrado para esta origem.</td></tr>';
-            return;
-        }
-
-        // -------------------------------------------------------------------------
-        // FILTRAGEM RIGOROSA: Garante que só entram na tela de envio os itens "Disponíveis"
-        // (Situação ID 1 ou texto correspondente), ocultando os que estão em uso, reservados ou baixados.
-        // -------------------------------------------------------------------------
-        const listaApenasDisponiveis = lista.filter(eq => {
-            if (tipo === 'devolucao') return true; // Se for fluxo específico de devolução, ignora o filtro comum
-
-            const sitId = eq.situacaoId !== undefined ? eq.situacaoId : (eq.situacao ? eq.situacao.id : null);
-            const sitTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && eq.situacao.nome) || '').toLowerCase();
-
-            // Considera disponível se o ID for 1 ou se o texto contiver "disponível"
-            const ehDisponivel = (sitId == 1) || sitTexto.includes("disponível");
-
-            // Garante também que não está bloqueado ou em trânsito externo
-            const NaoEstaBloqueado = !eq.bloquearOrigem && !eq.origemBloqueada && eq.statusMovimentacao !== 'EM_DESTINO_EXTERNO';
-
-            return ehDisponivel && NaoEstaBloqueado;
-        });
-
-        if (listaApenasDisponiveis.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhum equipamento com status Disponível encontrado.</td></tr>';
-            return;
-        }
-
-        listaApenasDisponiveis.forEach(eq => {
-            if (!equipamentosSelecionadosMap.has(eq.idEquipamento)) {
-                let nomeCpu = eq.nomeIdentificador || eq.nomeCpu || '-';
-                let produto = eq.produtoNome || eq.nomeProduto || eq.descricaoProduto || eq.nome 
-                            || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
-                            || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
-
-                let statusBadge = (tipo === 'devolucao') ? 'Em Devolução' : (eq.statusNome || eq.statusAtual || 'Ativo');
-                let badgeClass = (tipo === 'devolucao') ? 'bg-warning text-dark' : 'bg-success';
-
-                eq.filialIdPadrao = eq.origemCodigo || eq.idFilialOrigem || eq.filialId || eq.empresaId;
-
-                let tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td class="text-center"><input type="checkbox" class="form-check-input check-equip" value="${eq.idEquipamento}" data-json='${JSON.stringify(eq)}'></td>
-                    <td>${eq.idSistema || '-'}</td>
-                    <td>${eq.patrimonio || '-'}</td>
-                    <td>${nomeCpu}</td>
-                    <td>${produto}</td>
-                    <td>${eq.numeroSerie || '-'}</td>
-                    <td><span class="badge ${badgeClass}">${statusBadge}</span></td>
-                `;
-                tbody.appendChild(tr);
-            }
-        });
-    })
-    .catch(err => console.error("Erro ao carregar equipamentos para seleção:", err));
-}
-
 function atualizarTabelaPrincipalItens() {
     const tbody = document.getElementById("corpoTabelaItens");
     if (!tbody) return;
@@ -556,3 +539,61 @@ function removerItemEnvio(id) {
         }
     }
 }
+
+// Função global para excluir equipamento
+async function confirmarExclusaoEquipamento(idEquipamento) {
+    const confirmado = await ModalService.confirm(
+        "Confirmar Inativação", 
+        "Deseja realmente inativar este equipamento? Ele sairá da listagem ativa e o histórico será preservado."
+    );
+    
+    if (confirmado) {
+        try {
+            const response = await fetch(`${contextPath}/api/equipamentos?id=${idEquipamento}`, {
+                method: 'DELETE'
+            });
+
+            // Lê o texto primeiro para evitar erro caso o backend retorne vazio
+            const textoResposta = await response.text();
+            let resultado = {};
+            
+            try {
+                resultado = textoResposta ? JSON.parse(textoResposta) : {};
+            } catch (e) {
+                resultado = { mensagem: textoResposta };
+            }
+
+            if (!response.ok) {
+                throw new Error(resultado.mensagem || "Não foi possível inativar o equipamento.");
+            }
+
+            // Atualiza a listagem da tela
+            if (typeof pesquisarEquipamentos === 'function') {
+                pesquisarEquipamentos();
+            } else {
+                location.reload();
+            }
+            
+            if (typeof ModalService.success === 'function') {
+                ModalService.success("Sucesso", resultado.mensagem || "Equipamento inativado com sucesso.");
+            }
+        } catch (error) {
+            console.error("Erro na inativação:", error);
+            if (typeof ModalService !== 'undefined' && ModalService.error) {
+                ModalService.error("Atenção", error.message);
+            } else {
+                alert(error.message);
+            }
+        }
+    }
+
+}
+/**
+	 * Função global chamada pelo clique no botão de devolução na tela de consulta.
+	 * Redireciona para a página de movimentação/envio com o parâmetro de tipo='devolucao'
+	 */
+	// Função global para iniciar a devolução de um equipamento em uso
+	function iniciarDevolucao(idEquipamento) {
+	    // CORREÇÃO: Altere de 'movimentacao-envio.jsp' para 'envio-equipamento.jsp'
+	    window.location.href = `${contextPath}/jsp/envio-equipamento.jsp?tipo=devolucao&idEquipamento=${idEquipamento}`;
+	}

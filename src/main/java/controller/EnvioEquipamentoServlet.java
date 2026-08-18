@@ -136,22 +136,43 @@ public class EnvioEquipamentoServlet extends HttpServlet {
                 return;
             }
 
+            // Verifica se a requisição veio indicando devolução via parâmetro na URL
+            String tipoParam = req.getParameter("tipo");
+            boolean ehDevolucao = "devolucao".equals(tipoParam);
+
             MovimentacaoEnvio envio = new MovimentacaoEnvio();
             envio.setDataEnvio(LocalDate.parse(payload.dataEnvio));
             envio.setOrigemId(payload.origemId);
             envio.setDestinoId(payload.destinoId);
             envio.setResponsavel(payload.responsavel);
             envio.setTransportadora(payload.transportadora);
-            envio.setCodigoRastreio(payload.codigoRastreio);
-            envio.setNumeroNota(payload.numeroNota); // Seta o número da nota fiscal vindo do payload
+            
+            // --- REGRA DE OURO PARA DEVOLUÇÃO: FORÇA O PREFIXO DEV- ---
+            String codigoRastreioFinal = payload.codigoRastreio;
+            if (ehDevolucao) {
+                if (codigoRastreioFinal == null || codigoRastreioFinal.trim().isEmpty()) {
+                    codigoRastreioFinal = "DEV-" + System.currentTimeMillis();
+                } else if (!codigoRastreioFinal.startsWith("DEV-")) {
+                    codigoRastreioFinal = "DEV-" + codigoRastreioFinal;
+                }
+            }
+            envio.setCodigoRastreio(codigoRastreioFinal);
+            // ----------------------------------------------------------
+
+            envio.setNumeroNota(payload.numeroNota); 
             
             if (payload.dataPrevisaoEntrega != null && !payload.dataPrevisaoEntrega.isEmpty()) {
                 envio.setDataPrevisaoEntrega(LocalDate.parse(payload.dataPrevisaoEntrega));
             }
             envio.setObservacoes(payload.observacoes);
             
-            // Define o status da movimentação (Se não vier preenchido do front, assume 2 = Enviado por padrão)
-            envio.setStatusId(payload.statusId != null ? payload.statusId : 1L);
+            // --- REGRA DE OURO PARA STATUS: SE FOR DEVOLUÇÃO, TRAVA OBRIGATORIAMENTE EM 1L (Aguardando Envio) ---
+            if (ehDevolucao) {
+                envio.setStatusId(1L); // Força Aguardando Envio para devoluções
+            } else {
+                envio.setStatusId(payload.statusId != null ? payload.statusId : 1L);
+            }
+            // --------------------------------------------------------------------------------------------------
 
             Long idGerado = dao.inserir(envio, payload.equipamentosIds);
 

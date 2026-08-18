@@ -7,37 +7,38 @@ import java.util.*;
 public class MovimentacaoRecebimentoDAO {
 
     // 1. Lista os envios que estão em trânsito (excluindo devoluções)
-    public List<Map<String, Object>> listarEnviosEmTransito() {
-        List<Map<String, Object>> lista = new ArrayList<>();
-        String sql = "SELECT e.id_envio, e.codigo_rastreio, f.nome_empresa as destino_nome " +
-                     "FROM movimentacao_envio e " +
-                     "JOIN filiais f ON e.destino_id = f.id_filial " +
-                     "WHERE e.status_id = 2 AND e.codigo_rastreio NOT LIKE 'DEV-%' " +
-                     "ORDER BY e.id_envio DESC";
+	public List<Map<String, Object>> listarEnviosEmTransito() {
+	    List<Map<String, Object>> lista = new ArrayList<>();
+	    // Alterado de INNER JOIN para LEFT JOIN para evitar que o envio suma caso o ID da filial varie
+	    String sql = "SELECT e.id_envio, e.codigo_rastreio, COALESCE(f.nome_empresa, 'Filial Destino #' || e.destino_id) as destino_nome " +
+	                 "FROM movimentacao_envio e " +
+	                 "LEFT JOIN filiais f ON e.destino_id = f.id_filial " +
+	                 "WHERE e.status_id = 2 AND (e.codigo_rastreio NOT LIKE 'DEV-%' OR e.codigo_rastreio IS NULL) " +
+	                 "ORDER BY e.id_envio DESC";
 
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
+	    Connection conn = null;
+	    PreparedStatement stmt = null;
+	    ResultSet rs = null;
 
-        try {
-            conn = Conexao.conectar();
-            stmt = conn.prepareStatement(sql);
-            rs = stmt.executeQuery();
+	    try {
+	        conn = Conexao.conectar();
+	        stmt = conn.prepareStatement(sql);
+	        rs = stmt.executeQuery();
 
-            while (rs.next()) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("idEnvio", rs.getInt("id_envio"));
-                map.put("codigoRastreio", rs.getString("codigo_rastreio"));
-                map.put("destinoNome", rs.getString("destino_nome"));
-                lista.add(map);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            Conexao.fechar(rs, stmt, conn);
-        }
-        return lista;
-    }
+	        while (rs.next()) {
+	            Map<String, Object> map = new HashMap<>();
+	            map.put("idEnvio", rs.getInt("id_envio"));
+	            map.put("codigoRastreio", rs.getString("codigo_rastreio"));
+	            map.put("destinoNome", rs.getString("destino_nome"));
+	            lista.add(map);
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    } finally {
+	        Conexao.fechar(rs, stmt, conn);
+	    }
+	    return lista;
+	}
 
     // 2. Busca os detalhes de um envio específico e seus itens/equipamentos
     public Map<String, Object> buscarDetalhesEnvio(int idEnvio) {
@@ -106,7 +107,7 @@ public class MovimentacaoRecebimentoDAO {
                                  "WHERE e.id_envio = ?";
                                  
         String sqlBuscaItens = "SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?";
-        String sqlAtualizaEquip = "UPDATE equipamentos SET origem_codigo = ?, situacao_id = 1 WHERE id_equipamento = ?";
+        String sqlAtualizaEquip = "UPDATE equipamentos SET origem_codigo = ?, situacao_id = 7 WHERE id_equipamento = ?";
 
         Connection conn = null;
         try {
@@ -268,11 +269,16 @@ public class MovimentacaoRecebimentoDAO {
         return resultado;
     }
 
-    // 6. Registra o recebimento de Devolução
+ // 6. Registra o recebimento de Devolução (Com correção no resgate do código da filial)
     public boolean registrarRecebimentoDevolucao(int idDevolucao, String dataRecebimento, String responsavel, String condicaoGeral) {
         String sqlRecebimento = "INSERT INTO movimentacao_recebimento (id_envio, data_recebimento, responsavel_recebimento, condicao_geral) VALUES (?, ?, ?, ?)";
         String sqlAtualizaDev = "UPDATE movimentacao_envio SET status_id = 3 WHERE id_envio = ?";
-        String sqlBuscaDestino = "SELECT destino_id FROM movimentacao_envio WHERE id_envio = ?";
+        
+        // CORRIGIDO: Faz o JOIN com filiais para buscar o 'origem_codigo' real, evitando inconsistência
+        String sqlBuscaDestino = "SELECT f.origem_codigo FROM movimentacao_envio e " +
+                                 "JOIN filiais f ON e.destino_id = f.id_filial " +
+                                 "WHERE e.id_envio = ?";
+                                 
         String sqlBuscaItens = "SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?";
         String sqlAtualizaEquip = "UPDATE equipamentos SET situacao_id = 1, origem_codigo = ? WHERE id_equipamento = ?";
 
@@ -281,13 +287,13 @@ public class MovimentacaoRecebimentoDAO {
             conn = Conexao.conectar();
             conn.setAutoCommit(false);
 
-            // A. Busca o destino_id para onde a devolução está retornando
-            int destinoId = 0;
+            // A. Busca o origem_codigo real da filial de destino onde a devolução está sendo recebida
+            int origemCodigoDestino = 0;
             try (PreparedStatement stmtDestino = conn.prepareStatement(sqlBuscaDestino)) {
                 stmtDestino.setInt(1, idDevolucao);
                 try (ResultSet rsDestino = stmtDestino.executeQuery()) {
                     if (rsDestino.next()) {
-                        destinoId = rsDestino.getInt("destino_id");
+                        origemCodigoDestino = rsDestino.getInt("origem_codigo");
                     }
                 }
             }
@@ -301,13 +307,13 @@ public class MovimentacaoRecebimentoDAO {
                 stmt.executeUpdate();
             }
 
-            // C. Atualiza o status da devolução para Recebido
+            // C. Atualiza o status da devolução para Recebido (3)
             try (PreparedStatement stmt = conn.prepareStatement(sqlAtualizaDev)) {
                 stmt.setInt(1, idDevolucao);
                 stmt.executeUpdate();
             }
 
-            // D. Atualiza os equipamentos de volta para Disponível (1) e restaura a origem_codigo para a filial que recebeu a devolução
+            // D. Atualiza os equipamentos de volta para Disponível (1) e aplica o origem_codigo correto
             try (PreparedStatement stmtBusca = conn.prepareStatement(sqlBuscaItens);
                  PreparedStatement stmtEq = conn.prepareStatement(sqlAtualizaEquip)) {
                 
@@ -315,7 +321,7 @@ public class MovimentacaoRecebimentoDAO {
                 try (ResultSet rs = stmtBusca.executeQuery()) {
                     while (rs.next()) {
                         int idEq = rs.getInt("id_equipamento");
-                        stmtEq.setInt(1, destinoId); 
+                        stmtEq.setInt(1, origemCodigoDestino); // Joga o código correto da filial de destino
                         stmtEq.setInt(2, idEq);
                         stmtEq.executeUpdate();
                     }

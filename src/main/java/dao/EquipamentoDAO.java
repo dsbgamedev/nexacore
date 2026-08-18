@@ -16,6 +16,11 @@ public class EquipamentoDAO {
 	        eq.setIdSistema(gerarProximoIdSistema());
 	    }
 
+	    // Garante que todo novo equipamento comece obrigatoriamente como Disponível (ID 1) caso venha vazio/zerado
+	    if (eq.getSituacaoId() <= 0) {
+	        eq.setSituacaoId(1);
+	    }
+
 	    String sql = "INSERT INTO equipamentos (id_produto, id_sistema, patrimonio, numero_serie, nome_identificador, origem_codigo, ip_atual, status_id, situacao_id, usuario_atual, departamento_id, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 	    
 	    Connection conn = null;
@@ -46,8 +51,8 @@ public class EquipamentoDAO {
 	            // Status do Equipamento
 	            stmt.setInt(8, eq.getStatusId() > 0 ? eq.getStatusId() : 1);
 	            
-	            // Situação do Equipamento
-	            stmt.setInt(9, eq.getSituacaoId() > 0 ? eq.getSituacaoId() : 1);
+	            // Situação do Equipamento (Força 1 se for menor ou igual a 0)
+	            stmt.setInt(9, eq.getSituacaoId());
 	            
 	            stmt.setString(10, eq.getUsuarioAtual());
 	            

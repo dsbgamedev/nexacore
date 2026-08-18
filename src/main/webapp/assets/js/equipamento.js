@@ -69,108 +69,120 @@ document.addEventListener("DOMContentLoaded", function() {
         
 	// 2. Função para carregar os dados do equipamento caso venha um ID na URL (Modo Edição)
 	async function carregarEquipamentoParaEdicao() {
-	        const urlParams = new URLSearchParams(window.location.search);
-	        const idEquipamento = urlParams.get('id');
+	    const urlParams = new URLSearchParams(window.location.search);
+	    const idEquipamento = urlParams.get('id');
 
-	        if (!idEquipamento) return;
+	    if (!idEquipamento) return;
 
-	        try {
-	            const response = await fetch(`/nexacore/api/equipamentos?id=${idEquipamento}`);
-	            if (response.ok) {
-	                const eq = await response.json();
-	                
-	                document.getElementById("input-id").value = eq.idEquipamento || eq.id || '';
-	                
-	                inputIdSistema.value = eq.idSistema || '';
-	                document.getElementById("input-patrimonio").value = eq.patrimonio || '';
-	                document.getElementById("input-numeroserie").value = eq.numeroSerie || '';
-	                document.getElementById("input-nomeidentificador").value = eq.nomeIdentificador || '';
-	                
-	                const selectOrigem = document.getElementById("input-origem");
-	                if (selectOrigem) {
-	                    selectOrigem.value = eq.origemCodigo || '';
+	    try {
+	        const response = await fetch(`/nexacore/api/equipamentos?id=${idEquipamento}`);
+	        if (response.ok) {
+	            const eq = await response.json();
+	            
+	            document.getElementById("input-id").value = eq.idEquipamento || eq.id || '';
+	            
+	            inputIdSistema.value = eq.idSistema || '';
+	            document.getElementById("input-patrimonio").value = eq.patrimonio || '';
+	            document.getElementById("input-numeroserie").value = eq.numeroSerie || '';
+	            document.getElementById("input-nomeidentificador").value = eq.nomeIdentificador || '';
+	            
+	            const selectOrigem = document.getElementById("input-origem");
+	            if (selectOrigem) {
+	                selectOrigem.value = eq.origemCodigo || '';
 
-	                    // ----------------------------------------------------
-	                    // REGRA DE BLOQUEIO DA ORIGEM E SITUAÇÃO:
-	                    // Se o equipamento foi recebido em outra filial (ex: 101) e ainda não retornou,
-	                    // bloqueamos a edição do campo de origem e ocultamos a situação "Disponível".
-	                    // ----------------------------------------------------
-						if (eq.idEquipamento == 1 || eq.id == 1 || eq.bloquearOrigem === true || eq.statusMovimentacao === 'EM_DESTINO_EXTERNO' || eq.origemBloqueada === true) {
-	                        selectOrigem.disabled = true;
-	                        selectOrigem.classList.add("bg-light");
+	                // ----------------------------------------------------
+	                // REGRA DE BLOQUEIO DA ORIGEM E SITUAÇÃO:
+	                // Se a origem for 161 (Matriz), NUNCA aplica o bloqueio.
+	                // ----------------------------------------------------
+	                const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : null;
+	                const ehMatriz161 = (codigoOrigemAtual === 161);
 
-	                        let avisoOrigem = document.getElementById('avisoBloqueioOrigem');
-	                        if (!avisoOrigem) {
-	                            avisoOrigem = document.createElement('div');
-	                            avisoOrigem.id = 'avisoBloqueioOrigem';
-	                            avisoOrigem.className = 'form-text text-danger mt-1';
-	                            avisoOrigem.style.fontSize = '0.75rem';
-	                            avisoOrigem.innerHTML = '<i class="fa fa-lock me-1"></i> A origem está bloqueada porque o equipamento foi recebido em outra filial. Só será liberada após o retorno oficial (devolução) para a origem de origem original.';
-	                            selectOrigem.parentNode.appendChild(avisoOrigem);
-	                        }
-	                    } else {
-	                        selectOrigem.disabled = false;
-	                        selectOrigem.classList.remove("bg-light");
-	                        const aviso = document.getElementById('avisoBloqueioOrigem');
-	                        if (aviso) aviso.remove();
+	                if (!ehMatriz161 && (eq.idEquipamento == 1 || eq.id == 1 || eq.bloquearOrigem === true || eq.statusMovimentacao === 'EM_DESTINO_EXTERNO' || eq.origemBloqueada === true)) {
+	                    selectOrigem.disabled = true;
+	                    selectOrigem.classList.add("bg-light");
+
+	                    let avisoOrigem = document.getElementById('avisoBloqueioOrigem');
+	                    if (!avisoOrigem) {
+	                        avisoOrigem = document.createElement('div');
+	                        avisoOrigem.id = 'avisoBloqueioOrigem';
+	                        avisoOrigem.className = 'form-text text-danger mt-1';
+	                        avisoOrigem.style.fontSize = '0.75rem';
+	                        avisoOrigem.innerHTML = '<i class="fa fa-lock me-1"></i> A origem está bloqueada porque o equipamento foi recebido em outra filial. Só será liberada após o retorno oficial (devolução) para a origem original.';
+	                        selectOrigem.parentNode.appendChild(avisoOrigem);
 	                    }
-	                }
-	                
-	                document.getElementById("input-status").value = eq.statusId || '';
-	                document.getElementById("input-situacao").value = eq.situacaoId || '';
-
-	                // Se o equipamento estiver bloqueado/fora da base, exibe APENAS "Em Uso" ou "Reservado" no select de situação
-					if (eq.idEquipamento == 1 || eq.id == 1 || eq.bloquearOrigem === true || eq.origemBloqueada === true || eq.permiteDisponivel === false) {
-	                    const selectSituacao = document.getElementById("input-situacao");
-	                    if (selectSituacao) {
-	                        Array.from(selectSituacao.options).forEach(opt => {
-	                            if (!opt.value) return; // Mantém a opção vazia padrão se houver
-	                            
-	                            const textoOpt = opt.text.toLowerCase();
-	                            const ehPermitido = textoOpt.includes("uso") || textoOpt.includes("reservado");
-	                            
-	                            if (!ehPermitido) {
-	                                opt.style.display = "none"; // Esconde opções indesejadas (Disponível, Baixado, etc.)
-	                            } else {
-	                                opt.style.display = "block"; // Mantém apenas Em Uso / Reservado visíveis
-	                            }
-	                        });
-	                    }
-	                }
-
-	                document.getElementById("input-usuario").value = eq.usuarioAtual || '';
-	                document.getElementById("input-observacoes").value = eq.observacoes || '';
-
-	                if (eq.ipAtual) {
-	                    checkPossuiIp.checked = true;
-	                    inputIp.disabled = false;
-	                    inputIp.value = eq.ipAtual;
-	                    inputIp.classList.remove("bg-light");
 	                } else {
-	                    checkPossuiIp.checked = false;
-	                    inputIp.disabled = true;
-	                    inputIp.value = "";
-	                    inputIp.classList.add("bg-light");
+	                    selectOrigem.disabled = false;
+	                    selectOrigem.classList.remove("bg-light");
+	                    const aviso = document.getElementById('avisoBloqueioOrigem');
+	                    if (aviso) aviso.remove();
 	                }
+	            }
+	            
+	            document.getElementById("input-status").value = eq.statusId || '';
+	            document.getElementById("input-situacao").value = eq.situacaoId || '';
 
-	                if (selectDepartamento && eq.departamentoId) {
-	                    selectDepartamento.value = eq.departamentoId;
-	                }
+	            // Se o equipamento estiver bloqueado E NÃO FOR DA MATRIZ 161, exibe APENAS "Em Uso" ou "Reservado"
+	            const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : null;
+	            const ehMatriz161 = (codigoOrigemAtual === 161);
 
-	                if (eq.idProduto && listaProdutosGlobal.length > 0) {
-	                    const produtoEncontrado = listaProdutosGlobal.find(p => p.id === eq.idProduto);
-	                    if (produtoEncontrado) {
-	                        selecionarProduto(produtoEncontrado);
-	                    }
+	            if (!ehMatriz161 && (eq.idEquipamento == 1 || eq.id == 1 || eq.bloquearOrigem === true || eq.origemBloqueada === true || eq.permiteDisponivel === false)) {
+	                const selectSituacao = document.getElementById("input-situacao");
+	                if (selectSituacao) {
+	                    Array.from(selectSituacao.options).forEach(opt => {
+	                        if (!opt.value) return; 
+	                        
+	                        const textoOpt = opt.text.toLowerCase();
+	                        const ehPermitido = textoOpt.includes("uso") || textoOpt.includes("reservado");
+	                        
+	                        if (!ehPermitido) {
+	                            opt.style.display = "none"; 
+	                        } else {
+	                            opt.style.display = "block"; 
+	                        }
+	                    });
 	                }
 	            } else {
-	                console.error("Não foi possível carregar os dados do equipamento para edição.");
+	                // Se for a Matriz 161, garante que todas as opções de situação aparecem normalmente
+	                const selectSituacao = document.getElementById("input-situacao");
+	                if (selectSituacao) {
+	                    Array.from(selectSituacao.options).forEach(opt => {
+	                        opt.style.display = "block";
+	                    });
+	                }
 	            }
-	        } catch (error) {
-	            console.error("Erro ao buscar equipamento por ID:", error);
+
+	            document.getElementById("input-usuario").value = eq.usuarioAtual || '';
+	            document.getElementById("input-observacoes").value = eq.observacoes || '';
+
+	            if (eq.ipAtual) {
+	                checkPossuiIp.checked = true;
+	                inputIp.disabled = false;
+	                inputIp.value = eq.ipAtual;
+	                inputIp.classList.remove("bg-light");
+	            } else {
+	                checkPossuiIp.checked = false;
+	                inputIp.disabled = true;
+	                inputIp.value = "";
+	                inputIp.classList.add("bg-light");
+	            }
+
+	            if (selectDepartamento && eq.departamentoId) {
+	                selectDepartamento.value = eq.departamentoId;
+	            }
+
+	            if (eq.idProduto && listaProdutosGlobal.length > 0) {
+	                const produtoEncontrado = listaProdutosGlobal.find(p => p.id === eq.idProduto);
+	                if (produtoEncontrado) {
+	                    selecionarProduto(produtoEncontrado);
+	                }
+	            }
+	        } else {
+	            console.error("Não foi possível carregar os dados do equipamento para edição.");
 	        }
+	    } catch (error) {
+	        console.error("Erro ao buscar equipamento por ID:", error);
 	    }
-	    
+	}
     // 3. Carrega todos os produtos para a busca rápida local e para o modal
     async function carregarProdutosCatalogo() {
         try {

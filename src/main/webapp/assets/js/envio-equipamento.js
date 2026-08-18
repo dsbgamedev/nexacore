@@ -136,7 +136,16 @@ document.addEventListener("DOMContentLoaded", function() {
                 equipamentosIds: Array.from(equipamentosSelecionadosMap.keys())
             };
 
-            fetch(contextPath + '/api/envios', {
+			// Captura o tipo da URL para propagar para o Servlet se for devolução
+            const urlParams = new URLSearchParams(window.location.search);
+            const tipoParam = urlParams.get('tipo');
+            
+            let urlEndpoint = contextPath + '/api/envios';
+            if (tipoParam === 'devolucao') {
+                urlEndpoint += '?tipo=devolucao';
+            }
+
+            fetch(urlEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json;charset=UTF-8' },
                 body: JSON.stringify(payload)
@@ -229,7 +238,6 @@ function carregarEquipamentosDisponiveis() {
                 const situacaoTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && eq.situacao.nome) || '').toLowerCase();
 
                 // Regra estrita para o Envio: Deve ser obrigatoriamente Disponível 
-                // (ID 1 ou texto contendo 'disponível', garantindo que não contenha 'uso' ou 'reservado')
                 const ehDisponivel = (situacaoId === 1) || (situacaoTexto.includes("disponível") && !situacaoTexto.includes("uso") && !situacaoTexto.includes("reservado"));
 
                 return ehDisponivel;
