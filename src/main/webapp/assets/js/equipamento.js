@@ -13,6 +13,9 @@ document.addEventListener("DOMContentLoaded", function() {
     
     const inputIdSistema = document.getElementById("input-idsistema");
     const selectDepartamento = document.getElementById("input-departamento");
+    const selectStatus = document.getElementById("input-status");
+    const selectSituacao = document.getElementById("input-situacao");
+
     const btnSalvar = document.getElementById("btn-salvar");
     const btnVoltar = document.getElementById("btn-voltar");
     const btnAbrirModal = document.getElementById("btn-abrir-modal-produto");
@@ -30,6 +33,103 @@ document.addEventListener("DOMContentLoaded", function() {
     const modalTabelaProdutos = document.getElementById("modal-tabela-produtos");
 
     let listaProdutosGlobal = [];
+
+    // Função auxiliar para gerenciar a exibição da situação com base no status selecionado
+    function ajustarSituacaoPorStatus(statusId, situacaoAlvoId = null) {
+        if (!selectSituacao) return;
+
+        // Obtém o texto do status selecionado para garantir verificação por nome além do ID
+        let textoStatus = "";
+        if (selectStatus && selectStatus.selectedIndex >= 0) {
+            textoStatus = selectStatus.options[selectStatus.selectedIndex].text.toLowerCase();
+        }
+
+        // Função auxiliar para garantir que a opção exista no select
+        function garantirOpcao(val, texto) {
+            let optExistente = Array.from(selectSituacao.options).find(o => o.value == val);
+            if (!optExistente) {
+                const novaOpt = document.createElement("option");
+                novaOpt.value = val;
+                novaOpt.text = texto;
+                selectSituacao.appendChild(novaOpt);
+            }
+        }
+
+        // 1. Status: Em Manutenção (ID 2 ou texto 'manutenção')
+        if (statusId === 2 || textoStatus.includes("manuten")) {
+            garantirOpcao("6", "Na Assistência");
+
+            Array.from(selectSituacao.options).forEach(opt => {
+                if (opt.value == "6") {
+                    opt.style.display = "block";
+                } else {
+                    opt.style.display = "none";
+                }
+            });
+
+            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "6";
+        } 
+        // 2. Status: Baixado (texto 'baixado')
+        else if (textoStatus.includes("baixado")) {
+            garantirOpcao("7", "Baixado");
+
+            Array.from(selectSituacao.options).forEach(opt => {
+                if (opt.value == "7") {
+                    opt.style.display = "block";
+                } else {
+                    opt.style.display = "none";
+                }
+            });
+
+            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "7";
+        } 
+        // 3. Status: Inativo (texto 'inativo')
+        else if (textoStatus.includes("inativo")) {
+            garantirOpcao("10", "Inativo");
+
+            Array.from(selectSituacao.options).forEach(opt => {
+                if (opt.value == "10") {
+                    opt.style.display = "block";
+                } else {
+                    opt.style.display = "none";
+                }
+            });
+
+            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "10";
+        } 
+        // 4. Status: Ativo (ID 1 ou texto 'ativo')
+        else if (statusId === 1 || textoStatus.includes("ativo")) {
+            Array.from(selectSituacao.options).forEach(opt => {
+                if (!opt.value) return;
+                const texto = opt.text.toLowerCase();
+                
+                if (texto.includes("disponível") || texto.includes("uso") || texto.includes("reservado")) {
+                    opt.style.display = "block";
+                } else {
+                    opt.style.display = "none";
+                }
+            });
+            
+            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "1";
+        } 
+        // 5. Outros Status: Exibe todas as opções
+        else {
+            Array.from(selectSituacao.options).forEach(opt => {
+                opt.style.display = "block";
+            });
+            if (situacaoAlvoId) {
+                selectSituacao.value = situacaoAlvoId;
+            }
+        }
+    }
+
+    // Listener para quando o usuário alterar o status manualmente na tela
+    if (selectStatus) {
+        selectStatus.addEventListener("change", function() {
+            const statusId = parseInt(this.value);
+            ajustarSituacaoPorStatus(statusId);
+        });
+    }
 
     // 1. Carrega o próximo ID Sistema automático ao abrir a tela
     async function carregarProximoId() {
@@ -67,122 +167,113 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
         
-	// 2. Função para carregar os dados do equipamento caso venha um ID na URL (Modo Edição)
-	async function carregarEquipamentoParaEdicao() {
-	    const urlParams = new URLSearchParams(window.location.search);
-	    const idEquipamento = urlParams.get('id');
+    // 2. Função para carregar os dados do equipamento caso venha um ID na URL (Modo Edição)
+    async function carregarEquipamentoParaEdicao() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const idEquipamento = urlParams.get('id');
 
-	    if (!idEquipamento) return;
+        if (!idEquipamento) return;
 
-	    try {
-	        const response = await fetch(`/nexacore/api/equipamentos?id=${idEquipamento}`);
-	        if (response.ok) {
-	            const eq = await response.json();
-	            
-	            document.getElementById("input-id").value = eq.idEquipamento || eq.id || '';
-	            
-	            inputIdSistema.value = eq.idSistema || '';
-	            document.getElementById("input-patrimonio").value = eq.patrimonio || '';
-	            document.getElementById("input-numeroserie").value = eq.numeroSerie || '';
-	            document.getElementById("input-nomeidentificador").value = eq.nomeIdentificador || '';
-	            
-	            const selectOrigem = document.getElementById("input-origem");
-	            if (selectOrigem) {
-	                selectOrigem.value = eq.origemCodigo || '';
+        try {
+            const response = await fetch(`/nexacore/api/equipamentos?id=${idEquipamento}`);
+            if (response.ok) {
+                const eq = await response.json();
+                
+                document.getElementById("input-id").value = eq.idEquipamento || eq.id || '';
+                
+                inputIdSistema.value = eq.idSistema || '';
+                document.getElementById("input-patrimonio").value = eq.patrimonio || '';
+                document.getElementById("input-numeroserie").value = eq.numeroSerie || '';
+                document.getElementById("input-nomeidentificador").value = eq.nomeIdentificador || '';
+                
+                const selectOrigem = document.getElementById("input-origem");
+                if (selectOrigem) {
+                    selectOrigem.value = eq.origemCodigo || '';
 
-	                // ----------------------------------------------------
-	                // REGRA DE BLOQUEIO DA ORIGEM E SITUAÇÃO:
-	                // Se a origem for 161 (Matriz), NUNCA aplica o bloqueio.
-	                // ----------------------------------------------------
-	                const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : null;
-	                const ehMatriz161 = (codigoOrigemAtual === 161);
+                    const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : null;
+                    const ehMatriz161 = (codigoOrigemAtual === 161);
 
-	                if (!ehMatriz161 && (eq.idEquipamento == 1 || eq.id == 1 || eq.bloquearOrigem === true || eq.statusMovimentacao === 'EM_DESTINO_EXTERNO' || eq.origemBloqueada === true)) {
-	                    selectOrigem.disabled = true;
-	                    selectOrigem.classList.add("bg-light");
+                    if (!ehMatriz161 && (eq.idEquipamento == 1 || eq.id == 1 || eq.bloquearOrigem === true || eq.statusMovimentacao === 'EM_DESTINO_EXTERNO' || eq.origemBloqueada === true)) {
+                        selectOrigem.disabled = true;
+                        selectOrigem.classList.add("bg-light");
 
-	                    let avisoOrigem = document.getElementById('avisoBloqueioOrigem');
-	                    if (!avisoOrigem) {
-	                        avisoOrigem = document.createElement('div');
-	                        avisoOrigem.id = 'avisoBloqueioOrigem';
-	                        avisoOrigem.className = 'form-text text-danger mt-1';
-	                        avisoOrigem.style.fontSize = '0.75rem';
-	                        avisoOrigem.innerHTML = '<i class="fa fa-lock me-1"></i> A origem está bloqueada porque o equipamento foi recebido em outra filial. Só será liberada após o retorno oficial (devolução) para a origem original.';
-	                        selectOrigem.parentNode.appendChild(avisoOrigem);
-	                    }
-	                } else {
-	                    selectOrigem.disabled = false;
-	                    selectOrigem.classList.remove("bg-light");
-	                    const aviso = document.getElementById('avisoBloqueioOrigem');
-	                    if (aviso) aviso.remove();
-	                }
-	            }
-	            
-	            document.getElementById("input-status").value = eq.statusId || '';
-	            document.getElementById("input-situacao").value = eq.situacaoId || '';
+                        let avisoOrigem = document.getElementById('avisoBloqueioOrigem');
+                        if (!avisoOrigem) {
+                            avisoOrigem = document.createElement('div');
+                            avisoOrigem.id = 'avisoBloqueioOrigem';
+                            avisoOrigem.className = 'form-text text-danger mt-1';
+                            avisoOrigem.style.fontSize = '0.75rem';
+                            avisoOrigem.innerHTML = '<i class="fa fa-lock me-1"></i> A origem está bloqueada porque o equipamento foi recebido em outra filial. Só será liberada após o retorno oficial (devolução) para a origem original.';
+                            selectOrigem.parentNode.appendChild(avisoOrigem);
+                        }
+                    } else {
+                        selectOrigem.disabled = false;
+                        selectOrigem.classList.remove("bg-light");
+                        const aviso = document.getElementById('avisoBloqueioOrigem');
+                        if (aviso) aviso.remove();
+                    }
+                }
+                
+                // Define o status e aplica a regra de ajuste da situação correspondente
+                if (selectStatus) {
+                    selectStatus.value = eq.statusId || '';
+                }
+                
+                ajustarSituacaoPorStatus(eq.statusId, eq.situacaoId);
 
-	            // Se o equipamento estiver bloqueado E NÃO FOR DA MATRIZ 161, exibe APENAS "Em Uso" ou "Reservado"
-	            const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : null;
-	            const ehMatriz161 = (codigoOrigemAtual === 161);
+                const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : null;
+                const ehMatriz161 = (codigoOrigemAtual === 161);
 
-	            if (!ehMatriz161 && (eq.idEquipamento == 1 || eq.id == 1 || eq.bloquearOrigem === true || eq.origemBloqueada === true || eq.permiteDisponivel === false)) {
-	                const selectSituacao = document.getElementById("input-situacao");
-	                if (selectSituacao) {
-	                    Array.from(selectSituacao.options).forEach(opt => {
-	                        if (!opt.value) return; 
-	                        
-	                        const textoOpt = opt.text.toLowerCase();
-	                        const ehPermitido = textoOpt.includes("uso") || textoOpt.includes("reservado");
-	                        
-	                        if (!ehPermitido) {
-	                            opt.style.display = "none"; 
-	                        } else {
-	                            opt.style.display = "block"; 
-	                        }
-	                    });
-	                }
-	            } else {
-	                // Se for a Matriz 161, garante que todas as opções de situação aparecem normalmente
-	                const selectSituacao = document.getElementById("input-situacao");
-	                if (selectSituacao) {
-	                    Array.from(selectSituacao.options).forEach(opt => {
-	                        opt.style.display = "block";
-	                    });
-	                }
-	            }
+                if (!ehMatriz161 && (eq.idEquipamento == 1 || eq.id == 1 || eq.bloquearOrigem === true || eq.origemBloqueada === true || eq.permiteDisponivel === false)) {
+                    if (selectSituacao) {
+                        Array.from(selectSituacao.options).forEach(opt => {
+                            if (!opt.value) return; 
+                            
+                            const textoOpt = opt.text.toLowerCase();
+                            const ehPermitido = textoOpt.includes("uso") || textoOpt.includes("reservado");
+                            
+                            if (!ehPermitido) {
+                                opt.style.display = "none"; 
+                            } else {
+                                opt.style.display = "block"; 
+                            }
+                        });
+                    }
+                }
 
-	            document.getElementById("input-usuario").value = eq.usuarioAtual || '';
-	            document.getElementById("input-observacoes").value = eq.observacoes || '';
+                document.getElementById("input-usuario").value = eq.usuarioAtual || '';
+                document.getElementById("input-observacoes").value = eq.observacoes || '';
 
-	            if (eq.ipAtual) {
-	                checkPossuiIp.checked = true;
-	                inputIp.disabled = false;
-	                inputIp.value = eq.ipAtual;
-	                inputIp.classList.remove("bg-light");
-	            } else {
-	                checkPossuiIp.checked = false;
-	                inputIp.disabled = true;
-	                inputIp.value = "";
-	                inputIp.classList.add("bg-light");
-	            }
+                if (eq.ipAtual) {
+                    checkPossuiIp.checked = true;
+                    inputIp.disabled = false;
+                    inputIp.value = eq.ipAtual;
+                    inputIp.classList.remove("bg-light");
+                } else {
+                    checkPossuiIp.checked = false;
+                    inputIp.disabled = true;
+                    inputIp.value = "";
+                    inputIp.classList.add("bg-light");
+                }
 
-	            if (selectDepartamento && eq.departamentoId) {
-	                selectDepartamento.value = eq.departamentoId;
-	            }
+                if (selectDepartamento && eq.departamentoId) {
+                    selectDepartamento.value = eq.departamentoId;
+                }
 
-	            if (eq.idProduto && listaProdutosGlobal.length > 0) {
-	                const produtoEncontrado = listaProdutosGlobal.find(p => p.id === eq.idProduto);
-	                if (produtoEncontrado) {
-	                    selecionarProduto(produtoEncontrado);
-	                }
-	            }
-	        } else {
-	            console.error("Não foi possível carregar os dados do equipamento para edição.");
-	        }
-	    } catch (error) {
-	        console.error("Erro ao buscar equipamento por ID:", error);
-	    }
-	}
+                if (eq.idProduto && listaProdutosGlobal.length > 0) {
+                    const produtoEncontrado = listaProdutosGlobal.find(p => p.id === eq.idProduto);
+                    if (produtoEncontrado) {
+                        selecionarProduto(produtoEncontrado);
+                    }
+                }
+            } else {
+                console.error("Não foi possível carregar os dados do equipamento para edição.");
+            }
+        } catch (error) {
+            console.error("Erro ao buscar equipamento por ID:", error);
+        }
+    }
+
     // 3. Carrega todos os produtos para a busca rápida local e para o modal
     async function carregarProdutosCatalogo() {
         try {
@@ -216,66 +307,68 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
     
-	// Carrega as opções para o select de Status do Equipamento
-	async function carregarStatusEquipamento() {
-	    try {
-	        const response = await fetch(`${contextPath}/api/status-equipamento`);
-	        if (response.ok) {
-	            const listaStatus = await response.json();
-	            const selectStatus = document.getElementById("input-status");
-	            if (selectStatus) {
-	                selectStatus.innerHTML = '<option value="">Selecione o status...</option>';
-	                if (Array.isArray(listaStatus)) {
-	                    listaStatus.forEach(s => {
-	                        if (s.id !== undefined && s.nome) {
-	                            const option = document.createElement("option");
-	                            option.value = s.id;
-	                            option.textContent = s.nome;
-	                            selectStatus.appendChild(option);
-	                        }
-	                    });
-	                }
-	            }
-	        }
-	    } catch (error) {
-	        console.error("Erro ao carregar status do equipamento:", error);
-	    }
-	}
+    // Carrega as opções para o select de Status do Equipamento
+    async function carregarStatusEquipamento() {
+        try {
+            const contextPath = window.location.pathname.substring(0, window.location.pathname.indexOf("/", 1));
+            const response = await fetch(`${contextPath}/api/status-equipamento`);
+            if (response.ok) {
+                const listaStatus = await response.json();
+                if (selectStatus) {
+                    selectStatus.innerHTML = '<option value="">Selecione o status...</option>';
+                    if (Array.isArray(listaStatus)) {
+                        listaStatus.forEach(s => {
+                            if (s.id !== undefined && s.nome) {
+                                const option = document.createElement("option");
+                                option.value = s.id;
+                                option.textContent = s.nome;
+                                selectStatus.appendChild(option);
+                            }
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao carregar status do equipamento:", error);
+        }
+    }
 
-	// Carrega as opções para o select de Situação do Equipamento
-	async function carregarSituacaoEquipamento() {
-	    try {
-	        const response = await fetch('/nexacore/api/equipamentos/?acaoSituacoes=edicao-direta');
-	        if (response.ok) {
-	            const listaSituacao = await response.json();
-	            const selectSituacao = document.getElementById("input-situacao");
-	            if (selectSituacao) {
-	                selectSituacao.innerHTML = '<option value="">Selecione a situação...</option>';
-	                if (Array.isArray(listaSituacao)) {
-	                    listaSituacao.forEach(sit => {
-	                        if (sit.id !== undefined && sit.nome) {
-	                            const option = document.createElement("option");
-	                            option.value = sit.id;
-	                            option.textContent = sit.nome;
-	                            selectSituacao.appendChild(option);
-	                        }
-	                    });
-	                }
-	            }
-	        }
-	    } catch (error) {
-	        console.error("Erro ao carregar situação do equipamento:", error);
-	    }
-	}
+    // Carrega as opções para o select de Situação do Equipamento
+    async function carregarSituacaoEquipamento() {
+        try {
+            const response = await fetch('/nexacore/api/equipamentos/?acaoSituacoes=edicao-direta');
+            if (response.ok) {
+                const listaSituacao = await response.json();
+                if (selectSituacao) {
+                    selectSituacao.innerHTML = '<option value="">Selecione a situação...</option>';
+                    if (Array.isArray(listaSituacao)) {
+                        listaSituacao.forEach(sit => {
+                            if (sit.id !== undefined && sit.nome) {
+                                const option = document.createElement("option");
+                                option.value = sit.id;
+                                option.textContent = sit.nome;
+                                selectSituacao.appendChild(option);
+                            }
+                        });
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao carregar situação do equipamento:", error);
+        }
+    }
 
     // Inicialização das requisições assíncronas da página
     carregarProximoId();
     carregarDepartamentos();
     carregarFiliais();
-    carregarStatusEquipamento();
-    carregarSituacaoEquipamento();
     
-    carregarProdutosCatalogo().then(() => {
+    // Carrega status/situações e em seguida busca os dados do equipamento caso seja edição
+    Promise.all([
+        carregarStatusEquipamento(),
+        carregarSituacaoEquipamento(),
+        carregarProdutosCatalogo()
+    ]).then(() => {
         carregarEquipamentoParaEdicao();
     });
 
@@ -561,9 +654,6 @@ document.addEventListener("DOMContentLoaded", function() {
 
     if (btnSalvar) {
         btnSalvar.addEventListener("click", async function() {
-            const selectStatus = document.getElementById("input-status");
-            const selectSituacao = document.getElementById("input-situacao");
-
             const payload = {
                 idEquipamento: document.getElementById("input-id").value ? parseInt(document.getElementById("input-id").value) : 0,
                 idProduto: parseInt(inputIdProduto.value),
@@ -571,12 +661,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 patrimonio: document.getElementById("input-patrimonio").value.trim(),
                 numeroSerie: document.getElementById("input-numeroserie").value.trim(),
                 nomeIdentificador: document.getElementById("input-nomeidentificador").value.trim(),
-				origemCodigo: (function() {
-				    const elOrigem = document.getElementById("input-origem");
-				    if (!elOrigem) return null;
-				    // Se o elemento estiver desabilitado, pegamos o valor selecionado diretamente ou mantemos a propriedade
-				    return elOrigem.value ? parseInt(elOrigem.value) : null;
-				})(),
+                origemCodigo: (function() {
+                    const elOrigem = document.getElementById("input-origem");
+                    if (!elOrigem) return null;
+                    return elOrigem.value ? parseInt(elOrigem.value) : null;
+                })(),
                 ipAtual: checkPossuiIp && checkPossuiIp.checked ? document.getElementById("input-ip").value.trim() : "",
                 
                 statusId: selectStatus && selectStatus.value ? parseInt(selectStatus.value) : null,

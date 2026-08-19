@@ -9,8 +9,17 @@ document.addEventListener("DOMContentLoaded", function() {
         inputDataEnvio.value = hoje;
     }
 
-	// 2. Carregar o select de Filiais (Origem e Destino)
-    carregarFiliais();
+	// 2. Carregar o select de Filiais
+    carregarFiliais().then(() => {
+        // Se for devolução pela URL, já carrega e adiciona o equipamento automaticamente para travar o destino certo
+        const urlParams = new URLSearchParams(window.location.search);
+        const tipo = urlParams.get('tipo');
+        const idEquipamentoDevolucao = urlParams.get('idEquipamento');
+
+        if (tipo === 'devolucao' && idEquipamentoDevolucao) {
+            carregarEquipamentoDevolucaoAutomatico(idEquipamentoDevolucao);
+        }
+    });
 
     // 3. Evento do botão que abre o modal de seleção de equipamentos
     const btnAbrirModal = document.getElementById("btnAbrirModalEquipamentos");
@@ -123,10 +132,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
             }
 
+            const selectDestino = document.getElementById("destinoId");
+            let destinoIdValor = selectDestino ? selectDestino.value : null;
+
             const payload = {
                 dataEnvio: document.getElementById("dataEnvio").value,
                 origemId: parseInt(origemIdValor),
-                destinoId: parseInt(document.getElementById("destinoId").value),
+                destinoId: parseInt(destinoIdValor),
                 responsavel: document.getElementById("responsavel").value,
                 transportadora: document.getElementById("transportadora").value,
                 codigoRastreio: document.getElementById("codigoRastreio").value,
@@ -136,7 +148,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 equipamentosIds: Array.from(equipamentosSelecionadosMap.keys())
             };
 
-			// Captura o tipo da URL para propagar para o Servlet se for devolução
             const urlParams = new URLSearchParams(window.location.search);
             const tipoParam = urlParams.get('tipo');
             
@@ -200,15 +211,67 @@ function carregarFiliais() {
         .catch(err => console.error("Erro ao carregar filiais:", err));
 }
 
-// Função para buscar equipamentos disponíveis ou o item específico de devolução para o modal
+// Carrega o equipamento de devolução automaticamente na tabela e define/trava o destino correto pela última movimentação
+async function carregarEquipamentoDevolucaoAutomatico(idEquipamento) {
+    try {
+        // 1. Busca os dados do equipamento
+        const resEq = await fetch(`${contextPath}/api/equipamentos?id=${idEquipamento}`);
+        if (!resEq.ok) return;
+        const eq = await resEq.json();
+
+        eq.filialIdPadrao = eq.origemCodigo || eq.idFilialOrigem || eq.filialId || eq.empresaId;
+        equipamentosSelecionadosMap.set(eq.idEquipamento, eq);
+        atualizarTabelaPrincipalItens();
+
+        // 2. Define a origem atual na tela
+        const selectOrigem = document.getElementById("origemId");
+        if (selectOrigem && eq.filialIdPadrao) {
+            for (let i = 0; i < selectOrigem.options.length; i++) {
+                let optVal = selectOrigem.options[i].value;
+                let optText = selectOrigem.options[i].text;
+                if (optVal == eq.filialIdPadrao || optText.startsWith(eq.filialIdPadrao + " -") || optText.includes(eq.filialIdPadrao)) {
+                    selectOrigem.selectedIndex = i;
+                    break;
+                }
+            }
+            selectOrigem.disabled = true;
+        }
+
+        // 3. Busca o último envio para descobrir a filial de origem original e colocá-la travada no Destino
+        const resEnvios = await fetch(`${contextPath}/api/envios?idEquipamento=${idEquipamento}`);
+        if (resEnvios.ok) {
+            const envios = await resEnvios.json();
+            if (Array.isArray(envios) && envios.length > 0) {
+                const ultimoEnvio = envios[envios.length - 1];
+                const filialOrigemOriginal = ultimoEnvio.origemId || ultimoEnvio.origemCodigo;
+
+                const selectDestino = document.getElementById("destinoId");
+                if (selectDestino && filialOrigemOriginal) {
+                    for (let i = 0; i < selectDestino.options.length; i++) {
+                        let optVal = selectDestino.options[i].value;
+                        let optText = selectDestino.options[i].text;
+                        if (optVal == filialOrigemOriginal || optText.startsWith(filialOrigemOriginal + " -") || optText.includes(filialOrigemOriginal)) {
+                            selectDestino.selectedIndex = i;
+                            break;
+                        }
+                    }
+                    // Trava o destino para ninguém conseguir alterar
+                    selectDestino.disabled = true;
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Erro ao carregar devolução automática:", e);
+    }
+}
+
+// Função para buscar equipamentos disponíveis para o modal
 function carregarEquipamentosDisponiveis() {
     const urlParams = new URLSearchParams(window.location.search);
     const tipo = urlParams.get('tipo');
     const idEquipamentoDevolucao = urlParams.get('idEquipamento');
 
     let endpoint = contextPath + '/api/equipamentos';
-    
-    // Se for uma devolução, busca estritamente o equipamento específico pelo ID da URL
     if (tipo === 'devolucao' && idEquipamentoDevolucao) {
         endpoint = `${contextPath}/api/equipamentos?id=${idEquipamentoDevolucao}`;
     }
@@ -227,20 +290,15 @@ function carregarEquipamentosDisponiveis() {
                 return;
             }
 
-            // Filtragem rigorosa para o modal de Envio e Devolução
             const equipamentosValidos = lista.filter(eq => {
                 if (tipo === 'devolucao' && idEquipamentoDevolucao) {
                     return eq.idEquipamento == idEquipamentoDevolucao;
                 }
                 
-                // Mapeia o ID e o texto da situação do equipamento de forma segura
                 const situacaoId = eq.situacaoId !== undefined ? Number(eq.situacaoId) : (eq.situacao && eq.situacao.id ? Number(eq.situacao.id) : 0);
                 const situacaoTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && eq.situacao.nome) || '').toLowerCase();
 
-                // Regra estrita para o Envio: Deve ser obrigatoriamente Disponível 
-                const ehDisponivel = (situacaoId === 1) || (situacaoTexto.includes("disponível") && !situacaoTexto.includes("uso") && !situacaoTexto.includes("reservado"));
-
-                return ehDisponivel;
+                return (situacaoId === 1) || (situacaoTexto.includes("disponível") && !situacaoTexto.includes("uso") && !situacaoTexto.includes("reservado"));
             });
 
             if (equipamentosValidos.length === 0) {
@@ -251,7 +309,6 @@ function carregarEquipamentosDisponiveis() {
             equipamentosValidos.forEach(eq => {
                 if (!equipamentosSelecionadosMap.has(eq.idEquipamento)) {
                     let nomeCpu = eq.nomeIdentificador || eq.nomeCpu || '-';
-                    
                     let produto = eq.produtoNome || eq.nomeProduto || eq.descricaoProduto || eq.nome 
                                 || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
                                 || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
@@ -291,7 +348,6 @@ function atualizarTabelaPrincipalItens() {
 
     equipamentosSelecionadosMap.forEach((eq, id) => {
         let nomeCpu = eq.nomeIdentificador || eq.nomeCpu || '-';
-        
         let produto = eq.produtoNome || eq.nomeProduto || eq.descricaoProduto || eq.nome 
                     || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
                     || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
@@ -324,6 +380,11 @@ function removerItemEnvio(id) {
         if (selectOrigem) {
             selectOrigem.disabled = false;
             selectOrigem.value = "";
+        }
+        const selectDestino = document.getElementById("destinoId");
+        if (selectDestino) {
+            selectDestino.disabled = false;
+            selectDestino.value = "";
         }
     }
 }

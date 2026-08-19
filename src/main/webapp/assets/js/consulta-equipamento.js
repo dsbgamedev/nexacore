@@ -2,16 +2,23 @@
 let equipamentosSelecionadosMap = new Map();
 
 document.addEventListener("DOMContentLoaded", function() {
-    // 1. Definir a data de hoje por padrão
+    // 1. Definir a data de hoje por padrão (caso exista na tela)
     const hoje = new Date().toISOString().split('T')[0];
     const inputDataEnvio = document.getElementById("dataEnvio");
     if (inputDataEnvio) {
         inputDataEnvio.value = hoje;
     }
 	
+    // 2. Carregar os selects de Filtros da Tela de Consulta dinamicamente
+    carregarFiltroFiliais();
+    carregarFiltroDepartamentos();
+    carregarFiltroStatus();
+    carregarFiltroSituacao();
 
-	// 2. Carregar o select de Filiais (Origem e Destino)
-    carregarFiliais();
+    // Executa a pesquisa inicial para popular a tabela com todos os registros
+    if (typeof pesquisarEquipamentos === 'function') {
+        pesquisarEquipamentos();
+    }
 	
     // 3. Evento do botão que abre o modal de seleção de equipamentos
     const btnAbrirModal = document.getElementById("btnAbrirModalEquipamentos");
@@ -172,6 +179,91 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 });
+
+// FUNÇÕES DE CARREGAMENTO DOS FILTROS DA TELA DE CONSULTA
+async function carregarFiltroFiliais() {
+    try {
+        const response = await fetch('/nexacore/api/empresas/');
+        if (response.ok) {
+            const filiais = await response.json();
+            const select = document.getElementById("filtroOrigem");
+            if (select) {
+                select.innerHTML = '<option value="">Selecione...</option>';
+                filiais.forEach(f => {
+                    const option = document.createElement("option");
+                    option.value = f.origemCodigo;
+                    option.textContent = `${f.origemCodigo} - ${f.sufixo || f.nomeEmpresa || ''}`;
+                    select.appendChild(option);
+                });
+            }
+        }
+    } catch (e) {
+        console.error("Erro ao carregar filiais para o filtro:", e);
+    }
+}
+
+async function carregarFiltroDepartamentos() {
+    try {
+        const response = await fetch('/nexacore/api/departamentos');
+        if (response.ok) {
+            const departamentos = await response.json();
+            const select = document.getElementById("filtroDepartamento");
+            if (select) {
+                select.innerHTML = '<option value="">Todos os setores...</option>';
+                departamentos.forEach(d => {
+                    const option = document.createElement("option");
+                    option.value = d.idDepartamento || d.id;
+                    option.textContent = d.nomeDepartamento || d.nome;
+                    select.appendChild(option);
+                });
+            }
+        }
+    } catch (e) {
+        console.error("Erro ao carregar departamentos para o filtro:", e);
+    }
+}
+
+async function carregarFiltroStatus() {
+    try {
+        const response = await fetch('/nexacore/api/status-equipamento');
+        if (response.ok) {
+            const listaStatus = await response.json();
+            const select = document.getElementById("filtroStatus");
+            if (select) {
+                select.innerHTML = '<option value="">Selecione...</option>';
+                listaStatus.forEach(s => {
+                    const option = document.createElement("option");
+                    option.value = s.id;
+                    option.textContent = s.nome;
+                    select.appendChild(option);
+                });
+            }
+        }
+    } catch (e) {
+        console.error("Erro ao carregar status para o filtro:", e);
+    }
+}
+
+async function carregarFiltroSituacao() {
+    try {
+        const response = await fetch('/nexacore/api/equipamentos/?acaoSituacoes=edicao-direta');
+        if (response.ok) {
+            const listaSituacao = await response.json();
+            const select = document.getElementById("filtroSituacao");
+            if (select) {
+                select.innerHTML = '<option value="">Selecione...</option>';
+                listaSituacao.forEach(sit => {
+                    const option = document.createElement("option");
+                    option.value = sit.id;
+                    option.textContent = sit.nome;
+                    select.appendChild(option);
+                });
+            }
+        }
+    } catch (e) {
+        console.error("Erro ao carregar situação para o filtro:", e);
+    }
+}
 
 // FUNÇÃO DE VISUALIZAÇÃO DE DETALHES (LUPA) CORRIGIDA NO ESCOPO GLOBAL
 async function visualizarDetalhesEquipamento(idEquipamento) {
@@ -347,10 +439,12 @@ async function pesquisarEquipamentos() {
             }
 
             const situacaoTexto = eq.situacaoAtual || eq.situacaoNome || eq.situacaoDescricao || (eq.situacao && eq.situacao.nome) || '-';
-            const sitId = eq.situacaoId !== undefined ? eq.situacaoId : (eq.situacao ? eq.situacao.id : 0);
+            const sitId = eq.situacaoId !== undefined ? Number(eq.situacaoId) : (eq.situacao ? Number(eq.situacao.id) : 0);
 
-            // Bloqueia edição direta se estiver estritamente em trânsito (3) ou em devolução (8)
-            const bloqueado = (sitId === 3 || sitId === 8);
+            const eAguardandoEnvio = situacaoTexto.toLowerCase().includes('aguardando envio');
+            const bloqueado = (sitId === 3 || sitId === 8 || eAguardandoEnvio);
+
+            const ehDisponivel = (sitId === 1) || (situacaoTexto.toLowerCase().includes('disponível') && !situacaoTexto.toLowerCase().includes('uso'));
 
             let acoesHtml = `
                 <button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Visualizar" onclick="visualizarDetalhesEquipamento(${eq.idEquipamento})">
@@ -367,24 +461,28 @@ async function pesquisarEquipamentos() {
                     <a href="${contextPath}/jsp/cadastro-equipamento.jsp?id=${eq.idEquipamento}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
                         <i class="fas fa-pen"></i>
                     </a>
-                    <button type="button" class="btn btn-sm btn-outline-danger me-1" title="Excluir" onclick="confirmarExclusaoEquipamento(${eq.idEquipamento})">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
                 `;
 
-				// O botão de devolução aparece se estiver "Em Uso" E a origem NÃO for a Matriz (161)
-				const ID_SITUACAO_EM_USO = 2; 
-				const ehEmUso = (sitId === ID_SITUACAO_EM_USO) || (situacaoTexto.toLowerCase().includes('em uso'));
-				const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : 0;
-				const ehMatriz161 = (codigoOrigemAtual === 161);
+                if (ehDisponivel) {
+                    acoesHtml += `
+                        <button type="button" class="btn btn-sm btn-outline-danger me-1" title="Excluir" onclick="confirmarExclusaoEquipamento(${eq.idEquipamento})">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    `;
+                }
+            }
 
-				if (ehEmUso && !ehMatriz161) {
-				    acoesHtml += `
-				        <button type="button" class="btn btn-sm btn-outline-warning ms-1" title="Iniciar Devolução" onclick="iniciarDevolucao(${eq.idEquipamento})">
-				            <i class="fas fa-undo"></i>
-				        </button>
-				    `;
-				}
+            const ID_SITUACAO_EM_USO = 2; 
+            const ehEmUso = (sitId === ID_SITUACAO_EM_USO) || (situacaoTexto.toLowerCase().includes('em uso'));
+            const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : 0;
+            const ehMatriz161 = (codigoOrigemAtual === 161);
+
+            if (ehEmUso && !ehMatriz161) {
+                acoesHtml += `
+                    <button type="button" class="btn btn-sm btn-outline-warning ms-1" title="Iniciar Devolução" onclick="iniciarDevolucao(${eq.idEquipamento})">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                `;
             }
 
             const row = `<tr>
@@ -441,20 +539,13 @@ function carregarEquipamentosDisponiveis() {
                 return;
             }
 
-            // -------------------------------------------------------------------------
-            // FILTRAGEM CORRIGIDA: Permite itens Disponíveis (mesmo sem histórico) 
-            // ou itens que venham do fluxo específico de devolução.
-            // -------------------------------------------------------------------------
             const listaApenasDisponiveis = lista.filter(eq => {
                 if (tipo === 'devolucao') return true; 
 
                 const sitId = eq.situacaoId !== undefined ? eq.situacaoId : (eq.situacao ? eq.situacao.id : null);
                 const sitTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && eq.situacao.nome) || '').toLowerCase();
 
-                // Considera válido para envio se a situação for "Disponível" (ID 1 ou texto)
                 const ehDisponivel = (sitId == 1) || sitTexto.includes("disponível");
-
-                // Garante que o equipamento não está bloqueado ou em trânsito externo atual
                 const naoEstaBloqueado = !eq.bloquearOrigem && !eq.origemBloqueada && eq.statusMovimentacao !== 'EM_DESTINO_EXTERNO';
 
                 return ehDisponivel && naoEstaBloqueado;
@@ -493,6 +584,7 @@ function carregarEquipamentosDisponiveis() {
         })
         .catch(err => console.error("Erro ao carregar equipamentos para seleção:", err));
 }
+
 function atualizarTabelaPrincipalItens() {
     const tbody = document.getElementById("corpoTabelaItens");
     if (!tbody) return;
@@ -540,7 +632,6 @@ function removerItemEnvio(id) {
     }
 }
 
-// Função global para excluir equipamento
 async function confirmarExclusaoEquipamento(idEquipamento) {
     const confirmado = await ModalService.confirm(
         "Confirmar Inativação", 
@@ -553,7 +644,6 @@ async function confirmarExclusaoEquipamento(idEquipamento) {
                 method: 'DELETE'
             });
 
-            // Lê o texto primeiro para evitar erro caso o backend retorne vazio
             const textoResposta = await response.text();
             let resultado = {};
             
@@ -567,7 +657,6 @@ async function confirmarExclusaoEquipamento(idEquipamento) {
                 throw new Error(resultado.mensagem || "Não foi possível inativar o equipamento.");
             }
 
-            // Atualiza a listagem da tela
             if (typeof pesquisarEquipamentos === 'function') {
                 pesquisarEquipamentos();
             } else {
@@ -586,14 +675,8 @@ async function confirmarExclusaoEquipamento(idEquipamento) {
             }
         }
     }
-
 }
-/**
-	 * Função global chamada pelo clique no botão de devolução na tela de consulta.
-	 * Redireciona para a página de movimentação/envio com o parâmetro de tipo='devolucao'
-	 */
-	// Função global para iniciar a devolução de um equipamento em uso
-	function iniciarDevolucao(idEquipamento) {
-	    // CORREÇÃO: Altere de 'movimentacao-envio.jsp' para 'envio-equipamento.jsp'
-	    window.location.href = `${contextPath}/jsp/envio-equipamento.jsp?tipo=devolucao&idEquipamento=${idEquipamento}`;
-	}
+
+function iniciarDevolucao(idEquipamento) {
+    window.location.href = `${contextPath}/jsp/envio-equipamento.jsp?tipo=devolucao&idEquipamento=${idEquipamento}`;
+}

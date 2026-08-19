@@ -217,6 +217,10 @@ public class EquipamentoDAO {
             if (situacaoIdFiltro != null && !situacaoIdFiltro.trim().isEmpty()) {
                 sql.append(" AND e.situacao_id = ?");
                 parametros.add(Integer.parseInt(situacaoIdFiltro));
+               // ADICIONE ESTE BLOCO LOGO ABAIXO: Se for a situação 6 (Assistência), garante que não há chamado ativo
+                if ("6".equals(situacaoIdFiltro.trim())) {
+                    sql.append(" AND NOT EXISTS (SELECT 1 FROM manutencao_chamados c WHERE c.id_equipamento = e.id_equipamento AND c.id_status_chamado IN (1, 2, 3, 4, 5))");
+                }
             }
             if (produto != null && !produto.trim().isEmpty()) {
                 sql.append(" AND (p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ?)");
@@ -335,6 +339,11 @@ public class EquipamentoDAO {
                      "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
                      "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
                      "WHERE e.origem_codigo = ? AND e.status_id != 3 AND e.situacao_id = 1 " +
+                     "AND NOT EXISTS (" +
+                     "    SELECT 1 FROM manutencao_chamados c " +
+                     "    WHERE c.id_equipamento = e.id_equipamento " +
+                     "    AND c.id_status_chamado IN (1, 2, 3, 4, 5)" +
+                     ") " +
                      "ORDER BY p.modelo ASC";
 
         try (Connection conn = Conexao.conectar();
