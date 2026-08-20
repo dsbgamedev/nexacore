@@ -184,6 +184,89 @@ public class ManutencaoDAO {
 
         return lista;
     }
+    
+    public List<ManutencaoChamado> listarComFiltros(String busca, String status, String tipo, String prioridade) throws SQLException {
+        List<ManutencaoChamado> lista = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(
+            "SELECT c.*, s.nome_status, e.nome_identificador, e.patrimonio FROM manutencao_chamados c " +
+            "LEFT JOIN status_chamado s ON c.id_status_chamado = s.id_status_chamado " +
+            "LEFT JOIN equipamentos e ON c.id_equipamento = e.id_equipamento WHERE 1=1 "
+        );
+
+        List<Object> parametros = new ArrayList<>();
+
+        if (busca != null && !busca.trim().isEmpty()) {
+            sql.append("AND (CAST(c.id_chamado AS TEXT) ILIKE ? OR e.patrimonio ILIKE ? OR c.descricao_problema ILIKE ?) ");
+            String termo = "%" + busca.trim() + "%";
+            parametros.add(termo);
+            parametros.add(termo);
+            parametros.add(termo);
+        }
+
+        if (status != null && !status.trim().isEmpty() && !status.equals("Todos")) {
+            sql.append("AND s.nome_status = ? ");
+            parametros.add(status);
+        }
+
+        if (tipo != null && !tipo.trim().isEmpty() && !tipo.equals("Todas")) {
+            sql.append("AND c.tipo_problema = ? ");
+            parametros.add(tipo);
+        }
+
+        if (prioridade != null && !prioridade.trim().isEmpty() && !prioridade.equals("Todas")) {
+            sql.append("AND c.prioridade = ? ");
+            parametros.add(prioridade);
+        }
+
+        sql.append(" ORDER BY c.id_chamado DESC");
+
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+
+        try {
+            conn = Conexao.conectar();
+            stmt = conn.prepareStatement(sql.toString());
+
+            for (int i = 0; i < parametros.size(); i++) {
+                stmt.setObject(i + 1, parametros.get(i));
+            }
+
+            rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                ManutencaoChamado m = new ManutencaoChamado();
+                m.setIdChamado(rs.getLong("id_chamado"));
+                m.setIdEquipamento(rs.getLong("id_equipamento"));
+                
+                String nomeEquip = rs.getString("nome_identificador");
+                String patrimonio = rs.getString("patrimonio");
+                m.setNomeEquipamento(nomeEquip != null ? nomeEquip + " (Pat: " + patrimonio + ")" : "EQ-" + m.getIdEquipamento());
+
+                if (rs.getDate("data_abertura") != null) {
+                    m.setDataAbertura(rs.getDate("data_abertura").toLocalDate());
+                }
+                m.setSolicitante(rs.getString("solicitante"));
+                m.setTipoProblema(rs.getString("tipo_problema"));
+                m.setPrioridade(rs.getString("prioridade"));
+                m.setDescricaoProblema(rs.getString("descricao_problema"));
+                m.setResponsavelTecnico(rs.getString("responsavel_tecnico"));
+                m.setDiagnostico(rs.getString("diagnostico"));
+                m.setSolucaoRealizada(rs.getString("solucao_realizada"));
+                
+                String nomeStatus = rs.getString("nome_status");
+                m.setNomeStatus(nomeStatus != null ? nomeStatus : "Aberto");
+                m.setIdStatusChamado(rs.getLong("id_status_chamado"));
+                
+                lista.add(m);
+            }
+        } finally {
+            Conexao.fechar(rs, stmt, conn);
+        }
+
+        return lista;
+    }
+    
     public void atualizar(ManutencaoChamado chamado, boolean reparado) throws SQLException {
         String sqlChamado = "UPDATE manutencao_chamados SET " +
                      "id_status_chamado = ?, " +
@@ -248,18 +331,51 @@ public class ManutencaoDAO {
     }
     
     public void excluir(Long idChamado) throws SQLException {
-        String sql = "DELETE FROM manutencao_chamados WHERE id_chamado = ?";
+        String sqlChamado = "UPDATE manutencao_chamados SET id_status_chamado = 7 WHERE id_chamado = ?";
+        String sqlEquipamento = "UPDATE equipamentos SET situacao_id = 1, status_id = 1 WHERE id_equipamento = ?";
 
         Connection conn = null;
-        PreparedStatement stmt = null;
+        PreparedStatement stmtChamado = null;
+        PreparedStatement stmtEquip = null;
 
         try {
             conn = Conexao.conectar();
-            stmt = conn.prepareStatement(sql);
-            stmt.setLong(1, idChamado);
-            stmt.executeUpdate();
+            conn.setAutoCommit(false);
+
+            // 1. Descobre qual equipamento está vinculado a este chamado antes de cancelar
+            Long idEquipamento = null;
+            String sqlBuscaEquip = "SELECT id_equipamento FROM manutencao_chamados WHERE id_chamado = ?";
+            try (PreparedStatement stmtBusca = conn.prepareStatement(sqlBuscaEquip)) {
+                stmtBusca.setLong(1, idChamado);
+                try (ResultSet rs = stmtBusca.executeQuery()) {
+                    if (rs.next()) {
+                        idEquipamento = rs.getLong("id_equipamento");
+                    }
+                }
+            }
+
+            // 2. Atualiza o status do chamado para Cancelado (7)
+            stmtChamado = conn.prepareStatement(sqlChamado);
+            stmtChamado.setLong(1, idChamado);
+            stmtChamado.executeUpdate();
+
+            // 3. Altera o equipamento automaticamente para Ativo (1) e Disponível (1)
+            if (idEquipamento != null) {
+                stmtEquip = conn.prepareStatement(sqlEquipamento);
+                stmtEquip.setLong(1, idEquipamento);
+                stmtEquip.executeUpdate();
+            }
+
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            }
+            throw e;
         } finally {
-            Conexao.fechar(null, stmt, conn);
+            try { if (stmtChamado != null) stmtChamado.close(); } catch (Exception e) {}
+            try { if (stmtEquip != null) stmtEquip.close(); } catch (Exception e) {}
+            Conexao.fechar(null, null, conn);
         }
     }
 }

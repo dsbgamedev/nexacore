@@ -310,7 +310,58 @@ function buscarHistoricoCompletoEquipamento(idEquipamento) {
 }
 
 function visualizarChamado(id) {
-    ModalService.info("Detalhes do Chamado", "Visualizar chamado completo ID: " + id);
+    // Tenta buscar o chamado na API. Caso a sua API espere outro parâmetro, garantimos a compatibilidade:
+    fetch(`${contextPath}/api/manutencoes?id=${id}`)
+        .then(res => res.json())
+        .then(data => {
+            // Se a API retornar uma lista ou um objeto direto, tratamos ambos os casos:
+            let chamado = Array.isArray(data) ? data.find(c => (c.idChamado == id || c.id == id)) : data;
+            
+            if (!chamado || Object.keys(chamado).length === 0) {
+                // Plano B: Se a API não achou pelo ID isolado, buscamos todos os chamados do equipamento atual e filtramos
+                const selectEquip = document.getElementById('selectEquipamento');
+                if (selectEquip && selectEquip.value) {
+                    return fetch(`${contextPath}/api/manutencoes?idEquipamento=${selectEquip.value}`)
+                        .then(r => r.json())
+                        .then(lista => Array.isArray(lista) ? lista.find(c => c.idChamado == id || c.id == id) : null);
+                }
+                throw new Error("Chamado não encontrado");
+            }
+            return chamado;
+        })
+        .then(chamado => {
+            if (!chamado) {
+                ModalService.error("Erro", "Não foi possível localizar os dados deste chamado.");
+                return;
+            }
+
+            // Preenche os campos do modal mapeando corretamente com o banco de dados
+            document.getElementById('detalhesId').innerText = 'MAN-' + String(chamado.idChamado || chamado.id || id).padStart(6, '0');
+            document.getElementById('detalhesData').innerText = chamado.dataAbertura || '---';
+            document.getElementById('detalhesTipo').innerText = chamado.tipoManutencao || 'Corretiva';
+            document.getElementById('detalhesProblemaTipo').innerText = chamado.tipoProblema || '---';
+            document.getElementById('detalhesPrioridade').innerText = chamado.prioridade || '---';
+            document.getElementById('detalhesSolicitante').innerText = chamado.solicitante || '---';
+            document.getElementById('detalhesTecnico').innerText = chamado.responsavelTecnico || chamado.tecnico || 'Não atribuído';
+            document.getElementById('detalhesDescricao').innerText = chamado.descricaoProblema || chamado.descricao || 'Nenhuma descrição informada.';
+            document.getElementById('detalhesSolucao').innerText = chamado.solucaoRealizada || chamado.solucao || chamado.observacoes || 'Sem registros de solução adicionais.';
+
+            const badgeStatus = document.getElementById('detalhesStatus');
+            const statusNome = chamado.statusChamado || chamado.status || 'Aberto';
+            badgeStatus.innerText = statusNome;
+            badgeStatus.className = "badge " + (String(statusNome).toLowerCase().includes('concluíd') || String(statusNome).toLowerCase().includes('finalizad') || String(statusNome).toLowerCase().includes('6') ? 'bg-success' : 'bg-warning text-dark');
+
+            // Abre o modal de detalhes
+            const modalEl = document.getElementById('modalDetalhesChamado');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+        })
+        .catch(err => {
+            console.error("Erro ao carregar detalhes:", err);
+            ModalService.error("Erro", "Não foi possível carregar os detalhes do chamado ID " + id);
+        });
 }
 
 function enviarChamadoManutencao() {
@@ -380,4 +431,54 @@ function carregarSelectDepartamentos() {
                 select.innerHTML = '<option value="">Erro ao carregar departamentos</option>';
             }
         });
+}
+// --- Lógica para o Modal de Histórico Completo ---
+
+document.addEventListener("DOMContentLoaded", function() {
+    // Configura o botão do topo (Histórico do Equipamento)
+    const btnTopoHistorico = document.getElementById('btnHistoricoEquipamento');
+    if (btnTopoHistorico) {
+        btnTopoHistorico.addEventListener('click', function(e) {
+            e.preventDefault();
+            abrirModalHistoricoCompleto();
+        });
+    }
+
+    // Configura o link do rodapé do card (Ver histórico completo)
+    const linkHistoricoCompleto = document.getElementById('linkHistoricoCompleto');
+    if (linkHistoricoCompleto) {
+        linkHistoricoCompleto.addEventListener('click', function(e) {
+            e.preventDefault();
+            abrirModalHistoricoCompleto();
+        });
+    }
+});
+
+function abrirModalHistoricoCompleto() {
+    const selectEquip = document.getElementById('selectEquipamento');
+    
+    // Valida se há um equipamento selecionado
+    if (!selectEquip || !selectEquip.value) {
+        ModalService.error("Atenção", "Por favor, selecione um equipamento primeiro para visualizar o histórico completo.");
+        return;
+    }
+
+    // Define o nome do equipamento selecionado no título do modal
+    const textoEquip = selectEquip.options[selectEquip.selectedIndex].text;
+    document.getElementById('modalHistEquipNome').innerText = textoEquip;
+
+    // Copia os dados já carregados na tabela da Seção 3 para dentro do modal
+    const tbodyOrigem = document.getElementById('tabelaHistoricoManutencoes');
+    const tbodyDestino = document.getElementById('tabelaHistoricoCompletoModal');
+
+    if (tbodyOrigem && tbodyDestino) {
+        tbodyDestino.innerHTML = tbodyOrigem.innerHTML;
+    }
+
+    // Abre o modal utilizando o Bootstrap
+    const modalEl = document.getElementById('modalHistoricoCompleto');
+    if (modalEl) {
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    }
 }

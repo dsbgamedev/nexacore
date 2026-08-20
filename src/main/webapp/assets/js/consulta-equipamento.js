@@ -438,13 +438,17 @@ async function pesquisarEquipamentos() {
                 if (opt && opt.value !== "") deptoTexto = opt.text;
             }
 
-            const situacaoTexto = eq.situacaoAtual || eq.situacaoNome || eq.situacaoDescricao || (eq.situacao && eq.situacao.nome) || '-';
+			const situacaoTexto = eq.situacaoAtual || eq.situacaoNome || eq.situacaoDescricao || (eq.situacao && eq.situacao.nome) || '-';
             const sitId = eq.situacaoId !== undefined ? Number(eq.situacaoId) : (eq.situacao ? Number(eq.situacao.id) : 0);
 
             const eAguardandoEnvio = situacaoTexto.toLowerCase().includes('aguardando envio');
             const bloqueado = (sitId === 3 || sitId === 8 || eAguardandoEnvio);
-
             const ehDisponivel = (sitId === 1) || (situacaoTexto.toLowerCase().includes('disponível') && !situacaoTexto.toLowerCase().includes('uso'));
+
+            // NOVA REGRA: Verifica se está em manutenção (Situação 6) E se o chamado está aberto (Status ID 1)
+            const emManutencaoAssistência = (sitId === 6 || situacaoTexto.toLowerCase().includes('assistência') || situacaoTexto.toLowerCase().includes('manutenção'));
+            const chamadoAberto = (eq.idStatusChamado === 1 || eq.statusChamadoId === 1 || eq.statusChamado === 'Aberto');
+            const deveOcultarEditar = (emManutencaoAssistência && chamadoAberto);
 
             let acoesHtml = `
                 <button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Visualizar" onclick="visualizarDetalhesEquipamento(${eq.idEquipamento})">
@@ -457,11 +461,14 @@ async function pesquisarEquipamentos() {
                     <span class="badge bg-warning text-dark" title="Operação bloqueada para esta situação">Bloqueado</span>
                 `;
             } else {
-                acoesHtml += `
-                    <a href="${contextPath}/jsp/cadastro-equipamento.jsp?id=${eq.idEquipamento}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
-                        <i class="fas fa-pen"></i>
-                    </a>
-                `;
+                // Só exibe o botão de editar se NÃO estiver em manutenção com chamado aberto
+                if (!deveOcultarEditar) {
+                    acoesHtml += `
+                        <a href="${contextPath}/jsp/cadastro-equipamento.jsp?id=${eq.idEquipamento}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
+                            <i class="fas fa-pen"></i>
+                        </a>
+                    `;
+                }
 
                 if (ehDisponivel) {
                     acoesHtml += `

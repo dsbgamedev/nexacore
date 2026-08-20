@@ -72,6 +72,14 @@ public class ManutencaoServlet extends HttpServlet {
                 // ADICIONADO: Atende a rota /api/manutencoes/listar da nova tela de consulta
                 List<ManutencaoChamado> todos = dao.listarTodos();
                 out.print(gson.toJson(todos));
+            } else if (pathInfo != null && pathInfo.equals("/listar")) {
+                String busca = req.getParameter("busca");
+                String status = req.getParameter("status");
+                String tipo = req.getParameter("tipo");
+                String prioridade = req.getParameter("prioridade");
+
+                List<ManutencaoChamado> todos = dao.listarComFiltros(busca, status, tipo, prioridade);
+                out.print(gson.toJson(todos));
             } else {
                 // Se chamado sem parâmetros específicos, tenta retornar todos por segurança
                 List<ManutencaoChamado> todos = dao.listarTodos();
@@ -91,24 +99,7 @@ public class ManutencaoServlet extends HttpServlet {
         String pathInfo = req.getPathInfo();
 
         try {
-            BufferedReader reader = req.getReader();
-            ManutencaoChamado chamado = gson.fromJson(reader, ManutencaoChamado.class);
-
-         // Rota para atualizar o chamado (vindo do modal de gerenciar)
-            if ("/atualizar".equals(pathInfo)) {
-                if (chamado == null || chamado.getIdChamado() == null) {
-                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    out.print("{\"sucesso\": false, \"mensagem\": \"ID do chamado não informado para atualização.\"}");
-                    return;
-                }
-
-                // Passa o chamado e o status do checkbox de reparo para o DAO
-                dao.atualizar(chamado, chamado.isReparado());
-
-                resp.setStatus(HttpServletResponse.SC_OK);
-                out.print("{\"sucesso\": true, \"mensagem\": \"Chamado atualizado com sucesso!\"}");
-                return;
-            }// Rota para excluir o chamado
+            // Rota para excluir/cancelar o chamado
             if ("/excluir".equals(pathInfo)) {
                 String idParam = req.getParameter("id");
                 if (idParam == null || idParam.isEmpty()) {
@@ -118,17 +109,38 @@ public class ManutencaoServlet extends HttpServlet {
                 }
 
                 Long idChamado = Long.parseLong(idParam);
-                dao.excluir(idChamado);
+                dao.excluir(idChamado); // Altera o status para Cancelado e libera o equipamento
 
                 resp.setStatus(HttpServletResponse.SC_OK);
-                out.print("{\"sucesso\": true, \"mensagem\": \"Chamado excluído com sucesso!\"}");
+                out.print("{\"sucesso\": true, \"mensagem\": \"Chamado cancelado e equipamento liberado com sucesso!\"}");
                 return;
             }
 
-            // Fluxo normal de Abertura de Chamado
+            // Rota para atualizar o chamado (vindo do modal de gerenciar)
+            if ("/atualizar".equals(pathInfo)) {
+                BufferedReader reader = req.getReader();
+                ManutencaoChamado chamado = gson.fromJson(reader, ManutencaoChamado.class);
+                
+                if (chamado == null || chamado.getIdChamado() == null) {
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.print("{\"sucesso\": false, \"mensagem\": \"ID do chamado não informado para atualização.\"}");
+                    return;
+                }
+
+                dao.atualizar(chamado, chamado.isReparado());
+
+                resp.setStatus(HttpServletResponse.SC_OK);
+                out.print("{\"sucesso\": true, \"mensagem\": \"Chamado atualizado com sucesso!\"}");
+                return;
+            }
+
+            // Fluxo normal de Abertura de Chamado (caso POST seja feito diretamente na raiz)
+            BufferedReader reader = req.getReader();
+            ManutencaoChamado chamado = gson.fromJson(reader, ManutencaoChamado.class);
+
             if (chamado == null || chamado.getIdEquipamento() == null) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                out.print("{\"sucesso\": false, \"mensagem\": \"Dados incompletos para abertura do chamado.\"}");
+                out.print("{\"sucesso: false, \"mensagem\": \"Dados incompletos para abertura do chamado.\"}");
                 return;
             }
 
@@ -143,7 +155,7 @@ public class ManutencaoServlet extends HttpServlet {
 
         } catch (Exception e) {
             e.printStackTrace();
-            resp.setStatus(HttpServletResponse.SC_OK);
+            resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             out.print("{\"sucesso\": false, \"mensagem\": \"" + e.getMessage().replace("\"", "'") + "\"}");
         }
     }

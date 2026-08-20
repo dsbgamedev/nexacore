@@ -42,10 +42,12 @@
             <div class="section-title"><i class="fa-solid fa-filter me-1"></i> Filtros de Pesquisa</div>
             <form id="formFiltroChamados">
                 <div class="row">
+                <!-- Pesquisa Geral -->
                     <div class="col-md-3 mb-3">
                         <label class="form-label small fw-bold">Pesquisa Geral</label>
                         <input type="text" class="form-control form-control-sm" id="filtroBusca" placeholder="ID, patrimônio, descrição...">
                     </div>
+                    <!-- Status do Chamado -->
                     <div class="col-md-2 mb-3">
                         <label class="form-label small fw-bold">Status do Chamado</label>
                         <select class="form-select form-select-sm" id="filtroStatus">
@@ -59,6 +61,7 @@
                             <option value="7">Cancelado</option>
                         </select>
                     </div>
+                    <!-- Tipo de Manutenção -->
                     <div class="col-md-2 mb-3">
                         <label class="form-label small fw-bold">Tipo de Manutenção</label>
                         <select class="form-select form-select-sm" id="filtroTipo">
@@ -67,6 +70,7 @@
                             <option value="Preventiva">Preventiva</option>
                         </select>
                     </div>
+                    <!-- Prioridade -->
                     <div class="col-md-2 mb-3">
                         <label class="form-label small fw-bold">Prioridade</label>
                         <select class="form-select form-select-sm" id="filtroPrioridade">
@@ -77,6 +81,17 @@
                             <option value="Urgente">Urgente</option>
                         </select>
                     </div>
+                    <!-- NOVO: Data Início -->
+				    <div class="col-md-3">
+				        <label for="filtroDataInicio" class="form-label">Data Início</label>
+				        <input type="date" class="form-control" id="filtroDataInicio">
+				    </div>
+				
+				    <!-- NOVO: Data Fim -->
+				    <div class="col-md-3">
+				        <label for="filtroDataFim" class="form-label">Data Fim</label>
+				        <input type="date" class="form-control" id="filtroDataFim">
+				    </div>
                     <div class="col-md-3 mb-3 d-flex align-items-end justify-content-end">
                         <button type="button" class="btn btn-outline-secondary btn-sm me-2 px-3" onclick="limparFiltros()">
                             <i class="fa fa-eraser me-1"></i> Limpar
@@ -189,7 +204,32 @@
     </div>
 
     <!-- MODAIS PADRÃO -->
-    <div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static"><div class="modal-dialog modal-dialog-centered"><div class="modal-content-custom" id="alertBox"><h3 id="alertTitle"></h3><p id="alertMessage"></p><div class="modal-buttons"><button type="button" class="btn-confirmar" id="alertOkBtn">OK</button></div></div></div></div>
+    <div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content-custom" id="alertBox">
+                <h3 id="alertTitle"></h3>
+                <p id="alertMessage"></p>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-confirmar" id="alertOkBtn">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: transparent; border: none; box-shadow: none;">
+                <div class="modal-content-custom" id="confirmBox">
+                    <h3 id="confirmTitle"></h3>
+                    <p id="confirmMessage"></p>
+                    <div class="modal-buttons">
+                        <button type="button" class="btn-cancelar" id="confirmCancelBtn">Cancelar</button>
+                        <button type="button" class="btn-confirmar" id="confirmOkBtn">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/consulta-chamado.js"></script>

@@ -46,6 +46,8 @@ public class Equipamento {
     private String modelo;
     private String descricaoDetalhada;
     private String imagemUrl;
+   // ID do status do chamado de manutenção ativo (se houver)
+    private Integer statusChamadoId;
     
     
     /**
@@ -368,6 +370,19 @@ public class Equipamento {
 	public void setImagemUrl(String imagemUrl) {
 		this.imagemUrl = imagemUrl;
 	}
+	/**
+     * @return the statusChamadoId
+     */
+    public Integer getStatusChamadoId() {
+        return statusChamadoId;
+    }
+
+    /**
+     * @param statusChamadoId the statusChamadoId to set
+     */
+    public void setStatusChamadoId(Integer statusChamadoId) {
+        this.statusChamadoId = statusChamadoId;
+    }
 	
     
 }

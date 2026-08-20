@@ -16,7 +16,6 @@ public class EquipamentoDAO {
 	        eq.setIdSistema(gerarProximoIdSistema());
 	    }
 
-	    // Garante que todo novo equipamento comece obrigatoriamente como Disponível (ID 1) caso venha vazio/zerado
 	    if (eq.getSituacaoId() <= 0) {
 	        eq.setSituacaoId(1);
 	    }
@@ -38,7 +37,6 @@ public class EquipamentoDAO {
 	            stmt.setString(4, eq.getNumeroSerie());
 	            stmt.setString(5, eq.getNomeIdentificador());
 	            
-	            // Tratativa corrigida para buscar o código real da filial
 	            if (eq.getOrigemCodigo() != null && eq.getOrigemCodigo() > 0) {
 	                Integer codigoReal = buscarOrigemCodigoPorIdFilial(conn, eq.getOrigemCodigo());
 	                stmt.setInt(6, codigoReal);
@@ -47,13 +45,8 @@ public class EquipamentoDAO {
 	            }
 	            
 	            stmt.setString(7, eq.getIpAtual());
-	            
-	            // Status do Equipamento
 	            stmt.setInt(8, eq.getStatusId() > 0 ? eq.getStatusId() : 1);
-	            
-	            // Situação do Equipamento (Força 1 se for menor ou igual a 0)
 	            stmt.setInt(9, eq.getSituacaoId());
-	            
 	            stmt.setString(10, eq.getUsuarioAtual());
 	            
 	            if (eq.getDepartamentoId() != null) {
@@ -82,10 +75,10 @@ public class EquipamentoDAO {
 
 	public List<Equipamento> listar() throws SQLException {
         List<Equipamento> lista = new ArrayList<>();
-        // Ajustado de status_id != 0 para status_id != 3 (Inativo)
         String sql = "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, t.nome as nome_tipo, " +
                      "se.nome AS status_nome, se.cor AS status_cor, " +
                      "sit.nome AS situacao_nome, " +
+                     "mc.id_status_chamado AS status_chamado_id, " +
                      "CASE WHEN m.nome_marca IS NOT NULL AND m.nome_marca <> '' THEN m.nome_marca || ' - ' || p.modelo ELSE p.modelo END AS produto_completo " +
                      "FROM equipamentos e " +
                      "INNER JOIN produtos p ON e.id_produto = p.id " +
@@ -93,6 +86,11 @@ public class EquipamentoDAO {
                      "LEFT JOIN tipos_produto t ON p.tipo_id = t.id " +
                      "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
                      "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
+                     "LEFT JOIN ( " +
+                     "    SELECT m1.id_equipamento, m1.id_status_chamado, " +
+                     "    ROW_NUMBER() OVER(PARTITION BY m1.id_equipamento ORDER BY m1.id_chamado DESC) as rn " + 
+                     "    FROM manutencao_chamados m1 " +
+                     ") mc ON mc.id_equipamento = e.id_equipamento AND mc.rn = 1 " +
                      "WHERE e.status_id != 3 " + 
                      "ORDER BY e.id_equipamento DESC";
         
@@ -128,6 +126,9 @@ public class EquipamentoDAO {
                 eq.setStatusCor(rs.getString("status_cor"));
                 eq.setSituacaoNome(rs.getString("situacao_nome"));
 
+                int statusChamadoId = rs.getInt("status_chamado_id");
+                eq.setStatusChamadoId(rs.wasNull() ? null : statusChamadoId);
+
                 eq.setUsuarioAtual(rs.getString("usuario_atual"));
                 
                 int depId = rs.getInt("departamento_id");
@@ -155,19 +156,25 @@ public class EquipamentoDAO {
             conn = Conexao.conectar();
 
             StringBuilder sql = new StringBuilder(
-                "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, " +
-                "se.nome AS status_nome, se.cor AS status_cor, " +
-                "sit.nome AS situacao_nome, " +
-                "CASE WHEN m.nome_marca IS NOT NULL AND m.nome_marca <> '' THEN m.nome_marca || ' - ' || p.modelo ELSE p.modelo END AS produto_completo, " +
-                "f.nome_empresa as nome_origem, d.nome_departamento as nome_departamento " +
-                "FROM equipamentos e " +
-                "INNER JOIN produtos p ON e.id_produto = p.id " +
-                "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
-                "LEFT JOIN filiais f ON e.origem_codigo = f.origem_codigo " +
-                "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
-                "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
-                "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
-                "WHERE 1=1"
+				"SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, " +
+		                "se.nome AS status_nome, se.cor AS status_cor, " +
+		                "sit.nome AS situacao_nome, " +
+		                "mc.id_status_chamado AS status_chamado_id, " +
+		                "CASE WHEN m.nome_marca IS NOT NULL AND m.nome_marca <> '' THEN m.nome_marca || ' - ' || p.modelo ELSE p.modelo END AS produto_completo, " +
+		                "f.nome_empresa as nome_origem, d.nome_departamento as nome_departamento " +
+		                "FROM equipamentos e " +
+		                "INNER JOIN produtos p ON e.id_produto = p.id " +
+		                "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+		                "LEFT JOIN filiais f ON e.origem_codigo = f.origem_codigo " +
+		                "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
+		                "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
+		                "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
+		                "LEFT JOIN ( " +
+		                "    SELECT m1.id_equipamento, m1.id_status_chamado, " +
+		                "    ROW_NUMBER() OVER(PARTITION BY m1.id_equipamento ORDER BY m1.id_chamado DESC) as rn " + 
+		                "    FROM manutencao_chamados m1 " +
+		                ") mc ON mc.id_equipamento = e.id_equipamento AND mc.rn = 1 " +
+		                "WHERE 1=1"
             );
             
             List<Object> parametros = new ArrayList<>();
@@ -203,7 +210,7 @@ public class EquipamentoDAO {
                     sql.append(" AND e.origem_codigo = ?");
                     parametros.add(codigoReal != null ? codigoReal : valorOrigem);
                 } catch (NumberFormatException e) {
-                    // Se não for um número válido, ignora o filtro de origem para não quebrar a listagem
+                    // Ignora se não for número válido
                 }
             }
             if (departamento != null && !departamento.trim().isEmpty()) {
@@ -217,7 +224,6 @@ public class EquipamentoDAO {
             if (situacaoIdFiltro != null && !situacaoIdFiltro.trim().isEmpty()) {
                 sql.append(" AND e.situacao_id = ?");
                 parametros.add(Integer.parseInt(situacaoIdFiltro));
-               // ADICIONE ESTE BLOCO LOGO ABAIXO: Se for a situação 6 (Assistência), garante que não há chamado ativo
                 if ("6".equals(situacaoIdFiltro.trim())) {
                     sql.append(" AND NOT EXISTS (SELECT 1 FROM manutencao_chamados c WHERE c.id_equipamento = e.id_equipamento AND c.id_status_chamado IN (1, 2, 3, 4, 5))");
                 }
@@ -258,6 +264,9 @@ public class EquipamentoDAO {
                 
                 int depId = rs.getInt("departamento_id");
                 eq.setDepartamentoId(rs.wasNull() ? null : depId);
+                
+                int statusChamadoId = rs.getInt("status_chamado_id");
+                eq.setStatusChamadoId(rs.wasNull() ? null : statusChamadoId);
 
                 eq.setIpAtual(rs.getString("ip_atual"));
                 eq.setStatusId(rs.getInt("status_id"));
@@ -279,8 +288,7 @@ public class EquipamentoDAO {
         return lista;
     }
 	
-	// Lista apenas as situações que permitem alteração/cadastro direto (ocultando as de fluxo automático)
-    public List<Map<String, Object>> listarSituacoesEdicaoDireta() throws SQLException {
+	public List<Map<String, Object>> listarSituacoesEdicaoDireta() throws SQLException {
         List<Map<String, Object>> lista = new ArrayList<>();
         String sql = "SELECT id, nome FROM situacao_equipamento WHERE permite_edicao_direta = true ORDER BY nome";
         
@@ -499,7 +507,6 @@ public class EquipamentoDAO {
     }
     
     public void excluirEquipamento(int idEquipamento) throws SQLException {
-        // Altera o status para Inativo (3) e a situação para Baixado/Inativo (ex: ID 7)
         String sql = "UPDATE equipamentos SET status_id = 3, situacao_id = 7 WHERE id_equipamento = ?";
 
         try (Connection conn = Conexao.conectar();
