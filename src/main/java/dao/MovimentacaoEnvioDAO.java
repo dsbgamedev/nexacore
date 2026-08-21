@@ -373,6 +373,25 @@ public class MovimentacaoEnvioDAO {
             if (conn != null) { try { conn.setAutoCommit(true); conn.close(); } catch (SQLException e) { e.printStackTrace(); } }
         }
     }
+	
+	public boolean existeEnvioPendenteParaEquipamento(Long idEquipamento) throws SQLException {
+        // Verifica se o equipamento está vinculado a algum envio ativo que ainda não foi recebido ou cancelado (status 1 = Aguardando, 2 = Em Trânsito)
+        String sql = "SELECT COUNT(*) FROM movimentacao_envio_itens mei " +
+                     "JOIN movimentacao_envio me ON mei.id_envio = me.id_envio " +
+                     "WHERE mei.id_equipamento = ? AND me.status_id IN (1, 2)";
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idEquipamento);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+	
     public void efetivarEnvio(Long idEnvio) throws SQLException {
         String sqlUpdateEnvio = "UPDATE movimentacao_envio SET status_id = 2 WHERE id_envio = ?";
         String sqlUpdateEquip = "UPDATE equipamentos SET situacao_id = 3 WHERE id_equipamento IN (SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?)";

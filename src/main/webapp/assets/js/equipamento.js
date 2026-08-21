@@ -34,17 +34,19 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let listaProdutosGlobal = [];
 
-    // Função auxiliar para gerenciar a exibição da situação com base no status selecionado
-    function ajustarSituacaoPorStatus(statusId, situacaoAlvoId = null) {
+	// Função auxiliar para gerenciar a exibição da situação com base no status e na origem
+	function ajustarSituacaoPorStatus(statusId, situacaoAlvoId = null) {
         if (!selectSituacao) return;
 
-        // Obtém o texto do status selecionado para garantir verificação por nome além do ID
         let textoStatus = "";
         if (selectStatus && selectStatus.selectedIndex >= 0) {
             textoStatus = selectStatus.options[selectStatus.selectedIndex].text.toLowerCase();
         }
 
-        // Função auxiliar para garantir que a opção exista no select
+        const selectOrigem = document.getElementById("input-origem");
+        const codigoOrigemAtual = selectOrigem && selectOrigem.value ? parseInt(selectOrigem.value) : null;
+        const ehMatriz161 = (codigoOrigemAtual === 161);
+
         function garantirOpcao(val, texto) {
             let optExistente = Array.from(selectSituacao.options).find(o => o.value == val);
             if (!optExistente) {
@@ -55,74 +57,90 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
 
-        // 1. Status: Em Manutenção (ID 2 ou texto 'manutenção')
+        // 1. Status: Em Manutenção
         if (statusId === 2 || textoStatus.includes("manuten")) {
             garantirOpcao("6", "Na Assistência");
-
-            Array.from(selectSituacao.options).forEach(opt => {
-                if (opt.value == "6") {
-                    opt.style.display = "block";
-                } else {
-                    opt.style.display = "none";
-                }
-            });
-
-            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "6";
-        } 
-        // 2. Status: Baixado (texto 'baixado')
-        else if (textoStatus.includes("baixado")) {
-            garantirOpcao("7", "Baixado");
-
-            Array.from(selectSituacao.options).forEach(opt => {
-                if (opt.value == "7") {
-                    opt.style.display = "block";
-                } else {
-                    opt.style.display = "none";
-                }
-            });
-
-            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "7";
-        } 
-        // 3. Status: Inativo (texto 'inativo')
-        else if (textoStatus.includes("inativo")) {
-            garantirOpcao("10", "Inativo");
-
-            Array.from(selectSituacao.options).forEach(opt => {
-                if (opt.value == "10") {
-                    opt.style.display = "block";
-                } else {
-                    opt.style.display = "none";
-                }
-            });
-
-            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "10";
-        } 
-        // 4. Status: Ativo (ID 1 ou texto 'ativo')
-        else if (statusId === 1 || textoStatus.includes("ativo")) {
             Array.from(selectSituacao.options).forEach(opt => {
                 if (!opt.value) return;
-                const texto = opt.text.toLowerCase();
-                
-                if (texto.includes("disponível") || texto.includes("uso") || texto.includes("reservado")) {
-                    opt.style.display = "block";
-                } else {
-                    opt.style.display = "none";
-                }
+                opt.style.display = (opt.value == "6") ? "block" : "none";
             });
-            
-            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "1";
+            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "6";
         } 
-        // 5. Outros Status: Exibe todas as opções
-        else {
+        // 2. Status: Baixado
+        else if (textoStatus.includes("baixado")) {
+            garantirOpcao("7", "Baixado");
             Array.from(selectSituacao.options).forEach(opt => {
-                opt.style.display = "block";
+                if (!opt.value) return;
+                opt.style.display = (opt.value == "7") ? "block" : "none";
             });
-            if (situacaoAlvoId) {
-                selectSituacao.value = situacaoAlvoId;
-            }
-        }
-    }
+            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "7";
+        } 
+        // 3. Status: Inativo
+        else if (textoStatus.includes("inativo")) {
+            garantirOpcao("10", "Inativo");
+            Array.from(selectSituacao.options).forEach(opt => {
+                if (!opt.value) return;
+                opt.style.display = (opt.value == "10") ? "block" : "none";
+            });
+            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "10";
+        } 
+		// 4. Status: Ativo
+		        else if (statusId === 1 || textoStatus.includes("ativo")) {
+		            let temOpcaoValida = false;
+		            let primeiraOpcaoVisivel = null;
 
+		            Array.from(selectSituacao.options).forEach(opt => {
+		                if (!opt.value) return;
+		                const texto = opt.text.toLowerCase();
+		                
+		                let ehPermitido = texto.includes("uso") || texto.includes("reservado");
+		                
+		                // REGRA DA SITUAÇÃO: "Disponível" só aparece se a origem for 161 (Matriz)
+		                if (ehMatriz161) {
+		                    ehPermitido = ehPermitido || texto.includes("disponível");
+		                }
+
+		                if (ehPermitido) {
+		                    opt.style.display = "block";
+		                    if (!primeiraOpcaoVisivel) primeiraOpcaoVisivel = opt.value;
+		                    if (opt.value == situacaoAlvoId) temOpcaoValida = true;
+		                } else {
+		                    opt.style.display = "none";
+		                }
+		            });
+		            
+		            // Só define o valor se ele for permitido para a filial atual, senão pega o primeiro disponível ou limpa
+		            if (situacaoAlvoId && temOpcaoValida) {
+		                selectSituacao.value = situacaoAlvoId;
+		            } else {
+		                selectSituacao.value = primeiraOpcaoVisivel ? primeiraOpcaoVisivel : "";
+		            }
+		        } 
+		        // 5. Outros Status
+		        else {
+		            let temOpcaoValida = false;
+		            let primeiraOpcaoVisivel = null;
+
+		            Array.from(selectSituacao.options).forEach(opt => {
+		                if (!opt.value) return;
+		                const texto = opt.text.toLowerCase();
+		                
+		                if (!ehMatriz161 && texto.includes("disponível")) {
+		                    opt.style.display = "none";
+		                } else {
+		                    opt.style.display = "block";
+		                    if (!primeiraOpcaoVisivel) primeiraOpcaoVisivel = opt.value;
+		                    if (opt.value == situacaoAlvoId) temOpcaoValida = true;
+		                }
+		            });
+
+		            if (situacaoAlvoId && temOpcaoValida) {
+		                selectSituacao.value = situacaoAlvoId;
+		            } else {
+		                selectSituacao.value = primeiraOpcaoVisivel ? primeiraOpcaoVisivel : "";
+		            }
+		        }
+		}
     // Listener para quando o usuário alterar o status manualmente na tela
     if (selectStatus) {
         selectStatus.addEventListener("change", function() {
@@ -167,7 +185,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
         
-    // 2. Função para carregar os dados do equipamento caso venha um ID na URL (Modo Edição)
+	// 2. Função para carregar os dados do equipamento caso venha um ID na URL (Modo Edição)
     async function carregarEquipamentoParaEdicao() {
         const urlParams = new URLSearchParams(window.location.search);
         const idEquipamento = urlParams.get('id');
@@ -188,6 +206,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 
                 const selectOrigem = document.getElementById("input-origem");
                 if (selectOrigem) {
+                    // 1. Define a origem do equipamento carregado imediatamente
                     selectOrigem.value = eq.origemCodigo || '';
 
                     const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : null;
@@ -214,9 +233,22 @@ document.addEventListener("DOMContentLoaded", function() {
                     }
                 }
                 
-                // Define o status e aplica a regra de ajuste da situação correspondente
+                // 3. Define o status correto com base nos dados recebidos
                 if (selectStatus) {
                     selectStatus.value = eq.statusId || '';
+                    window.statusOriginalEquipamentoId = eq.statusId;
+                }
+                
+                // 4. REGRA: SE JÁ FOI ATIVADO ANTERIORMENTE, REMOVE O STATUS "BAIXADO" DA OPÇÃO
+                const STATUS_BAIXADO_ID = 4; // Ajuste para o ID numérico correto do "Baixado" no seu banco
+                if (window.statusOriginalEquipamentoId && Number(window.statusOriginalEquipamentoId) !== STATUS_BAIXADO_ID) {
+                    if (selectStatus) {
+                        Array.from(selectStatus.options).forEach(opt => {
+                            if (opt.value == STATUS_BAIXADO_ID) {
+                                opt.remove(); // Remove o "Baixado" para que não apareça na lista de seleção
+                            }
+                        });
+                    }
                 }
                 
                 ajustarSituacaoPorStatus(eq.statusId, eq.situacaoId);
@@ -308,17 +340,31 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     
     // Carrega as opções para o select de Status do Equipamento
-    async function carregarStatusEquipamento() {
+	async function carregarStatusEquipamento() {
         try {
             const contextPath = window.location.pathname.substring(0, window.location.pathname.indexOf("/", 1));
             const response = await fetch(`${contextPath}/api/status-equipamento`);
             if (response.ok) {
                 const listaStatus = await response.json();
                 if (selectStatus) {
+                    const valorAtual = selectStatus.value;
                     selectStatus.innerHTML = '<option value="">Selecione o status...</option>';
+                    
+                    const selectOrigem = document.getElementById("input-origem");
+                    const origemValor = selectOrigem && selectOrigem.value ? parseInt(selectOrigem.value) : null;
+                    const eMatriz161 = (origemValor === 161);
+
                     if (Array.isArray(listaStatus)) {
                         listaStatus.forEach(s => {
                             if (s.id !== undefined && s.nome) {
+                                const nomeStatus = s.nome.toLowerCase();
+                                
+                                // REGRA DO STATUS: Se NÃO for a matriz (161) e o status for "Inativo", oculta/pula. 
+                                // Se for 161, ele passa e aparece normalmente.
+                                if (!eMatriz161 && nomeStatus.includes('inativo')) {
+                                    return;
+                                }
+
                                 const option = document.createElement("option");
                                 option.value = s.id;
                                 option.textContent = s.nome;
@@ -326,12 +372,23 @@ document.addEventListener("DOMContentLoaded", function() {
                             }
                         });
                     }
+                    if (valorAtual) {
+                        selectStatus.value = valorAtual;
+                    }
                 }
             }
         } catch (error) {
             console.error("Erro ao carregar status do equipamento:", error);
         }
     }
+	
+	// Atualiza o select de status caso a origem seja alterada na tela
+	    const selectOrigemEl = document.getElementById("input-origem");
+	    if (selectOrigemEl) {
+	        selectOrigemEl.addEventListener("change", function() {
+	            carregarStatusEquipamento();
+	        });
+	    }
 
     // Carrega as opções para o select de Situação do Equipamento
     async function carregarSituacaoEquipamento() {
@@ -684,6 +741,19 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
                 return;
             }
+			
+			// NOVA REGRA: Trava para itens já baixados
+            /*const statusOriginalId = window.statusOriginalEquipamentoId || null;
+            const STATUS_BAIXADO_ID = 4; // Ajuste o número 4 caso o ID do status "Baixado" no seu banco seja diferente
+            
+            if (statusOriginalId && Number(statusOriginalId) === STATUS_BAIXADO_ID && payload.statusId !== STATUS_BAIXADO_ID) {
+                if (typeof ModalService !== 'undefined') {
+                    await ModalService.warning("Atenção", "Selecione outro status, pois o item já foi baixado.");
+                } else {
+                    alert("Selecione outro status, pois o item já foi baixado.");
+                }
+                return;
+            }*/
 
             try {
                 const response = await fetch('/nexacore/api/equipamentos', {

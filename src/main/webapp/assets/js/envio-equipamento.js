@@ -294,6 +294,12 @@ function carregarEquipamentosDisponiveis() {
                 if (tipo === 'devolucao' && idEquipamentoDevolucao) {
                     return eq.idEquipamento == idEquipamentoDevolucao;
                 }
+				
+				// TRAVA DE SEGURANÇA: Se já está aguardando envio ou em trânsito, bloqueia imediatamente
+                const statusMov = (eq.statusMovimentacao || eq.statusAtualMovimentacao || '').toUpperCase();
+                if (statusMov.includes("AGUARDANDO") || statusMov.includes("TRANSITO") || statusMov.includes("EXTERNO")) {
+                    return false;
+                }
                 
                 const situacaoId = eq.situacaoId !== undefined ? Number(eq.situacaoId) : (eq.situacao && eq.situacao.id ? Number(eq.situacao.id) : 0);
                 const situacaoTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && eq.situacao.nome) || '').toLowerCase();

@@ -113,14 +113,6 @@
                 <i class="fa fa-list me-2"></i> EQUIPAMENTOS CADASTRADOS 
                 <span class="badge bg-light text-primary border ms-2" id="totalRegistros" style="font-size: 0.75rem;">0 registros encontrados</span>
             </h5>
-            <div class="d-flex align-items-center gap-2">
-                <span class="text-muted small">Registros por página:</span>
-                <select class="form-select form-select-sm select-paginacao" style="width: 70px;" id="qtdPorPagina">
-                    <option value="10" selected>10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                </select>
-            </div>
         </div>
 
         <div class="table-responsive">

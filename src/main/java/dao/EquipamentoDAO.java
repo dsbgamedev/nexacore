@@ -91,7 +91,7 @@ public class EquipamentoDAO {
                      "    ROW_NUMBER() OVER(PARTITION BY m1.id_equipamento ORDER BY m1.id_chamado DESC) as rn " + 
                      "    FROM manutencao_chamados m1 " +
                      ") mc ON mc.id_equipamento = e.id_equipamento AND mc.rn = 1 " +
-                     "WHERE e.status_id != 3 " + 
+                     //"WHERE e.status_id != 3 " + 
                      "ORDER BY e.id_equipamento DESC";
         
         Connection conn = null;
@@ -179,7 +179,7 @@ public class EquipamentoDAO {
             
             List<Object> parametros = new ArrayList<>();
 
-            if (statusIdFiltro == null || statusIdFiltro.trim().isEmpty()) {
+            if ((statusIdFiltro == null || statusIdFiltro.trim().isEmpty()) && (pesquisaGlobal == null || pesquisaGlobal.trim().isEmpty())) {
                 sql.append(" AND e.status_id != 3");
             }
 
@@ -217,10 +217,13 @@ public class EquipamentoDAO {
                 sql.append(" AND e.departamento_id = ?");
                 parametros.add(Integer.parseInt(departamento));
             }
+            
+            // Tratamento correto para o Status
             if (statusIdFiltro != null && !statusIdFiltro.trim().isEmpty()) {
                 sql.append(" AND e.status_id = ?");
                 parametros.add(Integer.parseInt(statusIdFiltro));
             }
+
             if (situacaoIdFiltro != null && !situacaoIdFiltro.trim().isEmpty()) {
                 sql.append(" AND e.situacao_id = ?");
                 parametros.add(Integer.parseInt(situacaoIdFiltro));
@@ -237,8 +240,10 @@ public class EquipamentoDAO {
                 sql.append(" AND e.usuario_atual ILIKE ?");
                 parametros.add("%" + usuario.trim() + "%");
             }
-
             sql.append(" ORDER BY e.id_equipamento DESC");
+            
+            // limite fixo de 20 registros
+            sql.append(" LIMIT 20");
 
             stmt = conn.prepareStatement(sql.toString());
 

@@ -2,7 +2,43 @@
 let equipamentosSelecionadosMap = new Map();
 
 document.addEventListener("DOMContentLoaded", function() {
-    // 1. Definir a data de hoje por padrão (caso exista na tela)
+	    // 1. Declaração antecipada do elemento de busca global
+	    const inputBuscaGlobal = document.getElementById("busca-global");
+
+	    // Adiciona o evento de input (com debounce) para busca em tempo real
+	    if (inputBuscaGlobal) {
+	        let timerBusca;
+	        inputBuscaGlobal.addEventListener("input", function() {
+	            clearTimeout(timerBusca);
+	            timerBusca = setTimeout(() => {
+	                if (typeof pesquisarEquipamentos === 'function') {
+	                    pesquisarEquipamentos();
+	                }
+	            }, 300);
+	        });
+
+	        // Permite disparar a busca global pressionando "Enter" no campo
+	        inputBuscaGlobal.addEventListener("keypress", function(e) {
+	            if (e.key === 'Enter') {
+	                e.preventDefault();
+	                if (typeof pesquisarEquipamentos === 'function') {
+	                    pesquisarEquipamentos();
+	                }
+	            }
+	        });
+	    }
+
+	    // Adiciona o evento de clique no botão da lupa da busca global
+	    const btnBuscaGlobal = document.getElementById("btn-busca-global");
+	    if (btnBuscaGlobal) {
+	        btnBuscaGlobal.addEventListener("click", function() {
+	            if (typeof pesquisarEquipamentos === 'function') {
+	                pesquisarEquipamentos();
+	            }
+	        });
+	    }
+	
+	// 1. Definir a data de hoje por padrão (caso exista na tela)
     const hoje = new Date().toISOString().split('T')[0];
     const inputDataEnvio = document.getElementById("dataEnvio");
     if (inputDataEnvio) {
@@ -19,7 +55,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (typeof pesquisarEquipamentos === 'function') {
         pesquisarEquipamentos();
     }
-	
+		
     // 3. Evento do botão que abre o modal de seleção de equipamentos
     const btnAbrirModal = document.getElementById("btnAbrirModalEquipamentos");
     if (btnAbrirModal) {
@@ -180,6 +216,21 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 
+function limparFiltros() {
+    // Limpa todos os inputs de texto
+    document.getElementById("formFiltroEquipamento").reset();
+    
+    // Garante que os selects voltem para o valor padrão (vazio)
+    document.getElementById("filtroOrigem").value = "";
+    document.getElementById("filtroDepartamento").value = "";
+    document.getElementById("filtroStatus").value = "";
+    document.getElementById("filtroSituacao").value = "";
+    document.getElementById("busca-global").value = "";
+
+    // Executa a pesquisa novamente para trazer tudo
+    pesquisarEquipamentos();
+}
+
 // FUNÇÕES DE CARREGAMENTO DOS FILTROS DA TELA DE CONSULTA
 async function carregarFiltroFiliais() {
     try {
@@ -188,7 +239,10 @@ async function carregarFiltroFiliais() {
             const filiais = await response.json();
             const select = document.getElementById("filtroOrigem");
             if (select) {
-                select.innerHTML = '<option value="">Selecione...</option>';
+                select.innerHTML = `
+                    <option value="">Selecione...</option>
+                    <option value="todos">Todos</option>
+                `;
                 filiais.forEach(f => {
                     const option = document.createElement("option");
                     option.value = f.origemCodigo;
@@ -209,7 +263,9 @@ async function carregarFiltroDepartamentos() {
             const departamentos = await response.json();
             const select = document.getElementById("filtroDepartamento");
             if (select) {
-                select.innerHTML = '<option value="">Todos os setores...</option>';
+                select.innerHTML = `
+                    <option value="">Todos os setores...</option>
+                `;
                 departamentos.forEach(d => {
                     const option = document.createElement("option");
                     option.value = d.idDepartamento || d.id;
@@ -230,7 +286,10 @@ async function carregarFiltroStatus() {
             const listaStatus = await response.json();
             const select = document.getElementById("filtroStatus");
             if (select) {
-                select.innerHTML = '<option value="">Selecione...</option>';
+                select.innerHTML = `
+                    <option value="">Selecione...</option>
+                    <option value="todos">Todos</option>
+                `;
                 listaStatus.forEach(s => {
                     const option = document.createElement("option");
                     option.value = s.id;
@@ -251,7 +310,10 @@ async function carregarFiltroSituacao() {
             const listaSituacao = await response.json();
             const select = document.getElementById("filtroSituacao");
             if (select) {
-                select.innerHTML = '<option value="">Selecione...</option>';
+                select.innerHTML = `
+                    <option value="">Selecione...</option>
+                    <option value="todos">Todos</option>
+                `;
                 listaSituacao.forEach(sit => {
                     const option = document.createElement("option");
                     option.value = sit.id;
@@ -351,7 +413,10 @@ async function pesquisarEquipamentos() {
 
     const getVal = (id) => {
         const el = document.getElementById(id);
-        return el ? el.value.trim() : '';
+        if (!el) return '';
+        const val = el.value.trim();
+        // Se o usuário selecionou "Todos", tratamos como vazio para o filtro não restringir
+        return (val === 'todos') ? '' : val;
     };
 
     tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4">Buscando...</td></tr>';
@@ -366,7 +431,8 @@ async function pesquisarEquipamentos() {
         departamento: getVal('filtroDepartamento'),
         usuario: getVal('filtroUsuario'),
         status: getVal('filtroStatus'),
-        situacao: getVal('filtroSituacao')
+        situacao: getVal('filtroSituacao'),
+		limite: 20 // <--- Adiciona o limite fixo de 20 registros enviados ao backend
     });
 
     try {
@@ -438,17 +504,25 @@ async function pesquisarEquipamentos() {
                 if (opt && opt.value !== "") deptoTexto = opt.text;
             }
 
-			const situacaoTexto = eq.situacaoAtual || eq.situacaoNome || eq.situacaoDescricao || (eq.situacao && eq.situacao.nome) || '-';
+            const situacaoTexto = eq.situacaoAtual || eq.situacaoNome || eq.situacaoDescricao || (eq.situacao && eq.situacao.nome) || '-';
             const sitId = eq.situacaoId !== undefined ? Number(eq.situacaoId) : (eq.situacao ? Number(eq.situacao.id) : 0);
 
             const eAguardandoEnvio = situacaoTexto.toLowerCase().includes('aguardando envio');
             const bloqueado = (sitId === 3 || sitId === 8 || eAguardandoEnvio);
             const ehDisponivel = (sitId === 1) || (situacaoTexto.toLowerCase().includes('disponível') && !situacaoTexto.toLowerCase().includes('uso'));
 
-            // NOVA REGRA: Verifica se está em manutenção (Situação 6) E se o chamado está aberto (Status ID 1)
             const emManutencaoAssistência = (sitId === 6 || situacaoTexto.toLowerCase().includes('assistência') || situacaoTexto.toLowerCase().includes('manutenção'));
-            const chamadoAberto = (eq.idStatusChamado === 1 || eq.statusChamadoId === 1 || eq.statusChamado === 'Aberto');
-            const deveOcultarEditar = (emManutencaoAssistência && chamadoAberto);
+            
+            const idStatusChamadoAtual = eq.idStatusChamado !== undefined ? Number(eq.idStatusChamado) : Number(eq.statusChamadoId || 0);
+            const statusTextoChamado = (eq.statusChamado || '').toLowerCase();
+            
+            const temChamadoAtivo = (idStatusChamadoAtual >= 1 && idStatusChamadoAtual <= 5) || 
+                                    statusTextoChamado.includes('aberto') || 
+                                    statusTextoChamado.includes('andamento') || 
+                                    statusTextoChamado.includes('análise') || 
+                                    statusTextoChamado.includes('atendimento');
+                                    
+            const deveOcultarEditar = (emManutencaoAssistência && temChamadoAtivo);
 
             let acoesHtml = `
                 <button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Visualizar" onclick="visualizarDetalhesEquipamento(${eq.idEquipamento})">
@@ -461,7 +535,6 @@ async function pesquisarEquipamentos() {
                     <span class="badge bg-warning text-dark" title="Operação bloqueada para esta situação">Bloqueado</span>
                 `;
             } else {
-                // Só exibe o botão de editar se NÃO estiver em manutenção com chamado aberto
                 if (!deveOcultarEditar) {
                     acoesHtml += `
                         <a href="${contextPath}/jsp/cadastro-equipamento.jsp?id=${eq.idEquipamento}" class="btn btn-sm btn-outline-primary me-1" title="Editar">

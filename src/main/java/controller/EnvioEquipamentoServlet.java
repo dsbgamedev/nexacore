@@ -130,10 +130,23 @@ public class EnvioEquipamentoServlet extends HttpServlet {
         try {
             BufferedReader reader = req.getReader();
             EnvioPayload payload = gson.fromJson(reader, EnvioPayload.class);
-            if (payload == null) {
+            
+            // 1. Valida se o payload ou a lista de equipamentos está vazia primeiro
+            if (payload == null || payload.equipamentosIds == null || payload.equipamentosIds.isEmpty()) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                out.print("{\"sucesso\": false, \"mensagem\": \"Dados do envio não informados (Payload vazio).\"}");
+                out.print("{\"sucesso\": false, \"mensagem\": \"Dados do envio não informados ou nenhum equipamento selecionado.\"}");
                 return;
+            }
+            
+            // 2. --- REGRA DE SEGURANÇA: VALIDA SE JÁ EXISTE ENVIO PENDENTE PARA OS EQUIPAMENTOS ---
+            for (Long idEquipamento : payload.equipamentosIds) {
+                boolean jaPossuiEnvioPendente = dao.existeEnvioPendenteParaEquipamento(idEquipamento);
+                
+                if (jaPossuiEnvioPendente) {
+                    resp.setStatus(HttpServletResponse.SC_OK);
+                    out.print("{\"sucesso\": false, \"mensagem\": \"O equipamento com ID " + idEquipamento + " já possui um envio ou devolução pendente. Não é permitido duplicar envios para o mesmo item.\"}");
+                    return;
+                }
             }
 
             // Verifica se a requisição veio indicando devolução via parâmetro na URL

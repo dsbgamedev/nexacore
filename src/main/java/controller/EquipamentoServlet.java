@@ -112,34 +112,37 @@ public class EquipamentoServlet extends HttpServlet {
         }
         // 2. Trata a listagem geral ou com filtros para a tela de consulta
         try {
-            String pesquisaGlobal = request.getParameter("pesquisaGlobal"); 
-            String produto = request.getParameter("produto");
-            String idSistema = request.getParameter("idSistema");
-            String patrimonio = request.getParameter("patrimonio");
-            String serial = request.getParameter("serial");
-            String origem = request.getParameter("origem");
-            String departamento = request.getParameter("departamento");
-            String usuario = request.getParameter("usuario");
-            String status = request.getParameter("status"); 
-            String situacao = request.getParameter("situacao"); 
+            // Função auxiliar para limpar parâmetros vazios ou "todos"
+            java.util.function.Function<String, String> limparParametro = (val) -> {
+                if (val == null || val.trim().isEmpty() || "todos".equalsIgnoreCase(val.trim())) {
+                    return null;
+                }
+                return val.trim();
+            };
+
+            String pesquisaGlobal = limparParametro.apply(request.getParameter("pesquisaGlobal"));
+            String produto = limparParametro.apply(request.getParameter("produto"));
+            String idSistema = limparParametro.apply(request.getParameter("idSistema"));
+            String patrimonio = limparParametro.apply(request.getParameter("patrimonio"));
+            String serial = limparParametro.apply(request.getParameter("serial"));
+            String origem = limparParametro.apply(request.getParameter("origem"));
+            String departamento = limparParametro.apply(request.getParameter("departamento"));
+            String usuario = limparParametro.apply(request.getParameter("usuario"));
+            String status = limparParametro.apply(request.getParameter("status"));
+            String situacao = limparParametro.apply(request.getParameter("situacao"));
 
             List<Equipamento> lista;
 
-            if ((pesquisaGlobal != null && !pesquisaGlobal.trim().isEmpty()) ||
-            	    (produto != null && !produto.trim().isEmpty()) ||
-            	    (idSistema != null && !idSistema.trim().isEmpty()) ||
-            	    (patrimonio != null && !patrimonio.trim().isEmpty()) ||
-            	    (serial != null && !serial.trim().isEmpty()) ||
-            	    (origem != null && !origem.trim().isEmpty()) ||
-            	    (departamento != null && !departamento.trim().isEmpty()) ||
-            	    (usuario != null && !usuario.trim().isEmpty()) ||
-            	    (status != null && !status.trim().isEmpty()) ||
-            	    (situacao != null && !situacao.trim().isEmpty())) { 
-            		
-            	    lista = dao.listarComFiltros(pesquisaGlobal, idSistema, patrimonio, serial, origem, departamento, status, situacao, produto, usuario);
-            	} else {
-            	    lista = dao.listar();
-            	}
+            // Se algum dos parâmetros principais estiver preenchido (diferente de null), usa o filtro
+            if (pesquisaGlobal != null || produto != null || idSistema != null || 
+                patrimonio != null || serial != null || origem != null || 
+                departamento != null || usuario != null || status != null || situacao != null) {
+                
+                lista = dao.listarComFiltros(pesquisaGlobal, idSistema, patrimonio, serial, origem, departamento, status, situacao, produto, usuario);
+            } else {
+                // Se tudo estiver limpo ou marcado como "Todos", traz todos os registros
+                lista = dao.listar();
+            }
 
             out.print(gson.toJson(lista));
         } catch (Exception e) {
