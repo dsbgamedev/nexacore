@@ -1,5 +1,9 @@
 // Armazena os equipamentos selecionados para envio (Chave: idEquipamento, Valor: Objeto do Equipamento)
 let equipamentosSelecionadosMap = new Map();
+// Variável global para armazenar os dados correntes da tabela e permitir a ordenação
+let listaGlobalEquipamentos = [];
+let colunaAtualOrdenacao = '';
+let ordemCrescente = true;
 
 document.addEventListener("DOMContentLoaded", function() {
 	    // 1. Declaração antecipada do elemento de busca global
@@ -407,6 +411,74 @@ async function visualizarDetalhesEquipamento(idEquipamento) {
     }
 }
 
+// Função chamada ao clicar nas colunas do cabeçalho (Versão Definitiva)
+function ordenarTabela(propriedade) {
+    if (colunaAtualOrdenacao === propriedade) {
+        ordemCrescente = !ordemCrescente;
+    } else {
+        colunaAtualOrdenacao = propriedade;
+        ordemCrescente = true;
+    }
+
+    if (Array.isArray(listaGlobalEquipamentos) && listaGlobalEquipamentos.length > 0) {
+        listaGlobalEquipamentos.sort((a, b) => {
+            let valA = extrairValorPropriedade(a, propriedade);
+            let valB = extrairValorPropriedade(b, propriedade);
+
+            let valorA = valA !== null && valA !== undefined ? String(valA).toLowerCase().trim() : '';
+            let valorB = valB !== null && valB !== undefined ? String(valB).toLowerCase().trim() : '';
+
+            if (!isNaN(valorA) && !isNaN(valorB) && valorA !== '' && valorB !== '') {
+                valorA = parseFloat(valorA);
+                valorB = parseFloat(valorB);
+            }
+
+            if (valorA < valorB) return ordemCrescente ? -1 : 1;
+            if (valorA > valorB) return ordemCrescente ? 1 : -1;
+            return 0;
+        });
+
+        renderizarTabelaEquipamentos(listaGlobalEquipamentos);
+    }
+}
+
+function extrairValorPropriedade(obj, prop) {
+    if (!obj) return '';
+
+    if (prop === 'departamento') {
+        return obj._departamentoNormalizado || obj.nomeDepartamento || obj.departamentoNome || '';
+    }
+
+    if (prop === 'origem') {
+        return obj._origemNormalizada || obj.origemNome || obj.origemCodigo || '';
+    }
+
+    if (prop === 'produtoNome') {
+        return obj._produtoNormalizado || obj.produtoNome || obj.nomeCatalogo || obj.descricaoProduto || obj.modelo || obj.nomeProduto || obj.produto || '';
+    }
+
+    if (prop === 'status') {
+        if (typeof obj.status === 'object' && obj.status !== null) return obj.status.nome || obj.status.descricao || '';
+        return obj.statusAtual || obj.statusNome || obj.status || '';
+    }
+
+    if (prop === 'situacao') {
+        if (typeof obj.situacao === 'object' && obj.situacao !== null) return obj.situacao.nome || obj.situacao.descricao || '';
+        return obj.situacaoAtual || obj.situacaoNome || obj.situacao || '';
+    }
+
+    if (prop === 'nome') {
+        return obj.nomeIdentificador || obj.cpu || obj.nome || '';
+    }
+
+    if (obj[prop] !== undefined && obj[prop] !== null) {
+        return obj[prop];
+    }
+
+    return '';
+}
+
+// Sua função de pesquisa mantendo toda a lógica intacta
 async function pesquisarEquipamentos() {
     const tbody = document.getElementById('tabelaEquipamentosBody');
     if (!tbody) return;
@@ -444,148 +516,193 @@ async function pesquisarEquipamentos() {
 
         const data = await response.json();
 
-        tbody.innerHTML = '';
-        const badgeTotal = document.getElementById('totalRegistros');
+        // Salva os dados globalmente para permitir a ordenação sem nova requisição
+        listaGlobalEquipamentos = Array.isArray(data) ? data : [];
+		const listaBruta = Array.isArray(data) ? data : [];
 
-        if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">Nenhum equipamento encontrado.</td></tr>';
-            if (badgeTotal) badgeTotal.textContent = "0 registros encontrados";
-            return;
-        }
-
-        if (badgeTotal) badgeTotal.textContent = `${data.length} registro(s) encontrado(s)`;
-
-        const selOrigem = document.getElementById('filtroOrigem');
+        // Elementos de select dos filtros para capturar os nomes amigáveis por ID
+		const selOrigem = document.getElementById('filtroOrigem');
         const selDepto = document.getElementById('filtroDepartamento');
 
-        data.forEach(eq => {
-            const statusTexto = eq.statusAtual || eq.statusNome || eq.statusDescricao || (eq.status && eq.status.nome) || 'Ativo';
-
-            const corStatusBanco = (eq.statusCor || (eq.status && eq.status.cor) || '').toLowerCase();
-            let badgeStatusClass = "bg-secondary";
-            switch (corStatusBanco) {
-                case 'green': badgeStatusClass = "bg-success"; break;
-                case 'orange': badgeStatusClass = "bg-warning text-dark"; break;
-                case 'gray': case 'grey': badgeStatusClass = "bg-secondary text-white"; break;
-                case 'black': badgeStatusClass = "bg-dark"; break;
-                case 'red': badgeStatusClass = "bg-danger"; break;
-                case 'blue': badgeStatusClass = "bg-primary"; break;
-                default:
-                    if (statusTexto === "Em Manutencao" || statusTexto === "Em Manutenção") badgeStatusClass = "bg-warning text-dark";
-                    else if (statusTexto === "Inativo") badgeStatusClass = "bg-secondary text-white";
-                    else if (statusTexto === "Baixado") badgeStatusClass = "bg-dark";
-                    else if (statusTexto === "Ativo" || statusTexto === "Disponível") badgeStatusClass = "bg-success";
-                    break;
+        // Pré-processa os dados para normalizar os textos exibidos na tabela
+        listaGlobalEquipamentos = listaBruta.map(eq => {
+            // Normaliza Departamento
+            let deptoTexto = eq.nomeDepartamento || eq.departamentoNome || eq.setorNome || '';
+            if (!deptoTexto && typeof eq.departamento === 'object' && eq.departamento !== null) {
+                deptoTexto = eq.departamento.nomeDepartamento || eq.departamento.nome || eq.departamento.descricao || '';
             }
-
-            const corSituacaoBanco = (eq.situacaoCor || (eq.situacao && eq.situacao.cor) || '').toLowerCase();
-            let badgeSituacaoClass = "bg-info text-dark";
-            switch (corSituacaoBanco) {
-                case 'green': badgeSituacaoClass = "bg-success"; break;
-                case 'orange': badgeSituacaoClass = "bg-warning text-dark"; break;
-                case 'red': badgeSituacaoClass = "bg-danger"; break;
-                case 'blue': badgeSituacaoClass = "bg-primary"; break;
-                case 'black': badgeSituacaoClass = "bg-dark"; break;
-                case 'gray': case 'grey': badgeSituacaoClass = "bg-secondary text-white"; break;
-                default:
-                    badgeSituacaoClass = "bg-info text-dark";
-                    break;
-            }
-
-            let origemTexto = eq.origemNome || eq.nomeOrigem || eq.filialNome || eq.origemCodigo || '-';
-            if (selOrigem && eq.origemCodigo && (!eq.origemNome && !eq.nomeOrigem && !eq.filialNome)) {
-                const opt = Array.from(selOrigem.options).find(o => o.value == eq.origemCodigo);
-                if (opt && opt.value !== "") origemTexto = opt.text;
-            }
-
-            let deptoTexto = eq.nomeDepartamento || eq.departamentoNome || eq.departamentoId || '-';
-            if (selDepto && eq.departamentoId && (!eq.nomeDepartamento && !eq.departamentoNome)) {
+            if (!deptoTexto && selDepto && eq.departamentoId) {
                 const opt = Array.from(selDepto.options).find(o => o.value == eq.departamentoId);
                 if (opt && opt.value !== "") deptoTexto = opt.text;
             }
+            eq._departamentoNormalizado = deptoTexto || '-';
 
-            const situacaoTexto = eq.situacaoAtual || eq.situacaoNome || eq.situacaoDescricao || (eq.situacao && eq.situacao.nome) || '-';
-            const sitId = eq.situacaoId !== undefined ? Number(eq.situacaoId) : (eq.situacao ? Number(eq.situacao.id) : 0);
-
-            const eAguardandoEnvio = situacaoTexto.toLowerCase().includes('aguardando envio');
-            const bloqueado = (sitId === 3 || sitId === 8 || eAguardandoEnvio);
-            const ehDisponivel = (sitId === 1) || (situacaoTexto.toLowerCase().includes('disponível') && !situacaoTexto.toLowerCase().includes('uso'));
-
-            const emManutencaoAssistência = (sitId === 6 || situacaoTexto.toLowerCase().includes('assistência') || situacaoTexto.toLowerCase().includes('manutenção'));
-            
-            const idStatusChamadoAtual = eq.idStatusChamado !== undefined ? Number(eq.idStatusChamado) : Number(eq.statusChamadoId || 0);
-            const statusTextoChamado = (eq.statusChamado || '').toLowerCase();
-            
-            const temChamadoAtivo = (idStatusChamadoAtual >= 1 && idStatusChamadoAtual <= 5) || 
-                                    statusTextoChamado.includes('aberto') || 
-                                    statusTextoChamado.includes('andamento') || 
-                                    statusTextoChamado.includes('análise') || 
-                                    statusTextoChamado.includes('atendimento');
-                                    
-            const deveOcultarEditar = (emManutencaoAssistência && temChamadoAtivo);
-
-            let acoesHtml = `
-                <button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Visualizar" onclick="visualizarDetalhesEquipamento(${eq.idEquipamento})">
-                    <i class="fas fa-search"></i>
-                </button>
-            `;
-
-            if (bloqueado) {
-                acoesHtml += `
-                    <span class="badge bg-warning text-dark" title="Operação bloqueada para esta situação">Bloqueado</span>
-                `;
-            } else {
-                if (!deveOcultarEditar) {
-                    acoesHtml += `
-                        <a href="${contextPath}/jsp/cadastro-equipamento.jsp?id=${eq.idEquipamento}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
-                            <i class="fas fa-pen"></i>
-                        </a>
-                    `;
-                }
-
-                if (ehDisponivel) {
-                    acoesHtml += `
-                        <button type="button" class="btn btn-sm btn-outline-danger me-1" title="Excluir" onclick="confirmarExclusaoEquipamento(${eq.idEquipamento})">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                    `;
-                }
+            // Normaliza Origem
+            let origemTexto = eq.origemNome || eq.nomeOrigem || eq.filialNome || eq.origemCodigo || '';
+            if (!origemTexto && selOrigem && eq.origemCodigo) {
+                const opt = Array.from(selOrigem.options).find(o => o.value == eq.origemCodigo);
+                if (opt && opt.value !== "") origemTexto = opt.text;
             }
+            eq._origemNormalizada = origemTexto || '-';
 
-            const ID_SITUACAO_EM_USO = 2; 
-            const ehEmUso = (sitId === ID_SITUACAO_EM_USO) || (situacaoTexto.toLowerCase().includes('em uso'));
-            const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : 0;
-            const ehMatriz161 = (codigoOrigemAtual === 161);
+            // Normaliza Produto (Catálogo) correspondente à coluna da tabela (${eq.codigoCatalogo || eq.idProduto || '-'})
+            eq._produtoNormalizado = eq.codigoCatalogo || eq.idProduto || eq.produtoNome || eq.nomeCatalogo || '';
 
-            if (ehEmUso && !ehMatriz161) {
-                acoesHtml += `
-                    <button type="button" class="btn btn-sm btn-outline-warning ms-1" title="Iniciar Devolução" onclick="iniciarDevolucao(${eq.idEquipamento})">
-                        <i class="fas fa-undo"></i>
-                    </button>
-                `;
-            }
-
-            const row = `<tr>
-                <td class="fw-bold text-primary">${eq.idSistema || '-'}</td>
-                <td>${eq.patrimonio || '-'}</td>
-                <td>${eq.codigoCatalogo || eq.idProduto || '-'}</td>
-                <td>${eq.nomeIdentificador || '-'}</td>
-                <td>${origemTexto}</td>
-                <td>${eq.usuarioAtual || '-'}</td>
-                <td>${deptoTexto}</td>
-                <td><span class="badge ${badgeStatusClass}">${statusTexto}</span></td>
-                <td><span class="badge ${badgeSituacaoClass}">${situacaoTexto}</span></td>
-                <td>${eq.numeroSerie || '-'}</td>
-                <td class="text-center" style="white-space: nowrap;">
-                    ${acoesHtml}
-                </td>
-            </tr>`;
-            tbody.innerHTML += row;
+            return eq;
         });
+
+        // Chama a função que desenha a tabela com todas as suas regras originais
+        renderizarTabelaEquipamentos(listaGlobalEquipamentos);
+
     } catch (error) {
         console.error("Erro na pesquisa:", error);
         tbody.innerHTML = '<tr><td colspan="11" class="text-center text-danger py-4">Erro de comunicação com o servidor.</td></tr>';
     }
+}
+
+// Função dedicada a montar as linhas e aplicar todas as regras de negócio visuais
+function renderizarTabelaEquipamentos(data) {
+    const tbody = document.getElementById('tabelaEquipamentosBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    const badgeTotal = document.getElementById('totalRegistros');
+
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">Nenhum equipamento encontrado.</td></tr>';
+        if (badgeTotal) badgeTotal.textContent = "0 registros encontrados";
+        return;
+    }
+
+    if (badgeTotal) badgeTotal.textContent = `${data.length} registro(s) encontrado(s)`;
+
+    const selOrigem = document.getElementById('filtroOrigem');
+    const selDepto = document.getElementById('filtroDepartamento');
+
+    data.forEach(eq => {
+        const statusTexto = eq.statusAtual || eq.statusNome || eq.statusDescricao || (eq.status && eq.status.nome) || 'Ativo';
+
+        const corStatusBanco = (eq.statusCor || (eq.status && eq.status.cor) || '').toLowerCase();
+        let badgeStatusClass = "bg-secondary";
+        switch (corStatusBanco) {
+            case 'green': badgeStatusClass = "bg-success"; break;
+            case 'orange': badgeStatusClass = "bg-warning text-dark"; break;
+            case 'gray': case 'grey': badgeStatusClass = "bg-secondary text-white"; break;
+            case 'black': badgeStatusClass = "bg-dark"; break;
+            case 'red': badgeStatusClass = "bg-danger"; break;
+            case 'blue': badgeStatusClass = "bg-primary"; break;
+            default:
+                if (statusTexto === "Em Manutencao" || statusTexto === "Em Manutenção") badgeStatusClass = "bg-warning text-dark";
+                else if (statusTexto === "Inativo") badgeStatusClass = "bg-secondary text-white";
+                else if (statusTexto === "Baixado") badgeStatusClass = "bg-dark";
+                else if (statusTexto === "Ativo" || statusTexto === "Disponível") badgeStatusClass = "bg-success";
+                break;
+        }
+
+        const corSituacaoBanco = (eq.situacaoCor || (eq.situacao && eq.situacao.cor) || '').toLowerCase();
+        let badgeSituacaoClass = "bg-info text-dark";
+        switch (corSituacaoBanco) {
+            case 'green': badgeSituacaoClass = "bg-success"; break;
+            case 'orange': badgeSituacaoClass = "bg-warning text-dark"; break;
+            case 'red': badgeSituacaoClass = "bg-danger"; break;
+            case 'blue': badgeSituacaoClass = "bg-primary"; break;
+            case 'black': badgeSituacaoClass = "bg-dark"; break;
+            case 'gray': case 'grey': badgeSituacaoClass = "bg-secondary text-white"; break;
+            default:
+                badgeSituacaoClass = "bg-info text-dark";
+                break;
+        }
+
+        let origemTexto = eq.origemNome || eq.nomeOrigem || eq.filialNome || eq.origemCodigo || '-';
+        if (selOrigem && eq.origemCodigo && (!eq.origemNome && !eq.nomeOrigem && !eq.filialNome)) {
+            const opt = Array.from(selOrigem.options).find(o => o.value == eq.origemCodigo);
+            if (opt && opt.value !== "") origemTexto = opt.text;
+        }
+
+        let deptoTexto = eq.nomeDepartamento || eq.departamentoNome || eq.departamentoId || '-';
+        if (selDepto && eq.departamentoId && (!eq.nomeDepartamento && !eq.departamentoNome)) {
+            const opt = Array.from(selDepto.options).find(o => o.value == eq.departamentoId);
+            if (opt && opt.value !== "") deptoTexto = opt.text;
+        }
+
+        const situacaoTexto = eq.situacaoAtual || eq.situacaoNome || eq.situacaoDescricao || (eq.situacao && eq.situacao.nome) || '-';
+        const sitId = eq.situacaoId !== undefined ? Number(eq.situacaoId) : (eq.situacao ? Number(eq.situacao.id) : 0);
+
+        const eAguardandoEnvio = situacaoTexto.toLowerCase().includes('aguardando envio');
+        const bloqueado = (sitId === 3 || sitId === 8 || eAguardandoEnvio);
+        const ehDisponivel = (sitId === 1) || (situacaoTexto.toLowerCase().includes('disponível') && !situacaoTexto.toLowerCase().includes('uso'));
+
+        const emManutencaoAssistência = (sitId === 6 || situacaoTexto.toLowerCase().includes('assistência') || situacaoTexto.toLowerCase().includes('manutenção'));
+        
+        const idStatusChamadoAtual = eq.idStatusChamado !== undefined ? Number(eq.idStatusChamado) : Number(eq.statusChamadoId || 0);
+        const statusTextoChamado = (eq.statusChamado || '').toLowerCase();
+        
+        const temChamadoAtivo = (idStatusChamadoAtual >= 1 && idStatusChamadoAtual <= 5) || 
+                                statusTextoChamado.includes('aberto') || 
+                                statusTextoChamado.includes('andamento') || 
+                                statusTextoChamado.includes('análise') || 
+                                statusTextoChamado.includes('atendimento');
+                                
+        const deveOcultarEditar = (emManutencaoAssistência && temChamadoAtivo);
+
+        let acoesHtml = `
+            <button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Visualizar" onclick="visualizarDetalhesEquipamento(${eq.idEquipamento})">
+                <i class="fas fa-search"></i>
+            </button>
+        `;
+
+        if (bloqueado) {
+            acoesHtml += `
+                <span class="badge bg-warning text-dark" title="Operação bloqueada para esta situação">Bloqueado</span>
+            `;
+        } else {
+            if (!deveOcultarEditar) {
+                acoesHtml += `
+                    <a href="${contextPath}/jsp/cadastro-equipamento.jsp?id=${eq.idEquipamento}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
+                        <i class="fas fa-pen"></i>
+                    </a>
+                `;
+            }
+
+            if (ehDisponivel) {
+                acoesHtml += `
+                    <button type="button" class="btn btn-sm btn-outline-danger me-1" title="Excluir" onclick="confirmarExclusaoEquipamento(${eq.idEquipamento})">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                `;
+            }
+        }
+
+        const ID_SITUACAO_EM_USO = 2; 
+        const ehEmUso = (sitId === ID_SITUACAO_EM_USO) || (situacaoTexto.toLowerCase().includes('em uso'));
+        const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : 0;
+        const ehMatriz161 = (codigoOrigemAtual === 161);
+
+        if (ehEmUso && !ehMatriz161) {
+            acoesHtml += `
+                <button type="button" class="btn btn-sm btn-outline-warning ms-1" title="Iniciar Devolução" onclick="iniciarDevolucao(${eq.idEquipamento})">
+                    <i class="fas fa-undo"></i>
+                </button>
+            `;
+        }
+
+        const row = `<tr>
+            <td class="fw-bold text-primary">${eq.idSistema || '-'}</td>
+            <td>${eq.patrimonio || '-'}</td>
+            <td>${eq.codigoCatalogo || eq.idProduto || '-'}</td>
+            <td>${eq.nomeIdentificador || '-'}</td>
+            <td>${origemTexto}</td>
+            <td>${eq.usuarioAtual || '-'}</td>
+            <td>${deptoTexto}</td>
+            <td><span class="badge ${badgeStatusClass}">${statusTexto}</span></td>
+            <td><span class="badge ${badgeSituacaoClass}">${situacaoTexto}</span></td>
+            <td>${eq.numeroSerie || '-'}</td>
+            <td class="text-center" style="white-space: nowrap;">
+                ${acoesHtml}
+            </td>
+        </tr>`;
+        tbody.innerHTML += row;
+    });
 }
 
 function carregarEquipamentosDisponiveis() {

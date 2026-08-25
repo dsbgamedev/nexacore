@@ -36,6 +36,10 @@
 
             <!-- Botões Superiores de Ação -->
             <div class="col-md-6 text-md-end">
+            <!-- Botão de Atualizar dados sem precisar de F5 -->
+			    <button type="button" class="btn btn-outline-secondary btn-sm me-2" id="btnAtualizarTela" title="Atualizar Lista">
+			        <i class="fas fa-sync-alt"></i> Atualizar
+			    </button>
                 <button class="btn btn-outline-secondary btn-sm me-2" type="button">
                     <i class="bi bi-funnel"></i> Filtros
                 </button>
@@ -83,6 +87,18 @@
                 </table>
             </div>
         </div>
+        <!-- 👇 ADICIONE ESTE BLOCO AQUI (Rodapé da paginação) 👇 -->
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <div class="text-muted small" id="infoPaginacao">
+                Mostrando 0 de 0 registros
+            </div>
+            <nav aria-label="Navegação de páginas">
+                <ul class="pagination pagination-sm mb-0" id="botoesPaginacao">
+                    <!-- Preenchido dinamicamente via JavaScript -->
+                </ul>
+            </nav>
+        </div>
+        <!-- 👆 FIM DO BLOCO DE PAGINAÇÃO 👆 -->
     </div>
 </div>
 

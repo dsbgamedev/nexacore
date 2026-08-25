@@ -62,10 +62,11 @@
                     </select>
                 </div>
                 
-                <div class="col-md-4 mb-3">
-                    <label for="origem" class="form-label">Origem</label>
-                    <input type="text" id="origem" class="form-control" readonly>
-                </div>
+                 <div class="col-md-4 mb-3">
+				    <label for="origem" class="form-label">Origem</label>
+				    <input type="text" id="origem" class="form-control" readonly>
+				</div>
+
 
                 <div class="col-md-4 mb-3">
                     <label for="dataRecebimento" class="form-label">Data do Recebimento *</label>
@@ -126,7 +127,8 @@
 
             <div class="mt-4">
                 <button type="submit" class="btn btn-success">Confirmar Recebimento</button>
-                <a href="index.jsp" class="btn btn-secondary">Cancelar</a>
+                <!-- Alterado de <a> para <button type="button"> com o id correto -->
+   				 <button type="button" class="btn btn-secondary" id="btnCancelar">Limpar</button>
             </div>
         </form>
     </div>

@@ -489,3 +489,142 @@ textarea.form-control{
 .select-paginacao {
     width: 80px;
 }
+
+/* ==========================================================
+   AJUSTE GLOBAL PARA O RODAPÉ DE TABELAS E PAGINAÇÃO
+==========================================================*/
+
+.card-footer {
+    background-color: #fff;
+    border-top: 1px solid var(--border-color);
+    padding: 15px 20px; /* Garante respiro interno e evita que cole nas bordas */
+}
+
+/* Paginação elegante e centralizada verticalmente com o texto */
+.card-footer .pagination {
+    margin-bottom: 0;
+    gap: 3px; /* Espaçamento discreto entre os botões de página */
+}
+
+.card-footer .pagination .page-link {
+    color: var(--primary-color);
+    border-radius: 4px; /* Suaviza os cantos dos botões */
+    border: 1px solid var(--border-color);
+    padding: 6px 12px;
+    font-size: 13px;
+    transition: var(--transition);
+}
+
+.card-footer .pagination .page-link:hover {
+    background-color: #f8f9fa;
+    color: var(--primary-hover);
+}
+
+.card-footer .pagination .active .page-link {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2); /* Destaque sutil na página ativa */
+}
+
+.card-footer .pagination .disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: var(--border-color);
+    opacity: 0.6;
+}
+
+/* ==========================================================
+   PADRONIZAÇÃO DE CABEÇALHOS ORDENÁVEIS (CORREÇÃO DE ALINHAMENTO)
+==========================================================*/
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s ease;
+    white-space: nowrap; /* Evita que o texto quebre linha de forma indesejada */
+}
+
+th.sortable:hover {
+    background-color: #e9ecef !important;
+    color: var(--primary-color) !important;
+}
+
+/* Transforma o conteúdo do th em flexbox de forma limpa via CSS */
+th.sortable:after {
+    /* Garante compatibilidade caso use pseudo-elementos, 
+       mas o ideal é estruturar com span/i ou a regra flex abaixo */
+}
+
+th.sortable {
+    display: table-cell; /* Garante o comportamento padrão de célula da tabela */
+}
+
+/* Se preferir inserir o ícone direto ou tratar via HTML/JS, 
+   forçamos o espaçamento interno limpo para os títulos das tabelas */
+.table thead th {
+    position: relative;
+    padding-right: 24px !important; /* Espaço reservado para o ícone de ordenação */
+}
+
+.table thead th i.fa-sort,
+.table thead th i.fa-sort-up,
+.table thead th i.fa-sort-down {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* ==========================================================
+   AJUSTE FINAL DE LARGURA E TÍTULOS DOS CABEÇALHOS
+==========================================================*/
+.table-responsive .table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+/* Otimiza a fonte e garante que o título não corte o texto */
+.table thead th {
+    font-size: 11px !important;
+    letter-spacing: -0.3px;
+    padding-left: 4px !important;
+    padding-right: 18px !important; /* Espaço milimetricamente ajustado para a setinha */
+    white-space: nowrap;
+}
+
+/* Regra geral para o conteúdo de dados das colunas */
+.table td {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ==========================================================
+   LARGURA EQUILIBRADA DAS 11 COLUNAS (Sem barra de rolagem)
+==========================================================*/
+.table th:nth-child(1),  .table td:nth-child(1)  { width: 105px; /* ID Sistema */ }
+.table th:nth-child(2),  .table td:nth-child(2)  { width: 105px; /* Patrimônio / Etiqueta */ }
+.table th:nth-child(3),  .table td:nth-child(3)  { width: 175px; /* Produto (Catálogo) */ }
+.table th:nth-child(4),  .table td:nth-child(4)  { width: 85px;  /* Nome / CPU */ }
+.table th:nth-child(5),  .table td:nth-child(5)  { width: 85px;  /* Origem (Filial) */ }
+.table th:nth-child(6),  .table td:nth-child(6)  { width: 75px;  /* Usuário Atual */ }
+.table th:nth-child(7),  .table td:nth-child(7)  { width: 110px; /* Departamento */ }
+.table th:nth-child(8),  .table td:nth-child(8)  { width: 65px;  /* Status */ }
+.table th:nth-child(9),  .table td:nth-child(9)  { width: 75px;  /* Situação */ }
+.table th:nth-child(10), .table td:nth-child(10) { width: 65px;  /* Nº de Série */ }
+
+/* Coluna de Ações compacta */
+.table th:nth-child(11), .table td:nth-child(11) {
+    width: 115px !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-align: center;
+}
+
+/* Reduz o tamanho interno dos botões de ação */
+.table td:nth-child(11) .btn {
+    padding: 0.2rem 0.40rem !important;
+    font-size: 11px !important;
+}

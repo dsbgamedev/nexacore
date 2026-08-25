@@ -300,7 +300,7 @@ hr{
 /* Container base limpo */
 .modal-content-custom {
     background-color: #ffffff !important;
-    border: 2px solid #ccc !important;
+    /*border: 2px solid #ccc !important;*/
     border-radius: 12px !important;
     box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
     padding: 30px !important;

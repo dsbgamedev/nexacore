@@ -118,20 +118,22 @@
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
                 <thead class="table-light text-secondary">
-                    <tr>
-                        <th>ID Sistema</th>
-                        <th>Patrimônio / Etiqueta</th>
-                        <th>Produto (Catálogo)</th>
-                        <th>Nome / CPU</th>
-                        <th>Origem (Filial)</th>
-                        <th>Usuário Atual</th>
-                        <th>Departamento</th>
-                        <th>Status</th>
-                        <th>Situação</th>
-                        <th>Nº de Série</th>
-                        <th class="text-center" style="width: 140px;">Ações</th>
-                    </tr>
-                </thead>
+                    <thead class="table-light text-secondary">
+				    <tr>
+				        <th class="sortable" onclick="ordenarTabela('idSistema')">ID Sistema <i class="fas fa-sort text-muted small"></i></th>
+				        <th class="sortable" onclick="ordenarTabela('patrimonio')">Patrimônio / Etiqueta <i class="fas fa-sort text-muted small"></i></th>
+				        <th class="sortable" onclick="ordenarTabela('produtoNome')">Produto (Catálogo) <i class="fas fa-sort text-muted small"></i></th>
+				        <th class="sortable" onclick="ordenarTabela('nome')">Nome / CPU <i class="fas fa-sort text-muted small"></i></th>
+				        <th class="sortable" onclick="ordenarTabela('origem')">Origem (Filial) <i class="fas fa-sort text-muted small"></i></th>
+				        <th class="sortable" onclick="ordenarTabela('usuarioAtual')">Usuário Atual <i class="fas fa-sort text-muted small"></i></th>
+				        <th class="sortable" onclick="ordenarTabela('departamento')">Departamento <i class="fas fa-sort text-muted small"></i></th>
+				        <th class="sortable" onclick="ordenarTabela('status')">Status <i class="fas fa-sort text-muted small"></i></th>
+				        <th class="sortable" onclick="ordenarTabela('situacao')">Situação <i class="fas fa-sort text-muted small"></i></th>
+				        <th class="sortable" onclick="ordenarTabela('numeroSerie')">Nº de Série <i class="fas fa-sort text-muted small"></i></th>
+				        <th class="text-center" style="width: 140px;">Ações</th>
+				    </tr>
+				</thead>
+              
                 <tbody id="tabelaEquipamentosBody">
                     <tr>
                         <td colspan="11" class="text-center text-muted py-4">Utilize os filtros acima para consultar os equipamentos.</td>
@@ -140,7 +142,8 @@
             </table>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+        <!-- Rodapé da Paginação Integrado ao Layout.css -->
+        <div class="card-footer d-flex justify-content-between align-items-center">
             <div class="text-muted small" id="infoPaginacao">
                 Mostrando 0 registros
             </div>
@@ -154,8 +157,6 @@
         </div>
     </div>
 </div>
-
-
 
 <!-- Modais Padronizados -->
 <div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">

@@ -1,0 +1,429 @@
+/* ==========================================================================
+   NEXACORE - Layout Principal do Sistema (Dashboard & Sidebar)
+   ========================================================================== */
+
+:root {
+    --sidebar-width: 260px;
+    --topbar-height: 70px;
+    --bg-dark: #0b1329;
+    --bg-light: #f4f6f9;
+    --primary-color: #0d6efd;
+    --text-color: #333333;
+    --border-color: #e2e8f0;
+}
+
+body.nexacore-layout {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-light);
+    color: var(--text-color);
+    display: flex;
+    min-height: 100vh;
+}
+
+/* --------------------------------------------------------------------------
+   SIDEBAR LATERAL ESQUERDA
+   -------------------------------------------------------------------------- */
+aside.nexacore-sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--bg-dark);
+    color: #ffffff;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-brand {
+    height: 70px;
+    display: flex;
+    align-items: center;
+    padding: 0 1.2rem; /* Alinhado com o padding padrão do menu */
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.logo-symbol {
+    width: 36px;
+    height: 36px;
+    background: var(--primary-color);
+    color: #fff;
+    font-weight: bold;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    margin-right: 12px;
+}
+
+.logo-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.logo-name {
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+.logo-sub {
+    font-size: 0.7rem;
+    color: #94a3b8;
+}
+
+/* Container de rolagem do menu ajustado */
+.sidebar-menu-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0;
+    /* Deixa a barra de rolagem discreta e evita espaçamentos extras */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.sidebar-menu-container::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar-menu-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-menu-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.menu-category {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #64748b;
+    padding: 0.75rem 1.2rem 0.3rem; /* Alinhado com 1.2rem */
+    display: block;
+    letter-spacing: 0.8px;
+}
+
+ul.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 0.5rem 0;
+}
+
+ul.sidebar-menu li a {
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 1.2rem; /* Alinhado com 1.2rem */
+    color: #94a3b8;
+    text-decoration: none;
+    font-size: 0.88rem;
+    transition: all 0.2s ease;
+}
+
+ul.sidebar-menu li a i {
+    font-size: 1.1rem;
+    margin-right: 12px;
+    width: 20px;
+    text-align: center;
+}
+
+ul.sidebar-menu li a:hover,
+ul.sidebar-menu li a.active {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+ul.sidebar-menu li a.active {
+    border-left: 4px solid var(--primary-color);
+}
+
+/* User Footer na Sidebar */
+.sidebar-user-footer {
+    padding: 1rem 1.2rem; /* Alinha as laterais com o menu */
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.user-avatar {
+    width: 38px;
+    height: 38px;
+    background: var(--primary-color);
+    color: #fff;
+    font-weight: bold;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    font-size: 0.9rem;
+}
+
+.user-details {
+    flex: 1;
+    overflow: hidden;
+}
+
+.user-name {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-branch {
+    display: block;
+    font-size: 0.7rem;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-logout-icon {
+    color: #94a3b8;
+    font-size: 1.2rem;
+    padding: 4px;
+    transition: color 0.2s;
+}
+
+.user-logout-icon:hover {
+    color: #ef4444;
+}
+
+/* --------------------------------------------------------------------------
+   CONTEÚDO PRINCIPAL & TOPBAR
+   -------------------------------------------------------------------------- */
+main.nexacore-main {
+    margin-left: var(--sidebar-width);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background-color: var(--bg-light);
+}
+header.nexacore-topbar {
+    height: 70px;
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+}
+
+.btn-toggle {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+
+.topbar-icon-badge {
+    position: relative;
+    font-size: 1.2rem;
+    color: #64748b;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.topbar-icon-badge:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.badge-count {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: var(--primary-color);
+    color: #fff;
+    font-size: 0.65rem;
+    padding: 2px 5px;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+.topbar-branch-selector {
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+/* --------------------------------------------------------------------------
+   CARDS E SEÇÕES DO DASHBOARD
+   -------------------------------------------------------------------------- */
+.dashboard-container {
+    background-color: var(--bg-light);
+}
+
+.stat-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: flex-start;
+    height: 100%;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.bg-blue-light { background-color: #eff6ff; }
+.bg-green-light { background-color: #f0fdf4; }
+.bg-yellow-light { background-color: #fefce8; }
+.bg-purple-light { background-color: #f5f3ff; }
+.bg-red-light { background-color: #fef2f2; }
+
+.stat-info {
+    flex: 1;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.78rem;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.stat-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 6px;
+}
+
+.stat-link {
+    font-size: 0.78rem;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.stat-link:hover {
+    text-decoration: underline;
+}
+
+.card-section {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.quick-action-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1.2rem 0.8rem;
+    background: #f8fafc;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    text-decoration: none;
+    color: #333;
+    transition: all 0.2s ease;
+    height: 100%;
+}
+
+.quick-action-card:hover {
+    background: #ffffff;
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.08);
+}
+
+.quick-icon {
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+}
+
+.quick-action-card span {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 2px;
+}
+
+.quick-action-card small {
+    font-size: 0.7rem;
+    color: #64748b;
+}
+
+.notification-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.notification-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #f1f5f9;
+}
+
+.notification-item i {
+    font-size: 1.2rem;
+    margin-top: 2px;
+}
+
+.notification-item div {
+    display: flex;
+    flex-direction: column;
+}
+
+.notification-item strong {
+    font-size: 0.85rem;
+    color: #1e293b;
+}
+
+.notification-item span {
+    font-size: 0.75rem;
+    color: #64748b;
+}

@@ -95,13 +95,13 @@ public class MovimentacaoRecebimentoDAO {
         return resultado;
     }
 
-    // 3. Registra o recebimento de Envio (Transação segura)
+ // 3. Registra o recebimento de Envio (Com trava de segurança contra cancelamento)
     public boolean registrarRecebimento(int idEnvio, String dataRecebimento, String responsavel, String condicaoGeral) {
+        String sqlVerificaStatus = "SELECT status_id FROM movimentacao_envio WHERE id_envio = ?";
         String sqlRecebimento = "INSERT INTO movimentacao_recebimento (id_envio, data_recebimento, responsavel_recebimento, condicao_geral) VALUES (?, ?, ?, ?)";
         String sqlAtualizaEnvio = "UPDATE movimentacao_envio SET status_id = 3 WHERE id_envio = ?";
         String sqlHistorico = "INSERT INTO movimentacao_historico (id_envio, status_id, data_hora, observacao) VALUES (?, 3, NOW(), ?)";
         
-        // --> ALTERE AQUI: Faça o JOIN com a tabela filiais para buscar o 'origem_codigo' correto da filial de destino
         String sqlBuscaDestino = "SELECT f.origem_codigo FROM movimentacao_envio e " +
                                  "JOIN filiais f ON e.destino_id = f.id_filial " +
                                  "WHERE e.id_envio = ?";
@@ -113,6 +113,22 @@ public class MovimentacaoRecebimentoDAO {
         try {
             conn = Conexao.conectar();
             conn.setAutoCommit(false);
+
+            // 0. TRAVA DE SEGURANÇA CONTRA CACHE/DUPLA ABA
+            try (PreparedStatement stmtStatus = conn.prepareStatement(sqlVerificaStatus)) {
+                stmtStatus.setInt(1, idEnvio);
+                try (ResultSet rs = stmtStatus.executeQuery()) {
+                    if (rs.next()) {
+                        long statusAtual = rs.getLong("status_id");
+                        // Se não estiver mais em trânsito (2) ou aguardando (1), bloqueia!
+                        if (statusAtual != 1L && statusAtual != 2L) {
+                            throw new RuntimeException("Ação negada: Este envio foi cancelado ou já foi finalizado em outra tela.");
+                        }
+                    } else {
+                        throw new RuntimeException("Envio não encontrado.");
+                    }
+                }
+            }
 
             // 1. Pega o origem_codigo real da filial de destino
             int origemCodigoDestino = 0;
@@ -155,7 +171,7 @@ public class MovimentacaoRecebimentoDAO {
                 try (ResultSet rs = stmtBusca.executeQuery()) {
                     while (rs.next()) {
                         int idEq = rs.getInt("id_equipamento");
-                        stmtEq.setInt(1, origemCodigoDestino); // Joga o código correto (ex: 101, 161)
+                        stmtEq.setInt(1, origemCodigoDestino);
                         stmtEq.setInt(2, idEq);
                         stmtEq.executeUpdate();
                     }
@@ -168,15 +184,14 @@ public class MovimentacaoRecebimentoDAO {
             if (conn != null) {
                 try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
             }
-            e.printStackTrace();
-            return false;
+            // Propaga a mensagem de erro amigável para o Servlet capturar
+            throw new RuntimeException(e.getMessage(), e);
         } finally {
             if (conn != null) {
                 try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) { ex.printStackTrace(); }
             }
         }
     }
-
     // ==========================================
     // MÉTODOS PARA DEVOLUÇÕES
     // ==========================================
@@ -214,11 +229,15 @@ public class MovimentacaoRecebimentoDAO {
         return lista;
     }
 
-    // 5. Busca os detalhes de uma devolução específica e seus itens
+ // 5. Busca os detalhes de uma devolução específica e seus itens (CORRIGIDO PARA TRAZER O DESTINO)
     public Map<String, Object> buscarDetalhesDevolucao(int idDevolucao) {
         Map<String, Object> resultado = new HashMap<>();
-        String sqlDev = "SELECT e.*, f.nome_empresa as origem_nome FROM movimentacao_envio e " +
-                        "JOIN filiais f ON e.origem_id = f.id_filial WHERE e.id_envio = ?";
+        // Adicionado o LEFT JOIN com filiais para buscar o nome da empresa de destino (destino_id)
+        String sqlDev = "SELECT e.*, orig.nome_empresa as origem_nome, dest.nome_empresa as destino_nome " +
+                        "FROM movimentacao_envio e " +
+                        "JOIN filiais orig ON e.origem_id = orig.id_filial " +
+                        "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
+                        "WHERE e.id_envio = ?";
         
         Connection conn = null;
         PreparedStatement stmtDev = null;
@@ -233,6 +252,7 @@ public class MovimentacaoRecebimentoDAO {
             if (rsDev.next()) {
                 resultado.put("idEnvio", rsDev.getInt("id_envio"));
                 resultado.put("origemNome", rsDev.getString("origem_nome"));
+                resultado.put("destinoNome", rsDev.getString("destino_nome")); // <--- Agora o destino vai correto para o JSON!
                 resultado.put("transportadora", rsDev.getString("transportadora"));
                 resultado.put("codigoRastreio", rsDev.getString("codigo_rastreio"));
             }
@@ -269,12 +289,12 @@ public class MovimentacaoRecebimentoDAO {
         return resultado;
     }
 
- // 6. Registra o recebimento de Devolução (Com correção no resgate do código da filial)
+ // 6. Registra o recebimento de Devolução (Com trava de segurança contra cancelamento)
     public boolean registrarRecebimentoDevolucao(int idDevolucao, String dataRecebimento, String responsavel, String condicaoGeral) {
+        String sqlVerificaStatus = "SELECT status_id FROM movimentacao_envio WHERE id_envio = ?";
         String sqlRecebimento = "INSERT INTO movimentacao_recebimento (id_envio, data_recebimento, responsavel_recebimento, condicao_geral) VALUES (?, ?, ?, ?)";
         String sqlAtualizaDev = "UPDATE movimentacao_envio SET status_id = 3 WHERE id_envio = ?";
         
-        // CORRIGIDO: Faz o JOIN com filiais para buscar o 'origem_codigo' real, evitando inconsistência
         String sqlBuscaDestino = "SELECT f.origem_codigo FROM movimentacao_envio e " +
                                  "JOIN filiais f ON e.destino_id = f.id_filial " +
                                  "WHERE e.id_envio = ?";
@@ -286,6 +306,21 @@ public class MovimentacaoRecebimentoDAO {
         try {
             conn = Conexao.conectar();
             conn.setAutoCommit(false);
+
+            // 0. TRAVA DE SEGURANÇA CONTRA CACHE/DUPLA ABA
+            try (PreparedStatement stmtStatus = conn.prepareStatement(sqlVerificaStatus)) {
+                stmtStatus.setInt(1, idDevolucao);
+                try (ResultSet rs = stmtStatus.executeQuery()) {
+                    if (rs.next()) {
+                        long statusAtual = rs.getLong("status_id");
+                        if (statusAtual != 1L && statusAtual != 2L) {
+                            throw new RuntimeException("Ação negada: Esta devolução foi cancelada ou já foi finalizada em outra tela.");
+                        }
+                    } else {
+                        throw new RuntimeException("Devolução não encontrada.");
+                    }
+                }
+            }
 
             // A. Busca o origem_codigo real da filial de destino onde a devolução está sendo recebida
             int origemCodigoDestino = 0;
@@ -321,7 +356,7 @@ public class MovimentacaoRecebimentoDAO {
                 try (ResultSet rs = stmtBusca.executeQuery()) {
                     while (rs.next()) {
                         int idEq = rs.getInt("id_equipamento");
-                        stmtEq.setInt(1, origemCodigoDestino); // Joga o código correto da filial de destino
+                        stmtEq.setInt(1, origemCodigoDestino);
                         stmtEq.setInt(2, idEq);
                         stmtEq.executeUpdate();
                     }
@@ -334,8 +369,7 @@ public class MovimentacaoRecebimentoDAO {
             if (conn != null) {
                 try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
             }
-            e.printStackTrace();
-            return false;
+            throw new RuntimeException(e.getMessage(), e);
         } finally {
             if (conn != null) {
                 try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) { ex.printStackTrace(); }

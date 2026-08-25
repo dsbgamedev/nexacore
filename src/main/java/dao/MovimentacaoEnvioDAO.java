@@ -202,19 +202,39 @@ public class MovimentacaoEnvioDAO {
 	    }
 	    return lista;
 	}
+	
 	public void confirmarRecebimento(Long idEnvio, Long destinoId) throws SQLException {
-	    // 1. Busca o 'origem_codigo' real da filial de destino para atualizar o equipamento corretamente
+	    // 1. Verifica o status atual no banco para blindar contra cache / dupla aba
+	    String sqlVerificaStatus = "SELECT status_id FROM movimentacao_envio WHERE id_envio = ?";
 	    String sqlBuscaCodigoFilial = "SELECT origem_codigo FROM filiais WHERE id_filial = ?";
 	    String sqlBuscaItens = "SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?";
 	    String sqlAtualizaEnvioStatus = "UPDATE movimentacao_envio SET status_id = 3 WHERE id_envio = ?"; // 3 = Recebido
 	    
-	    // 2. Atualiza a situação para 1 (Disponível na nova filial) ou 2 (Em Uso) e atualiza o 'origem_codigo' para o código da nova filial
+	    // 2. Atualiza a situação para 1 (Disponível na nova filial) e atualiza o 'origem_codigo'
 	    String sqlAtualizaEquipamento = "UPDATE equipamentos SET situacao_id = 1, origem_codigo = ? WHERE id_equipamento = ?";
 
 	    Connection conn = null;
 	    try {
 	        conn = Conexao.conectar();
 	        conn.setAutoCommit(false);
+
+	        // =========================================================================
+	        // TRAVA DE SEGURANÇA CONTRA CACHE (Bloqueia se já foi cancelado ou recebido)
+	        // =========================================================================
+	        try (PreparedStatement stmtStatus = conn.prepareStatement(sqlVerificaStatus)) {
+	            stmtStatus.setLong(1, idEnvio);
+	            try (ResultSet rs = stmtStatus.executeQuery()) {
+	                if (rs.next()) {
+	                    Long statusAtual = rs.getLong("status_id");
+	                    // Se o status for diferente de 1 (Aguardando) e 2 (Em Trânsito), rejeita!
+	                    if (statusAtual != null && statusAtual != 1L && statusAtual != 2L) {
+	                        throw new SQLException("Ação negada: Este envio foi cancelado ou já foi finalizado em outra tela.");
+	                    }
+	                } else {
+	                    throw new SQLException("Envio não encontrado.");
+	                }
+	            }
+	        }
 
 	        Long origemCodigoDestino = null;
 	        try (PreparedStatement stmtFilial = conn.prepareStatement(sqlBuscaCodigoFilial)) {
@@ -267,9 +287,10 @@ public class MovimentacaoEnvioDAO {
 	        if (conn != null) { try { conn.setAutoCommit(true); conn.close(); } catch (SQLException e) { e.printStackTrace(); } }
 	    }
 	}
+	
 	public void cancelarEnvio(Long idEnvio) throws SQLException {
-        // 1. Busca a origem_id do envio e os dados dos itens vinculados (incluindo o status que o equipamento tinha no momento)
-        String sqlBuscaEnvio = "SELECT origem_id FROM movimentacao_envio WHERE id_envio = ?";
+        // 1. Busca a origem_id e O STATUS ATUAL real do envio no banco de dados para evitar cancelamento via cache/dupla aba
+        String sqlBuscaEnvio = "SELECT origem_id, status_id FROM movimentacao_envio WHERE id_envio = ?";
         String sqlBuscaItensEnvio = "SELECT iei.id_equipamento, iei.status_equipamento_momento, e.origem_codigo as origem_atual " +
                                      "FROM movimentacao_envio_itens iei " +
                                      "JOIN equipamentos e ON iei.id_equipamento = e.id_equipamento " +
@@ -281,7 +302,7 @@ public class MovimentacaoEnvioDAO {
         // 3. Atualiza o equipamento de volta para a situação e filial de origem originais
         String sqlVoltaEquip = "UPDATE equipamentos SET situacao_id = ?, origem_codigo = ? WHERE id_equipamento = ?";
         
-        // 4. Cancela o status do envio (ex: status_id = 4 para Cancelado)
+        // 4. Cancela o status do envio apenas se o status atual no banco for 1 (Aguardando) ou 2 (Em Trânsito)
         String sqlCancelaEnvioStatus = "UPDATE movimentacao_envio SET status_id = 4 WHERE id_envio = ?";
         
         // 5. Registra o histórico
@@ -292,17 +313,25 @@ public class MovimentacaoEnvioDAO {
             conn = Conexao.conectar();
             conn.setAutoCommit(false);
 
-            // Descobre a filial de origem do envio
+            // Descobre a filial de origem e o status atual REAL do banco de dados
             Long origemIdOriginal = null;
+            Long statusAtual = null;
             try (PreparedStatement stmtOrigem = conn.prepareStatement(sqlBuscaEnvio)) {
                 stmtOrigem.setLong(1, idEnvio);
                 try (ResultSet rs = stmtOrigem.executeQuery()) {
                     if (rs.next()) {
                         origemIdOriginal = rs.getLong("origem_id");
+                        statusAtual = rs.getLong("status_id");
                     } else {
                         throw new SQLException("Envio não encontrado.");
                     }
                 }
+            }
+
+            // TRAVA DE SEGURANÇA CONTRA CACHE: Se o status não for 1 (Aguardando) nem 2 (Em Trânsito), bloqueia!
+            // Ex: Status 3 = Recebido, Status 4 = Já Cancelado.
+            if (statusAtual != null && statusAtual != 1L && statusAtual != 2L) {
+                throw new SQLException("Ação negada: Esta movimentação já foi finalizada (Recebida ou Cancelada) e não pode ser cancelada.");
             }
 
             // Descobre o código da filial de origem (origem_codigo) para retornar o equipamento para o lugar certo
@@ -328,10 +357,9 @@ public class MovimentacaoEnvioDAO {
                 try (ResultSet rsItens = stmtBuscaItens.executeQuery()) {
                     while (rsItens.next()) {
                         Long idEquipamento = rsItens.getLong("id_equipamento");
-                        String statusMomento = rsItens.getString("status_equipamento_momento"); // Ex: "Disponível", "Em Uso", etc.
+                        String statusMomento = rsItens.getString("status_equipamento_momento");
                         
-                        // Descobre o ID numérico da situação original pelo nome
-                        Long situacaoIdOriginal = 1L; // Fallback padrão caso não ache
+                        Long situacaoIdOriginal = 1L; 
                         if (statusMomento != null && !statusMomento.isEmpty()) {
                             stmtBuscaSitId.setString(1, statusMomento);
                             try (ResultSet rsSit = stmtBuscaSitId.executeQuery()) {
@@ -341,7 +369,6 @@ public class MovimentacaoEnvioDAO {
                             }
                         }
 
-                        // Aplica o estorno: devolve para a situação original e para a filial de origem correta
                         stmtVolta.setLong(1, situacaoIdOriginal);
                         stmtVolta.setLong(2, origemCodigoReal);
                         stmtVolta.setLong(3, idEquipamento);

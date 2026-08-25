@@ -1,4 +1,6 @@
 let listaGlobalEnvios = [];
+let paginaAtual = 1;
+const itensPorPagina = 20;
 
 document.addEventListener("DOMContentLoaded", function () {
     carregarEnvios();
@@ -6,9 +8,30 @@ document.addEventListener("DOMContentLoaded", function () {
     const inputPesquisa = document.getElementById("inputPesquisaGlobal");
     if (inputPesquisa) {
         inputPesquisa.addEventListener("input", function () {
+            paginaAtual = 1; // Reseta para a primeira página ao pesquisar
             filtrarEnvios(this.value);
         });
     }
+});
+
+// Botão de Atualizar Tela (Listener duplicado removido)
+document.getElementById('btnAtualizarTela').addEventListener('click', function() {
+    const icone = this.querySelector('i');
+    if (icone) icone.classList.add('fa-spin');
+    
+    // Limpa a busca
+    const inputPesquisa = document.getElementById("inputPesquisaGlobal");
+    if (inputPesquisa) {
+        inputPesquisa.value = '';
+    }
+    
+    // Reseta a paginação e busca dados do servidor
+    paginaAtual = 1;
+    carregarEnvios(); 
+    
+    setTimeout(() => {
+        if (icone) icone.classList.remove('fa-spin');
+    }, 1000);
 });
 
 function carregarEnvios() {
@@ -17,12 +40,9 @@ function carregarEnvios() {
 
     fetch(url, {
         method: 'GET',
-        headers: {
-            'Accept': 'application/json'
-        }
+        headers: { 'Accept': 'application/json' }
     })
     .then(async response => {
-        console.log("Status da resposta:", response.status);
         if (!response.ok) {
             let textoErro = await response.text();
             throw new Error(`Erro HTTP ${response.status}: ${textoErro}`);
@@ -30,8 +50,8 @@ function carregarEnvios() {
         return response.json();
     })
     .then(data => {
-        console.log("Dados recebidos da API:", data);
         listaGlobalEnvios = data || [];
+        paginaAtual = 1;
         renderizarTabela(listaGlobalEnvios);
     })
     .catch(error => {
@@ -50,7 +70,7 @@ function carregarEnvios() {
     });
 }
 
-// Função auxiliar para formatar a data de AAAA-MM-DD para DD/MM/AAAA
+// Formatar a data de AAAA-MM-DD para DD/MM/AAAA
 function formatarDataBR(dataStr) {
     if (!dataStr) return '';
     let partes = dataStr.split('-');
@@ -67,11 +87,22 @@ function renderizarTabela(dados) {
 
     if (!dados || dados.length === 0) {
         tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">Nenhum envio encontrado.</td></tr>';
+        atualizarControlesPaginacao(0, 0, 0, 0);
         return;
     }
 
-    dados.forEach(envio => {
-        // Proteção caso algum objeto venha nulo no array
+    // LÓGICA DE PAGINAÇÃO DE 20 EM 20
+    const totalItens = dados.length;
+    const totalPaginas = Math.ceil(totalItens / itensPorPagina) || 1;
+    
+    if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+    if (paginaAtual < 1) paginaAtual = 1;
+
+    const inicio = (paginaAtual - 1) * itensPorPagina;
+    const fim = inicio + itensPorPagina;
+    const dadosPaginados = dados.slice(inicio, fim);
+
+    dadosPaginados.forEach(envio => {
         if (!envio) return;
 
         let idEnvio = envio.idEnvio || envio.id || 0;
@@ -87,7 +118,7 @@ function renderizarTabela(dados) {
         let qtdProdutos = listaProdutosEnvio.length;
         let textoProdutos = qtdProdutos === 1 ? "1 produto" : `${qtdProdutos} produtos`;
 
-        // Botões de Ação Modernos
+        // Botões de Ação
         let acoesHtml = `
             <div class="d-flex justify-content-center gap-1">
                 <button class="btn btn-light btn-sm text-secondary" title="Visualizar Detalhes" onclick="visualizarEnvio(${idEnvio})">
@@ -95,7 +126,6 @@ function renderizarTabela(dados) {
                 </button>
         `;
 
-        // Botão para efetivar envio caso esteja aguardando (statusId === 1)
         if (envio.statusId === 1 || String(nomeStatus).toLowerCase().includes('aguardando')) {
             acoesHtml += `
                 <button class="btn btn-light btn-sm text-success" title="Efetivar Envio (Colocar em Trânsito)" onclick="efetivarEnvio(${idEnvio})">
@@ -133,6 +163,63 @@ function renderizarTabela(dados) {
         `;
         tbody.appendChild(tr);
     });
+
+    // Atualiza os botões e texto da paginação no rodapé
+    atualizarControlesPaginacao(totalItens, totalPaginas, inicio, dadosPaginados.length);
+}
+
+function atualizarControlesPaginacao(totalItens, totalPaginas, inicio, qtdAtualNaTela) {
+    const infoPaginacao = document.getElementById("infoPaginacao");
+    const botoesPaginacao = document.getElementById("botoesPaginacao");
+    
+    if (!infoPaginacao || !botoesPaginacao) return;
+
+    if (totalItens === 0) {
+        infoPaginacao.innerText = "Nenhum registro encontrado";
+        botoesPaginacao.innerHTML = "";
+        return;
+    }
+
+    const primeiroExibido = inicio + 1;
+    const ultimoExibido = inicio + qtdAtualNaTela;
+    infoPaginacao.innerText = `Mostrando de ${primeiroExibido} até ${ultimoExibido} de ${totalItens} registros`;
+
+    let htmlPaginacao = '';
+    
+    // Botão Anterior
+    htmlPaginacao += `
+        <li class="page-item ${paginaAtual === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="mudarPagina(${paginaAtual - 1}); return false;">Anterior</a>
+        </li>
+    `;
+
+    // Botões Numéricos
+    for (let i = 1; i <= totalPaginas; i++) {
+        htmlPaginacao += `
+            <li class="page-item ${paginaAtual === i ? 'active' : ''}">
+                <a class="page-link" href="#" onclick="mudarPagina(${i}); return false;">${i}</a>
+            </li>
+        `;
+    }
+
+    // Botão Próximo
+    htmlPaginacao += `
+        <li class="page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="mudarPagina(${paginaAtual + 1}); return false;">Próximo</a>
+        </li>
+    `;
+
+    botoesPaginacao.innerHTML = htmlPaginacao;
+}
+
+function mudarPagina(novaPagina) {
+    paginaAtual = novaPagina;
+    const termo = document.getElementById("inputPesquisaGlobal").value;
+    if (termo) {
+        filtrarEnvios(termo);
+    } else {
+        renderizarTabela(listaGlobalEnvios);
+    }
 }
 
 function filtrarEnvios(termo) {
@@ -277,9 +364,10 @@ async function cancelarEnvio(idEnvio) {
             throw new Error("Resposta inválida do servidor: " + text);
         }
     })
-    .then(resultado => {
+	.then(resultado => {
         if (resultado.sucesso) {
-            ModalService.success("Sucesso", resultado.mensagem).then(() => {
+            // Como o cancelamento deve ser vermelho, usamos ModalService.error
+            ModalService.error("Atenção", resultado.mensagem).then(() => {
                 carregarEnvios();
             });
         } else {
@@ -291,6 +379,7 @@ async function cancelarEnvio(idEnvio) {
         ModalService.error("Erro Técnico", "Erro ao cancelar o envio: " + error.message);
     });
 }
+
 async function efetivarEnvio(idEnvio) {
     const confirmado = await ModalService.confirm(
         "Efetivar Envio", 
@@ -306,7 +395,7 @@ async function efetivarEnvio(idEnvio) {
     .then(resposta => {
         if (resposta.sucesso) {
             ModalService.success("Sucesso", resposta.mensagem).then(() => {
-                carregarEnvios(); // Recarrega a tabela atualizando o status visual
+                carregarEnvios();
             });
         } else {
             ModalService.error("Erro", resposta.mensagem);

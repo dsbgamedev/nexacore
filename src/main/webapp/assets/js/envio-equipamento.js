@@ -107,7 +107,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	}
 
     // 5. Evento de submissão do formulário principal de Envio
-	const formEnvio = document.getElementById("formEnvio");
+    const formEnvio = document.getElementById("formEnvio");
     if (formEnvio) {
         formEnvio.addEventListener("submit", function(e) {
             e.preventDefault();
@@ -156,6 +156,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 urlEndpoint += '?tipo=devolucao';
             }
 
+            // Desativa o botão de envio para evitar cliques duplos (duplicidade)
+            const btnSubmit = formEnvio.querySelector('button[type="submit"]');
+            if (btnSubmit) btnSubmit.disabled = true;
+
             fetch(urlEndpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json;charset=UTF-8' },
@@ -164,15 +168,18 @@ document.addEventListener("DOMContentLoaded", function() {
             .then(res => res.json())
             .then(resposta => {
                 if (resposta.sucesso) {
+                    equipamentosSelecionadosMap.clear(); // Limpa a memória dos itens selecionados
+                    
                     if (typeof ModalService !== 'undefined') {
                         ModalService.success("Sucesso", resposta.mensagem).then(() => {
-                            window.location.reload();
+                            window.location.href = contextPath + '/jsp/consulta-envios.jsp'; // Redireciona para a consulta
                         });
                     } else {
                         alert(resposta.mensagem);
-                        window.location.reload();
+                        window.location.href = contextPath + '/jsp/consulta-envios.jsp'; // Redireciona para a consulta
                     }
                 } else {
+                    if (btnSubmit) btnSubmit.disabled = false; // Reativa o botão se houver erro
                     if (typeof ModalService !== 'undefined') {
                         ModalService.error("Erro", resposta.mensagem);
                     } else {
@@ -182,6 +189,7 @@ document.addEventListener("DOMContentLoaded", function() {
             })
             .catch(err => {
                 console.error("Erro:", err);
+                if (btnSubmit) btnSubmit.disabled = false; // Reativa o botão se houver erro de rede
                 if (typeof ModalService !== 'undefined') {
                     ModalService.error("Erro", "Erro de comunicação ao efetuar o envio.");
                 } else {
@@ -266,6 +274,7 @@ async function carregarEquipamentoDevolucaoAutomatico(idEquipamento) {
 }
 
 // Função para buscar equipamentos disponíveis para o modal
+// Função para buscar equipamentos disponíveis para o modal (Com Trava Rigorosa)
 function carregarEquipamentosDisponiveis() {
     const urlParams = new URLSearchParams(window.location.search);
     const tipo = urlParams.get('tipo');
@@ -295,20 +304,29 @@ function carregarEquipamentosDisponiveis() {
                     return eq.idEquipamento == idEquipamentoDevolucao;
                 }
 				
-				// TRAVA DE SEGURANÇA: Se já está aguardando envio ou em trânsito, bloqueia imediatamente
+                // TRAVA DE SEGURANÇA RIGOROSA: Bloqueia se estiver aguardando envio, em trânsito, externo ou bloqueado
                 const statusMov = (eq.statusMovimentacao || eq.statusAtualMovimentacao || '').toUpperCase();
-                if (statusMov.includes("AGUARDANDO") || statusMov.includes("TRANSITO") || statusMov.includes("EXTERNO")) {
+                const situacaoTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && eq.situacao.nome) || '').toLowerCase();
+                const statusTexto = (eq.statusAtual || eq.status || '').toLowerCase();
+
+                if (
+                    statusMov.includes("AGUARDANDO") || 
+                    statusMov.includes("TRANSITO") || 
+                    statusMov.includes("EXTERNO") ||
+                    statusTexto.includes("aguardando") ||
+                    situacaoTexto.includes("aguardando") ||
+                    situacaoTexto.includes("trânsito")
+                ) {
                     return false;
                 }
                 
                 const situacaoId = eq.situacaoId !== undefined ? Number(eq.situacaoId) : (eq.situacao && eq.situacao.id ? Number(eq.situacao.id) : 0);
-                const situacaoTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && eq.situacao.nome) || '').toLowerCase();
 
                 return (situacaoId === 1) || (situacaoTexto.includes("disponível") && !situacaoTexto.includes("uso") && !situacaoTexto.includes("reservado"));
             });
 
             if (equipamentosValidos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhum equipamento com situação Disponível encontrado para esta operação.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhum equipamento disponível encontrado para esta operação.</td></tr>';
                 return;
             }
 
