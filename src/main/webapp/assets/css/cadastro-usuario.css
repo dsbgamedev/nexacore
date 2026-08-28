@@ -1,0 +1,165 @@
+@charset "UTF-8";
+
+body {
+           background: #f4f6f9;
+           font-family: Arial, Helvetica, sans-serif;
+           color: #172033;
+       }
+       .page-title {
+           color: #123b82;
+           font-size: 28px;
+           font-weight: 700;
+       }
+       .breadcrumb-custom {
+           color: #6c757d;
+           font-size: 14px;
+       }
+       .breadcrumb-custom a {
+           color: #1264e8;
+           text-decoration: none;
+       }
+       .card-nexa {
+           background: white;
+           border: 1px solid #dde3ec;
+           border-radius: 10px;
+           box-shadow: 0 2px 8px rgba(0,0,0,.04);
+       }
+       .section-title {
+           color: #123b82;
+           font-size: 17px;
+           font-weight: 700;
+           padding-bottom: 12px;
+           border-bottom: 1px solid #e1e6ed;
+           margin-bottom: 20px;
+       }
+       .form-label {
+           font-size: 13px;
+           font-weight: 600;
+       }
+       .permission-header {
+           background: #f5f7fa;
+           border-bottom: 1px solid #dfe4ea;
+           font-weight: 700;
+           color: #123b82;
+       }
+       .permission-row {
+           border-bottom: 1px solid #edf0f3;
+       }
+       .permission-row:hover {
+           background: #fafcff;
+       }
+       .module-name {
+           font-weight: 600;
+           color: #1f2937;
+       }
+
+       .permission-box {
+           text-align: center;
+           width: 90px;
+       }
+       .permission-box input {
+           width: 17px;
+           height: 17px;
+           cursor: pointer;
+       }
+       .module-icon {
+           width: 30px;
+           display: inline-block;
+           color: #1264e8;
+       }
+       .btn-save {
+           background: #0a9f62;
+           color: white;
+           font-weight: 600;
+       }
+       .btn-save:hover {
+           background: #078552;
+           color: white;
+       }
+
+       .btn-cancel {
+           border: 1px solid #adb5bd;
+           background: white;
+       }
+
+       .badge-info {
+           background: #e8f1ff;
+           color: #1264e8;
+       }
+
+/* ================================
+   UNIDADES PERMITIDAS
+================================ */
+
+.unidade-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+
+    width: 100%;
+
+    padding: 16px;
+
+    background: #ffffff;
+
+    border: 1px solid #dfe4ea;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+
+    transition: all 0.2s ease;
+}
+
+.unidade-card:hover {
+    border-color: #1264e8;
+
+    background: #fafcff;
+
+    box-shadow: 0 2px 8px rgba(18,100,232,.08);
+}
+
+.unidade-card:has(.unidade-checkbox:checked) {
+    border-color: #1264e8;
+
+    background: #f3f7ff;
+}
+
+.unidade-checkbox {
+    width: 18px;
+    height: 18px;
+
+    margin-top: 2px;
+
+    cursor: pointer;
+}
+
+.unidade-info {
+    flex: 1;
+}
+
+.unidade-header {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    margin-bottom: 6px;
+}
+
+.unidade-codigo {
+    font-weight: 700;
+
+    color: #123b82;
+
+    font-size: 14px;
+}
+
+.unidade-nome {
+    color: #374151;
+
+    font-size: 13px;
+
+    line-height: 1.4;
+}

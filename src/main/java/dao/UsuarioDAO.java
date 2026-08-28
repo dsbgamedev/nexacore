@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import dto.UnidadeDTO;
-
+import dto.ModuloDTO;
 
 public class UsuarioDAO {
 
@@ -221,26 +221,28 @@ public class UsuarioDAO {
     private void carregarContextoDeUnidades(Connection conn, Usuario user) throws SQLException {
         List<UnidadeDTO> listaCompleta = new ArrayList<>();
         
-        // Ajustado para apontar direto para a tabela 'filiais' e colunas reais do banco
-        String sql = "SELECT uu.unidade_id, f.nome_empresa, uu.e_padrao " +
+        // ALTERADO: Faz o JOIN com filiais trazendo origem_codigo e sufixo
+        String sql = "SELECT uu.unidade_id, f.origem_codigo, f.sufixo, uu.e_padrao " +
                      "FROM public.usuario_unidades uu " +
                      "JOIN public.filiais f ON uu.unidade_id = f.id_filial " +
                      "WHERE uu.usuario_id = ? " +
-                     "ORDER BY uu.e_padrao DESC, f.nome_empresa ASC";
+                     "ORDER BY uu.e_padrao DESC, f.origem_codigo ASC";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, user.getId());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     int id = rs.getInt("unidade_id");
-                    String nome = rs.getString("nome_empresa"); // Pega o nome real da filial
+                    String origemCodigo = String.valueOf(rs.getInt("origem_codigo"));
+                    String sufixo = rs.getString("sufixo");
+                    String nomeFormatado = origemCodigo + " - " + sufixo; // Formata para exibir bonitinho
                     boolean ePadrao = rs.getBoolean("e_padrao");
 
-                    listaCompleta.add(new UnidadeDTO(id, nome));
+                    listaCompleta.add(new UnidadeDTO(id, nomeFormatado));
 
                     if (ePadrao) {
                         user.setUnidadeAtivaId(id);
-                        user.setUnidadeAtivaNome(nome);
+                        user.setUnidadeAtivaNome(nomeFormatado);
                     }
                 }
             }
@@ -630,38 +632,7 @@ public class UsuarioDAO {
         return modulos;
     }
 
-    /**
-     * Salva as permissões de módulo para um usuário específico na tabela de junção 'usuario_modulos'.
-     * Este método assume que permissões antigas para este usuário já foram removidas, se necessário.
-     * @param conn A conexão JDBC (passada para reuso em transações).
-     * @param userId O ID do usuário.
-     * @param modulosPermitidos Uma lista de nomes de módulos a serem associados.
-     * @throws SQLException Se ocorrer um erro de banco de dados.
-     */
-    private void salvarModulosDoUsuario(Connection conn, int userId, List<String> modulosPermitidos) throws SQLException {
-        if (modulosPermitidos == null || modulosPermitidos.isEmpty()) {
-            return; // Nada para salvar
-        }
-
-        // Prepara o SQL para inserir múltiplas permissões
-        String sql = "INSERT INTO usuario_modulos (usuario_id, modulo_id) VALUES (?, ?)";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            for (String nomeModulo : modulosPermitidos) {
-                int moduloId = getModuloIdByNome(conn, nomeModulo);
-                if (moduloId != -1) { // Garante que o módulo existe
-                    ps.setInt(1, userId);
-                    ps.setInt(2, moduloId);
-                    ps.addBatch(); // Adiciona ao batch para inserção eficiente
-                } else {
-                    System.err.println("Aviso: Módulo '" + nomeModulo + "' não encontrado na tabela 'modulos'. Permissão ignorada para o usuário ID " + userId);
-                }
-            }
-            ps.executeBatch(); // Executa todas as inserções em lote
-        } catch (SQLException e) {
-            System.err.println("Erro SQL ao salvar módulos do usuário: " + e.getMessage());
-            throw e;
-        }
-    }
+    
 
     /**
      * Busca o ID de um módulo dado o seu nome.
@@ -723,7 +694,7 @@ public class UsuarioDAO {
      * Salva as unidades permitidas para um usuário na tabela de junção.
      * Limpa os registros antigos antes de inserir os novos para evitar duplicidade.
      */
-    private void salvarUnidadesDoUsuario(Connection conn, int userId, List<String> unidadesPermitidas) throws SQLException {
+    public void salvarUnidadesDoUsuario(Connection conn, int userId, List<String> unidadesPermitidas) throws SQLException {
         // 1. Limpa os vínculos atuais
         String sqlDelete = "DELETE FROM public.usuario_unidades WHERE usuario_id = ?";
         try (PreparedStatement psDelete = conn.prepareStatement(sqlDelete)) {
@@ -752,35 +723,158 @@ public class UsuarioDAO {
             psInsert.executeBatch();
         }
     }
+    /**
+     * Salva as permissões de módulo para um usuário específico na tabela de junção 'usuario_modulos'.
+     * Este método assume que permissões antigas para este usuário já foram removidas, se necessário.
+     * @param conn A conexão JDBC (passada para reuso em transações).
+     * @param userId O ID do usuário.
+     * @param modulosPermitidos Uma lista de nomes de módulos a serem associados.
+     * @throws SQLException Se ocorrer um erro de banco de dados.
+     */
     
-    public List<String[]> listarUnidadesDisponiveis() throws SQLException {
-        List<String[]> lista = new ArrayList<>();
-        // Ajustado para apontar para a tabela 'filiais' e colunas 'id_filial' e 'nome_empresa' do NexaCore
-        String sql = "SELECT id_filial, nome_empresa FROM filiais ORDER BY nome_empresa ASC";
-        
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
-
-        try {
-            conn = conexao.Conexao.conectar(); 
-            ps = conn.prepareStatement(sql);
-            rs = ps.executeQuery();
-
-            while (rs.next()) {
-                lista.add(new String[]{
-                    String.valueOf(rs.getInt("id_filial")), 
-                    rs.getString("nome_empresa")
-                });
-            }
-        } catch (SQLException e) {
-            System.err.println("Erro ao listar unidades no UsuarioDAO: " + e.getMessage());
-            throw e;
-        } finally {
-            conexao.Conexao.fechar(rs, ps, conn);
+    /**
+     * Salva as permissões padrão baseadas em uma lista de nomes de módulos (usado no cadastro simples).
+     */
+    private void salvarModulosDoUsuario(Connection conn, int userId, List<String> modulosPermitidos) throws SQLException {
+        if (modulosPermitidos == null || modulosPermitidos.isEmpty()) {
+            return; 
         }
-        return lista;
+
+        String sql = "INSERT INTO public.usuario_modulos (usuario_id, modulo_id, pode_consultar, pode_inserir, pode_editar, pode_excluir, pode_cancelar) " +
+                     "VALUES (?, ?, true, true, true, true, true)"; // Concede acesso total por padrão na lista simples
+                     
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (String nomeModulo : modulosPermitidos) {
+                int moduloId = getModuloIdByNome(conn, nomeModulo);
+                if (moduloId != -1) {
+                    ps.setInt(1, userId);
+                    ps.setInt(2, moduloId);
+                    ps.addBatch();
+                }
+            }
+            ps.executeBatch();
+        }
+    }
+    /**
+     * Salva a matriz granular de módulos enviada via JsonArray (Tela de Permissões Avançadas).
+     */
+    public void salvarModulosGranularesDoUsuario(Connection conn, int userId, com.google.gson.JsonArray modulosArray) throws SQLException {
+        String sqlDelete = "DELETE FROM public.usuario_modulos WHERE usuario_id = ?";
+        try (PreparedStatement psDelete = conn.prepareStatement(sqlDelete)) {
+            psDelete.setInt(1, userId);
+            psDelete.executeUpdate();
+        }
+
+        if (modulosArray == null || modulosArray.size() == 0) return;
+
+        String sqlInsert = "INSERT INTO public.usuario_modulos (usuario_id, modulo_id, pode_consultar, pode_inserir, pode_editar, pode_excluir, pode_cancelar) " +
+                           "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                           
+        try (PreparedStatement psInsert = conn.prepareStatement(sqlInsert)) {
+            for (int i = 0; i < modulosArray.size(); i++) {
+                com.google.gson.JsonObject modObj = modulosArray.get(i).getAsJsonObject();
+                
+                int moduloId = modObj.get("id").getAsInt();
+                boolean consultar = modObj.has("consultar") && modObj.get("consultar").getAsBoolean();
+                boolean inserir = modObj.has("inserir") && modObj.get("inserir").getAsBoolean();
+                boolean editar = modObj.has("editar") && modObj.get("editar").getAsBoolean();
+                boolean excluir = modObj.has("excluir") && modObj.get("excluir").getAsBoolean();
+                boolean cancelar = modObj.has("cancelar") && modObj.get("cancelar").getAsBoolean();
+
+                psInsert.setInt(1, userId);
+                psInsert.setInt(2, moduloId);
+                psInsert.setBoolean(3, consultar);
+                psInsert.setBoolean(4, inserir);
+                psInsert.setBoolean(5, editar);
+                psInsert.setBoolean(6, excluir);
+                psInsert.setBoolean(7, cancelar);
+                
+                psInsert.addBatch();
+            }
+            psInsert.executeBatch();
+        }
     }
     
+    /**
+     * Salva as permissões granulares de módulo para um usuário específico na tabela 'usuario_modulos'.
+     * @param conn A conexão JDBC (passada para reuso em transações).
+     * @param userId O ID do usuário.
+     * @param modulosPermitidos Lista contendo os dados ou o servlet chama diretamente inserindo por ID.
+     */
+    public void salvarPermissaoModuloDetalhada(Connection conn, int userId, int moduloId, boolean consultar, boolean inserir, boolean editar, boolean excluir, boolean cancelar) throws SQLException {
+        String sql = "INSERT INTO usuario_modulos (usuario_id, modulo_id, pode_consultar, pode_inserir, pode_editar, pode_excluir, pode_cancelar) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?) " +
+                     "ON CONFLICT (usuario_id, modulo_id) " +
+                     "DO UPDATE SET pode_consultar = EXCLUDED.pode_consultar, " +
+                     "              pode_inserir = EXCLUDED.pode_inserir, " +
+                     "              pode_editar = EXCLUDED.pode_editar, " +
+                     "              pode_excluir = EXCLUDED.pode_excluir, " +
+                     "              pode_cancelar = EXCLUDED.pode_cancelar";
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setInt(2, moduloId);
+            ps.setBoolean(3, consultar);
+            ps.setBoolean(4, inserir);
+            ps.setBoolean(5, editar);
+            ps.setBoolean(6, excluir);
+            ps.setBoolean(7, cancelar);
+            
+            ps.executeUpdate();
+        }
+    }
+    
+    /**
+     * Lista todas as unidades disponíveis no sistema utilizando origem_codigo e sufixo.
+     * Retorna uma lista de String[] contendo [origem_codigo, sufixo].
+     */
+    public List<String[]> listarUnidadesDisponiveis() throws SQLException {
+        List<String[]> unidades = new ArrayList<>();
+        String sql = "SELECT id_filial, origem_codigo, sufixo FROM filiais ORDER BY origem_codigo";
+        
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                String idFilial = String.valueOf(rs.getInt("id_filial"));
+                String origemCodigo = String.valueOf(rs.getInt("origem_codigo"));
+                String sufixo = rs.getString("sufixo");
+                
+                // Define se é Matriz (161) ou Filial
+                String tipoUnidade = "161".equals(origemCodigo) ? "Matriz" : "Filial";
+                
+                // Agora retornamos 4 posições: [id_filial, origem_codigo, sufixo, tipoUnidade]
+                unidades.add(new String[]{idFilial, origemCodigo, sufixo, tipoUnidade});
+            }
+        } catch (SQLException e) {
+            System.err.println("Erro SQL ao listar unidades disponíveis: " + e.getMessage());
+            throw e;
+        }
+        return unidades;
+    }
+    
+    /**
+     * Lista todos os módulos disponíveis no sistema contendo ID e Nome.
+     * @return Uma lista de String[] contendo [id, nome_modulo].
+     * @throws SQLException Se ocorrer um erro de banco de dados.
+     */
+    public List<ModuloDTO> listarModulosComId() throws SQLException {
+        List<ModuloDTO> modulos = new ArrayList<>();
+        String sql = "SELECT id, nome_modulo FROM modulos ORDER BY nome_modulo";
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String nome = rs.getString("nome_modulo");
+                modulos.add(new ModuloDTO(id, nome));
+            }
+        } catch (SQLException e) {
+            System.err.println("Erro SQL ao listar módulos com ID: " + e.getMessage());
+            throw e;
+        }
+        return modulos;
+    }
 }
 

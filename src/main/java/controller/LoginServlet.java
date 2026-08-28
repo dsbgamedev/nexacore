@@ -177,7 +177,8 @@ public class LoginServlet extends HttpServlet {
                 return;
             }
             
-            if (usuarioDoBanco.getSenha() != null && usuarioDoBanco.getSenha().equals(password)) {
+            // if (usuarioDoBanco.getSenha() != null && usuarioDoBanco.getSenha().equals(password)) {//Sem criptografia
+            if (usuarioDoBanco.getSenha() != null && BCrypt.checkpw(password, usuarioDoBanco.getSenha())) {
                 Usuario usuarioCompleto = usuarioDAO.buscarUsuarioPorId(usuarioDoBanco.getId());
             	
                 // --- TRAVA DE SEGURANÇA: FILIAIS VINCULADAS ---

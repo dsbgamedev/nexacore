@@ -3,6 +3,8 @@ package controller;
 import com.google.gson.Gson;
 import dao.EquipamentoDAO;
 import model.Equipamento;
+import model.Usuario;
+import model.enums.PerfilUsuario;
 import conexao.Conexao; // Importa a sua classe de conexão
 
 import jakarta.servlet.ServletException;
@@ -10,6 +12,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,11 +29,43 @@ public class EquipamentoServlet extends HttpServlet {
     
     private final EquipamentoDAO dao = new EquipamentoDAO();
     private final Gson gson = new Gson();
+    
+    private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
+        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("equipamentos"); 
+
+        if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json; charset=UTF-8");
+            response.getWriter().write("{\"error\": \"Acesso negado. Você não possui permissão para executar esta ação.\"}");
+            return false;
+        }
+        return true;
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        String acao = request.getParameter("acao");
-
+    	
+    	// Adicione esta validação no início para bloquear acessos negados via GET
+        if (!validarPermissao(request, response)) {
+            return;
+        }
+    	
+    	String acao = request.getParameter("acao");
+        HttpSession session = request.getSession(false);
+        //boolean isAjaxRequest = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+        // O AuthFilter já garantiu que a sessão existe e que o usuário está logado, 
+        // mas uma checagem rápida garante que o objeto Usuario está disponível para uso:
+        if (session == null || session.getAttribute("usuarioLogado") == null) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Sessão expirada.");
+            return;
+        }
+        Usuario usuarioLogado = (Usuario) session.getAttribute("usuarioLogado");
+        Integer unidadeAtivaId = usuarioLogado.getUnidadeAtivaId();
+        // A partir daqui, você foca 100% na regra de negócio (chamar o DAO, montar JSON, etc.)  
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
@@ -159,6 +194,11 @@ public class EquipamentoServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
+        
+     // Validação de segurança de acesso ao módulo
+        if (!validarPermissao(request, response)) {
+            return;
+        }
 
         String pathInfo = request.getPathInfo(); 
 
@@ -317,6 +357,11 @@ public class EquipamentoServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
+        
+     // Validação de segurança de acesso ao módulo
+        if (!validarPermissao(request, response)) {
+            return;
+        }
 
         if (idStr != null && !idStr.trim().isEmpty()) {
             try {

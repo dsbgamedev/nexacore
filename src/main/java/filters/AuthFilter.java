@@ -36,27 +36,23 @@ public class AuthFilter implements Filter {
     // Lista de JSPs que DEVEM ser explicitamente bloqueados para acesso direto
     // Acesso a estes JSPs deve ser feito via Servlet que lida com a lógica e permissões.
     private static final List<String> PROTECTED_JSP_PAGES = Arrays.asList(
-        "/cadastroEntidade.jsp",
-        "/cadastroProdutos.jsp",
-        "/cadastroUsuario.jsp",
-        "/consulta.jsp",
-        "/tiposFornecimento.jsp",
-        "/tiposProduto.jsp",
-        // Nomes das JSPs para o módulo de Manutenção
-        "/manutencaoEquipamentos.jsp", // JSP do Formulário de Chamado
-        "/historicoManutencao.jsp", // JSP do Histórico de Manutenções
-        "/forgotPassword.jsp",
-        "/resetPassword.jsp",
-        "/gerenciarEstoque.jsp",
-        "/cadastroTransportadora.jsp", 
-        "/lancarFrete.jsp" ,// JSP do novo módulo de frete
-        "/consultaFrete.jsp/",
-        "/consultarLogs.jsp",
-        "/gerarEtiquetaVisual.jsp", // Adicione esta linha
-        "/gerarEtiquetaVisual.jsp"
-        //"/TrocarUnidadeServlet" // <--- ADICIONE ESTA LINHA
-        // NOVO: Adicionado JSP de transportadoras
-        /*"/backup.jsp" Adicionado para proteger o acesso direto*/
+    		"/jsp/cadastro-empresa.jsp",
+            "/jsp/cadastro-equipamento.jsp",
+            "/jsp/cadastro-produto.jsp",
+            "/jsp/cadastro-usuario.jsp",
+            "/jsp/consulta-chamado.jsp",
+            "/jsp/consulta-envios.jsp",
+            "/jsp/consulta-equipamento.jsp",
+            "/jsp/consulta-produto.jsp",
+            "/jsp/envio-equipamento.jsp",
+            "/jsp/fabricantes.jsp",
+            "/jsp/gerarEtiquetaVisual.jsp",
+            "/jsp/gerenciar-atributos.jsp",
+            "/jsp/gerenciar-usuarios.jsp",
+            "/jsp/manutencao-abertura.jsp",
+            "/jsp/marcas.jsp",
+            "/jsp/recebimento-equipamento.jsp"
+    	     // Protegendo o acesso direto		
     );
 
     // Lista de Servlets públicos (ex: Login, Reset de Senha, Logout)
@@ -79,62 +75,86 @@ public class AuthFilter implements Filter {
     // Mapeamento de recursos protegidos para os módulos de permissão
     private static final Map<String, String> PROTECTED_RESOURCES_MODULES = new HashMap<>();
     static {
-        // Módulos para Produtos
-        PROTECTED_RESOURCES_MODULES.put("/cadastroProdutos.jsp", "produtos");
-        PROTECTED_RESOURCES_MODULES.put("/CadastrarProdutoServlet", "produtos");
-
-        // Módulos para Usuários
-        PROTECTED_RESOURCES_MODULES.put("/cadastroUsuario.jsp", "usuarios");
-        PROTECTED_RESOURCES_MODULES.put("/listarUsuarios.jsp", "usuarios");
+    	
+    	// 1. empresas
+        PROTECTED_RESOURCES_MODULES.put("/jsp/cadastro-empresa.jsp", "filiais");
+        PROTECTED_RESOURCES_MODULES.put("/CadastrarEmpresaServlet", "filiais");
+        PROTECTED_RESOURCES_MODULES.put("/api/filiais", "filiais");
+        PROTECTED_RESOURCES_MODULES.put("/api/filiais/", "filiais");
+        
+        // 2. equipamentos
+        PROTECTED_RESOURCES_MODULES.put("/jsp/cadastro-equipamento.jsp/", "equipamentos");
+        PROTECTED_RESOURCES_MODULES.put("/jsp/consulta-equipamento.jsp", "equipamentos");
+        PROTECTED_RESOURCES_MODULES.put("/EquipamentosServlet", "equipamentos");
+        PROTECTED_RESOURCES_MODULES.put("/ConsultaEquipamentosServlet", "equipamentos");
+        PROTECTED_RESOURCES_MODULES.put("/api/equipamentos", "equipamentos");
+        PROTECTED_RESOURCES_MODULES.put("/api/equipamentos/", "equipamentos");
+            
+        // 3. produtos
+        PROTECTED_RESOURCES_MODULES.put("/jsp/cadastro-produto.jsp", "produtos");
+        PROTECTED_RESOURCES_MODULES.put("/jsp/consulta-produto.jsp", "produtos");
+        PROTECTED_RESOURCES_MODULES.put("/ProdutoServlet", "produtos");
+        PROTECTED_RESOURCES_MODULES.put("/api/produtos", "produtos");
+        PROTECTED_RESOURCES_MODULES.put("/api/produtos/", "produtos");
+              
+        // 4. usuarios
+        PROTECTED_RESOURCES_MODULES.put("/jsp/cadastro-usuario.jsp", "usuarios");
+        PROTECTED_RESOURCES_MODULES.put("/jsp/gerenciar-usuarios.jsp", "usuarios");
+        PROTECTED_RESOURCES_MODULES.put("/GerenciarUsuariosServlet", "usuarios");
         PROTECTED_RESOURCES_MODULES.put("/CadastrarUsuarioServlet", "usuarios");
-        PROTECTED_RESOURCES_MODULES.put("/ExcluirUsuarioServlet", "usuarios"); 
-        PROTECTED_RESOURCES_MODULES.put("/GerenciarUsuariosServlet", "usuarios"); 
+        PROTECTED_RESOURCES_MODULES.put("/api/usuarios", "usuarios");
+        PROTECTED_RESOURCES_MODULES.put("/api/usuarios/", "usuarios");
+        
+        // 5. manutencao_chamados
+        PROTECTED_RESOURCES_MODULES.put("/jsp/consulta-chamados.jsp", "manutencao_chamados");
+        PROTECTED_RESOURCES_MODULES.put("/jsp/manutencao-abertura.jsp", "manutencao_chamados");
+        PROTECTED_RESOURCES_MODULES.put("/ManutencaoServlet", "manutencao_chamados");
+        PROTECTED_RESOURCES_MODULES.put("/api/manutencao_chamados", "manutencao_chamados");
+        PROTECTED_RESOURCES_MODULES.put("/api/manutencao_chamados/", "manutencao_chamados");
+        
+        // 6. movimentacao_envio
+        PROTECTED_RESOURCES_MODULES.put("/jsp/consulta-envios.jsp", "movimentacao_envio");
+        PROTECTED_RESOURCES_MODULES.put("/jsp/envio-equipamento.jsp", "movimentacao_envio");
+        PROTECTED_RESOURCES_MODULES.put("/EnvioEquipamentoServlet", "movimentacao_envio");
+        PROTECTED_RESOURCES_MODULES.put("/api/movimentacao_envio", "movimentacao_envio");
+        PROTECTED_RESOURCES_MODULES.put("/api/movimentacao_envio/", "movimentacao_envio");      
 
-        // Módulos para Entidades (Clientes e Fornecedores)
-        PROTECTED_RESOURCES_MODULES.put("/cadastroEntidade.jsp", "entidades");
-        PROTECTED_RESOURCES_MODULES.put("/CadastrarEntidadeServlet", "entidades");
+        // 7. fabricantes
+        PROTECTED_RESOURCES_MODULES.put("/jsp/fabricantes.jsp", "fabricantes");
+        PROTECTED_RESOURCES_MODULES.put("/FabricanteServlet", "fabricantes");  
+        PROTECTED_RESOURCES_MODULES.put("/api/fabricantes", "fabricantes"); 
+        PROTECTED_RESOURCES_MODULES.put("/api/fabricantes/", "fabricantes");
 
-        // Módulos de Consulta Geral (ConsultaDadosServlet)
-        PROTECTED_RESOURCES_MODULES.put("/consulta.jsp", "consulta"); // JSP geral de consulta
-        PROTECTED_RESOURCES_MODULES.put("/ConsultaDadosServlet", "consulta"); 
+        // 8. atributos (Duplicidade removida)
+        PROTECTED_RESOURCES_MODULES.put("/jsp/gerenciar-atributos.jsp", "atributos");
+        PROTECTED_RESOURCES_MODULES.put("/AtributosServlet", "atributos");
+        PROTECTED_RESOURCES_MODULES.put("/api/atributos", "atributos"); 
+        PROTECTED_RESOURCES_MODULES.put("/api/atributos/", "atributos"); 
+        
+        // 9. marcas
+        PROTECTED_RESOURCES_MODULES.put("/marcas.jsp", "marcas");
+        PROTECTED_RESOURCES_MODULES.put("/MarcaServlet", "marcas");
+        PROTECTED_RESOURCES_MODULES.put("/api/marcas", "marcas"); 
+        PROTECTED_RESOURCES_MODULES.put("/api/marcas/", "marcas"); 
+        
+        // 10. movimentacao_recebimento (Com as rotas reais de API chamadas pelo recebimento.js)
+        PROTECTED_RESOURCES_MODULES.put("/jsp/recebimento-equipamento.jsp", "movimentacao_recebimento");
+        PROTECTED_RESOURCES_MODULES.put("/MovimentacaoRecebimentoServlet", "movimentacao_recebimento");
+        PROTECTED_RESOURCES_MODULES.put("/api/movimentacao_recebimento", "movimentacao_recebimento"); 
+        PROTECTED_RESOURCES_MODULES.put("/api/movimentacao_recebimento/", "movimentacao_recebimento"); 
+        PROTECTED_RESOURCES_MODULES.put("/api/envios/transito", "movimentacao_recebimento");
+        PROTECTED_RESOURCES_MODULES.put("/api/envios/detalhes", "movimentacao_recebimento");
+        PROTECTED_RESOURCES_MODULES.put("/api/envios/receber", "movimentacao_recebimento");
+        PROTECTED_RESOURCES_MODULES.put("/api/devolucoes/transito", "movimentacao_recebimento");
+        PROTECTED_RESOURCES_MODULES.put("/api/devolucoes/detalhes", "movimentacao_recebimento");
+        PROTECTED_RESOURCES_MODULES.put("/api/devolucoes/receber", "movimentacao_recebimento");
+        
+        // 11. password_reset_tokens
+        PROTECTED_RESOURCES_MODULES.put("/jsp/resetPassword.jsp", "password_reset_tokens");
+        PROTECTED_RESOURCES_MODULES.put("/PasswordResetServlet", "password_reset_tokens");
+        PROTECTED_RESOURCES_MODULES.put("/api/password_reset_tokens", "password_reset_tokens"); 
+        PROTECTED_RESOURCES_MODULES.put("/api/password_reset_tokens/", "password_reset_tokens");
 
-        // Módulos para Relatórios
-        PROTECTED_RESOURCES_MODULES.put("/relatorios.jsp", "relatorios");
-
-        // Módulos para Manutenção de Equipamentos (agora usando 'manutencoes' como módulo)
-        PROTECTED_RESOURCES_MODULES.put("/manutencaoEquipamentos.jsp", "manutencoes"); // JSP do formulário (Chamado)
-        PROTECTED_RESOURCES_MODULES.put("/ManutencaoEquipamentoServlet", "manutencoes"); // Servlet do formulário
-        PROTECTED_RESOURCES_MODULES.put("/historicoManutencao.jsp", "manutencoes"); // Nova JSP do Histórico
-
-        // Módulos para Gerenciar Tipos de Fornecimento
-        PROTECTED_RESOURCES_MODULES.put("/tiposFornecimento.jsp", "gerenciar_tipos_fornecimento");
-        PROTECTED_RESOURCES_MODULES.put("/TipoFornecimentoServlet", "gerenciar_tipos_fornecimento");
-        
-        // Módulos para Gerenciar Tipos de Produto
-        PROTECTED_RESOURCES_MODULES.put("/tiposProduto.jsp", "gerenciar_tipos_produto");
-        PROTECTED_RESOURCES_MODULES.put("/TipoProdutoServlet", "gerenciar_tipos_produto");
-        
-        // NOVO MÓDULO PARA ESTOQUE
-        PROTECTED_RESOURCES_MODULES.put("/gerenciarEstoque.jsp", "estoque");
-        PROTECTED_RESOURCES_MODULES.put("/EstoqueServlet", "estoque");
-        
-        // NOVO MÓDULO PARA TRANSPORTADORAS
-        PROTECTED_RESOURCES_MODULES.put("/cadastroTransportadora.jsp", "transportadoras");
-        PROTECTED_RESOURCES_MODULES.put("/CadastrarTransportadoraServlet", "transportadoras");
-        
-        // CORREÇÃO CRÍTICA: MÓDULO LANÇAMENTO DE FRETES, USANDO O NOME CORRETO 'frete' (no singular) DO BANCO DE DADOS
-        PROTECTED_RESOURCES_MODULES.put("/lancarFrete.jsp", "frete"); 
-        PROTECTED_RESOURCES_MODULES.put("/LancarFreteServlet", "frete"); 
-        PROTECTED_RESOURCES_MODULES.put("/ImprimirEtiquetaServlet", "frete"); // <--- ADICIONE ESTA LINHA AQUI
-        PROTECTED_RESOURCES_MODULES.put("/consultaFrete.jsp", "consulta_frete"); 
-        PROTECTED_RESOURCES_MODULES.put("/ConsultaFreteServlet", "consulta_frete");
-        
-        //TROCAR FRETE
-        //PROTECTED_RESOURCES_MODULES.put("/TrocarUnidadeServlet", "frete");
-        
-     // Módulos para Auditoria de Logs
-        PROTECTED_RESOURCES_MODULES.put("/consultarLogs.jsp", "auditoria"); 
-        PROTECTED_RESOURCES_MODULES.put("/ConsultarLogsServlet", "auditoria");
     }
 
     @Override

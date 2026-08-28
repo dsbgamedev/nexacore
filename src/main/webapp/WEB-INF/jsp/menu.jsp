@@ -1,4 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fn" uri="jakarta.tags.functions" %>
 <%@ page import="model.Usuario" %>
 <%
     String ctx = request.getContextPath();
@@ -6,6 +8,14 @@
     String nomeUsuario = (usuario != null) ? usuario.getUsername() : "Usuário";
     String unidadeAtiva = (usuario != null && usuario.getUnidadeAtivaNome() != null) ? usuario.getUnidadeAtivaNome() : "Filial Padrão";
 %>
+<%--
+    Verifica se o usuário está logado. Se não, redireciona para a página de login.
+    Esta lógica é crucial para a segurança e é feita antes de qualquer renderização do corpo da página.
+--%>
+<c:if test="${empty sessionScope.usuarioLogado}">
+    <c:redirect url="${pageContext.request.contextPath}/LoginServlet?message=session_expired"/>
+</c:if>
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -18,11 +28,29 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     
     <!-- CSS Globais e do Layout (Apenas os corretos para o painel) -->
-      <link rel="stylesheet" href="<%=request.getContextPath()%>/assets/css/menu.css">
+    <link rel="stylesheet" href="<%=request.getContextPath()%>/assets/css/menu.css">
     <link rel="stylesheet" href="<%=request.getContextPath()%>/assets/css/global.css">
     <link rel="stylesheet" href="<%=request.getContextPath()%>/assets/css/layout.css">
 </head>
-<body class="nexacore-layout">
+<body class="nexacore-layout" data-app-context-path="<%=ctx%>" data-session-message="${sessionScope.mensagemSessao}">
+<div id="inlineMessageContainer"></div>
+
+    <%-- CONFIGURAÇÃO DE VARIÁVEIS DE PERMISSÃO ROBUSTA --%>
+    <c:set var="perfilLogado" value="${fn:toLowerCase(sessionScope.usuarioLogado.perfil)}" />
+    <c:set var="isSuperAdmin" value="${fn:contains(perfilLogado, 'super')}" />
+    <c:set var="isAdmin" value="${fn:contains(perfilLogado, 'admin')}" />
+    <c:set var="hasFullAccess" value="${isSuperAdmin or isAdmin}" />
+    <c:set var="modulos" value="${fn:toLowerCase(sessionScope.usuarioLogado.modulosPermitidos)}" />
+
+    <%-- Controle granular flexível (aceita variações no plural/singular do banco) --%>
+    <c:set var="canSeeEquipamentos" value="${hasFullAccess or fn:contains(modulos, 'equipamento')}" />
+    <c:set var="canSeeMovimentacao" value="${hasFullAccess or fn:contains(modulos, 'movimentacao')}" />
+    <c:set var="canSeeManutencao" value="${hasFullAccess or fn:contains(modulos, 'manutencao')}" />
+    <c:set var="canSeeFabricantes" value="${hasFullAccess or fn:contains(modulos, 'fabricante')}" />
+    <c:set var="canSeeMarcas" value="${hasFullAccess or fn:contains(modulos, 'marca')}" />
+    <c:set var="canSeeEmpresas" value="${hasFullAccess or fn:contains(modulos, 'empresa') or fn:contains(modulos, 'filial')}" />
+    <c:set var="canSeeAtributos" value="${hasFullAccess or fn:contains(modulos, 'atributo')}" />
+    <c:set var="canSeeUsuarios" value="${hasFullAccess or fn:contains(modulos, 'usuario')}" />
 
     <!-- SIDEBAR LATERAL ESQUERDA -->
     <aside id="sidebar" class="nexacore-sidebar">
@@ -37,41 +65,63 @@
         <div class="sidebar-menu-container">
             <span class="menu-category">PRINCIPAL</span>
             <ul class="sidebar-menu">
-                <li><a href="<%=ctx%>/jsp/menu.jsp" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+                <%-- Alterado de /jsp/menu.jsp para o Servlet correspondente --%>
+                <li><a href="<%=ctx%>/MenuServlet" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
             </ul>
 
-            <span class="menu-category">EQUIPAMENTOS</span>
-            <ul class="sidebar-menu">
-                <li><a href="<%=ctx%>/ConsultarEquipamentosServlet"><i class="bi bi-cpu"></i> Consulta de Equipamentos</a></li>
-                <li><a href="<%=ctx%>/CadastrarEquipamentoServlet"><i class="bi bi-plus-circle"></i> Novo Equipamento</a></li>
-                <li><a href="<%=ctx%>/CatalogoProdutosServlet"><i class="bi bi-box-seam"></i> Produtos (Catálogo)</a></li>
-            </ul>
+            <%-- EQUIPAMENTOS --%>
+            <c:if test="${canSeeEquipamentos}">
+                <span class="menu-category">EQUIPAMENTOS</span>
+                <ul class="sidebar-menu">
+                    <li><a href="<%=ctx%>/ConsultaEquipamentosServlet"><i class="bi bi-cpu"></i> Consulta de Equipamentos</a></li>
+                    <li><a href="<%=ctx%>/CadastrarEquipamentoServlet"><i class="bi bi-plus-circle"></i> Novo Equipamento</a></li>
+                    <li><a href="<%=ctx%>/ProdutoServlet"><i class="bi bi-box-seam"></i> Produtos (Catálogo)</a></li>
+                </ul>
+            </c:if>
 
-            <span class="menu-category">MOVIMENTAÇÕES</span>
-            <ul class="sidebar-menu">
-                <li><a href="<%=ctx%>/NovoEnvioServlet"><i class="bi bi-arrow-up-right-circle"></i> Envios</a></li>
-                <li><a href="<%=ctx%>/RecebimentoServlet"><i class="bi bi-arrow-down-left-circle"></i> Recebimentos</a></li>
-                <li><a href="<%=ctx%>/TransferenciaServlet"><i class="bi bi-arrow-left-right"></i> Transferências</a></li>
-                <li><a href="<%=ctx%>/DevolucaoServlet"><i class="bi bi-arrow-counterclockwise"></i> Devoluções</a></li>
-                <li><a href="<%=ctx%>/HistoricoMovimentacoesServlet"><i class="bi bi-clock-history"></i> Histórico de Movimentações</a></li>
-            </ul>
+            <%-- MOVIMENTAÇÕES --%>
+            <c:if test="${canSeeMovimentacao}">
+                <span class="menu-category">MOVIMENTAÇÕES</span>
+                <ul class="sidebar-menu">
+                    <li><a href="<%=ctx%>/EnvioEquipamentoServlet"><i class="bi bi-arrow-up-right-circle"></i> Envios</a></li>
+                    <li><a href="<%=ctx%>/MovimentacaoRecebimentoServlet"><i class="bi bi-arrow-down-left-circle"></i> Recebimentos</a></li>
+                    <li><a href="<%=ctx%>/TransferenciaServlet"><i class="bi bi-arrow-left-right"></i> Transferências</a></li>
+                    <li><a href="<%=ctx%>/MovimentacaoRecebimentoServlet"><i class="bi bi-arrow-counterclockwise"></i> Devoluções</a></li>
+                    <li><a href="<%=ctx%>/HistoricoMovimentacoesServlet"><i class="bi bi-clock-history"></i> Histórico de Movimentações</a></li>
+                </ul>
+            </c:if>
 
-            <span class="menu-category">MANUTENÇÕES</span>
-            <ul class="sidebar-menu">
-                <li><a href="<%=ctx%>/AbrirChamadoServlet"><i class="bi bi-tools"></i> Abrir Chamado</a></li>
-                <li><a href="<%=ctx%>/ConsultaChamadosServlet"><i class="bi bi-list-check"></i> Consulta de Chamados</a></li>
-                <li><a href="<%=ctx%>/HistoricoManutencoesServlet"><i class="bi bi-journal-medical"></i> Histórico de Manutenções</a></li>
-            </ul>
+            <%-- MANUTENÇÕES --%>
+            <c:if test="${canSeeManutencao}">
+                <span class="menu-category">MANUTENÇÕES</span>
+                <ul class="sidebar-menu">
+                    <li><a href="<%=ctx%>/ManutencaoServlet"><i class="bi bi-tools"></i> Abrir Chamado</a></li>
+                    <li><a href="<%=ctx%>/ConsultaChamadosServlet"><i class="bi bi-list-check"></i> Consulta de Chamados</a></li>
+                    <li><a href="<%=ctx%>/HistoricoManutencoesServlet"><i class="bi bi-journal-medical"></i> Histórico de Manutenções</a></li>
+                </ul>
+            </c:if>
 
-            <span class="menu-category">CADASTROS</span>
-            <ul class="sidebar-menu">
-                <li><a href="<%=ctx%>/FabricantesServlet"><i class="bi bi-building"></i> Fabricantes</a></li>
-                <li><a href="<%=ctx%>/MarcasServlet"><i class="bi bi-tag"></i> Marcas</a></li>
-                <li><a href="<%=ctx%>/TiposProdutoServlet"><i class="bi bi-grid"></i> Tipos de Produto</a></li>
-                <li><a href="<%=ctx%>/AtributosServlet"><i class="bi bi-list-nested"></i> Atributos</a></li>
-                <!-- Link direto para a nossa tela de cadastro de usuários recém-revisada! -->
-                <li><a href="<%=ctx%>/CadastrarUsuarioServlet"><i class="bi bi-people"></i> Usuários</a></li>
-            </ul>
+            <%-- CADASTROS --%>
+            <c:if test="${canSeeFabricantes or canSeeMarcas or canSeeEmpresas or canSeeAtributos or canSeeUsuarios}">
+                <span class="menu-category">CADASTROS</span>
+                <ul class="sidebar-menu">
+                    <c:if test="${canSeeFabricantes}">
+                        <li><a href="<%=ctx%>/FabricanteServlet"><i class="bi bi-building"></i> Fabricantes</a></li>
+                    </c:if>
+                    <c:if test="${canSeeMarcas}">
+                        <li><a href="<%=ctx%>/MarcaServlet"><i class="bi bi-tag"></i> Marcas</a></li>
+                    </c:if>
+                    <c:if test="${canSeeEmpresas}">
+                        <li><a href="<%=ctx%>/CadastrarEmpresaServlet"><i class="bi bi-grid"></i> Empresas</a></li>
+                    </c:if>
+                    <c:if test="${canSeeAtributos}">
+                        <li><a href="<%=ctx%>/AtributosServlet"><i class="bi bi-list-nested"></i> Atributos</a></li>
+                    </c:if>
+                    <c:if test="${canSeeUsuarios}">
+                        <li><a href="<%=ctx%>/CadastrarUsuarioServlet"><i class="bi bi-people"></i> Usuários</a></li>
+                    </c:if>
+                </ul>
+            </c:if>
 
             <span class="menu-category">CONFIGURAÇÕES</span>
             <ul class="sidebar-menu">
@@ -81,7 +131,7 @@
 
         <!-- USER FOOTER NA SIDEBAR -->
         <div class="sidebar-user-footer">
-            <div class="user-avatar"><%= nomeUsuario.substring(0, 2).toUpperCase() %></div>
+            <div class="user-avatar"><%= nomeUsuario.substring(0, Math.min(nomeUsuario.length(), 2)).toUpperCase() %></div>
             <div class="user-details">
                 <span class="user-name"><%= nomeUsuario %></span>
                 <span class="user-branch">Filial: <%= unidadeAtiva %></span>
@@ -103,10 +153,16 @@
                 <div class="topbar-icon-badge" title="Ajuda">
                     <i class="bi bi-question-circle"></i>
                 </div>
-                <div class="topbar-branch-selector">
-                    <i class="bi bi-building-check"></i>
-                    <span>Filial Atual: <strong><%= unidadeAtiva %></strong></span>
-                    <i class="bi bi-chevron-down ms-1"></i>
+                <div class="topbar-branch-selector d-flex align-items-center">
+                    <i class="bi bi-building-check me-1"></i>
+                    <span class="me-2">Filial Atual:</span>
+                    <select id="selectUnidadeAtiva" class="form-select form-select-sm w-auto d-inline-block">
+                        <c:forEach var="unidade" items="${sessionScope.usuarioLogado.unidadesPermitidasObjetos}">
+                            <option value="${unidade.id}" ${unidade.id == sessionScope.usuarioLogado.unidadeAtivaId ? 'selected' : ''}>
+                                ${unidade.nome}
+                            </option>
+                        </c:forEach>
+                    </select>
                 </div>
             </div>
         </header>
@@ -117,7 +173,7 @@
                 <div class="col-12 d-flex justify-content-between align-items-center">
                     <div>
                         <h2 class="fw-bold mb-1">Olá, <%= nomeUsuario %>! 👋</h2>
-                        <p class="text-muted mb-0">Bem-vinda ao NexaCore. Aqui você tem uma visão geral do sistema e acesso rápido às funcionalidades.</p>
+                        <p class="text-muted mb-0">Bem-vindo ao NexaCore. Aqui você tem uma visão geral do sistema e acesso rápido às funcionalidades.</p>
                     </div>
                     <div class="text-end text-muted small">
                         <div><i class="bi bi-calendar-event me-1"></i> Terça-feira, 19 de Agosto de 2026</div>
@@ -182,7 +238,7 @@
 
             <!-- ACESSO RÁPIDO E AVISOS -->
             <div class="row g-4 mb-4">
-                <!-- Acesso Rápido (8 opções) -->
+                <!-- Acesso Rápido -->
                 <div class="col-lg-8">
                     <div class="card-section p-4 h-100">
                         <h5 class="fw-bold mb-3">Acesso Rápido</h5>
@@ -195,28 +251,28 @@
                                 </a>
                             </div>
                             <div class="col-md-3 col-6">
-                                <a href="<%=ctx%>/NovoEnvioServlet" class="quick-action-card">
+                                <a href="<%=ctx%>/EnvioEquipamentoServlet" class="quick-action-card">
                                     <div class="quick-icon text-success"><i class="bi bi-truck"></i></div>
                                     <span>Enviar Equipamentos</span>
                                     <small>Criar novo envio</small>
                                 </a>
                             </div>
                             <div class="col-md-3 col-6">
-                                <a href="<%=ctx%>/RecebimentoServlet" class="quick-action-card">
+                                <a href="<%=ctx%>/MovimentacaoRecebimentoServlet" class="quick-action-card">
                                     <div class="quick-icon text-info"><i class="bi bi-box-arrow-down"></i></div>
                                     <span>Receber Equipamentos</span>
                                     <small>Confirmar recebimento</small>
                                 </a>
                             </div>
                             <div class="col-md-3 col-6">
-                                <a href="<%=ctx%>/AbrirChamadoServlet" class="quick-action-card">
+                                <a href="<%=ctx%>/ManutencaoServlet" class="quick-action-card">
                                     <div class="quick-icon text-warning"><i class="bi bi-tools"></i></div>
                                     <span>Abrir Chamado</span>
                                     <small>Abrir chamado de manutenção</small>
                                 </a>
                             </div>
                             <div class="col-md-3 col-6">
-                                <a href="<%=ctx%>/ConsultarEquipamentosServlet" class="quick-action-card">
+                                <a href="<%=ctx%>/ConsultaEquipamentosServlet" class="quick-action-card">
                                     <div class="quick-icon text-primary"><i class="bi bi-search"></i></div>
                                     <span>Consulta de Equipamentos</span>
                                     <small>Buscar equipamentos</small>
@@ -247,7 +303,7 @@
                     </div>
                 </div>
 
-                <!-- Avisos e Pendências Completo -->
+                <!-- Avisos e Pendências -->
                 <div class="col-lg-4">
                     <div class="card-section p-4 h-100">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -288,7 +344,7 @@
                 </div>
             </div>
 
-            <!-- TABELAS DE MOVIMENTAÇÕES E CHAMADOS RECENTES -->
+            <!-- TABELAS RECENTES -->
             <div class="row g-4">
                 <!-- Movimentações Recentes -->
                 <div class="col-lg-6">
@@ -383,15 +439,20 @@
                 </div>
             </div>
 
-            <!-- RODAPÉ DA PÁGINA -->
+            <!-- RODAPÉ -->
             <footer class="mt-5 text-center text-muted small pb-3 d-flex justify-content-between border-top pt-3">
                 <span>NexaCore v1.0.0</span>
                 <span>© 2026 NexaCore. Todos os direitos reservados.</span>
                 <span>Suporte: <a href="mailto:suporte@nexacore.com.br">suporte@nexacore.com.br</a></span>
             </footer>
         </div>
+    </main>
 
     <!-- Scripts Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Script Externo -->
+    <script src="<%=ctx%>/assets/js/menu.js"></script>
 </body>
 </html>
