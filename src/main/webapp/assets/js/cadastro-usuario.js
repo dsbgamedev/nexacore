@@ -1,11 +1,14 @@
 document.addEventListener("DOMContentLoaded", function () {
     console.log("NexaCore: Inicializando script de cadastro de usuário...");
 
-    // 1. Tenta carregar as unidades dinamicamente caso venham via JSON do Servlet
-    carregarUnidadesDinamicas();
+	// 1. Tenta carregar as unidades dinamicamente caso venham via JSON do Servlet
+	    carregarUnidadesDinamicas();
 
-    // 2. Inicializa contadores e eventos
-    atualizarContadorUnidades();
+	    // 1.1 Preenche os dados caso seja edição
+	    preencherDadosEdicao();
+
+	    // 2. Inicializa contadores e eventos
+	    atualizarContadorUnidades();
 
     const checkboxes = document.querySelectorAll('.unidade-checkbox');
     checkboxes.forEach(cb => {
@@ -28,7 +31,8 @@ document.addEventListener("DOMContentLoaded", function () {
             const action = actionInput ? actionInput.value : (id ? "editar" : "cadastrar");
 
             const username = form.querySelector("input[name='usuario']") ? form.querySelector("input[name='usuario']").value : "";
-            const email = form.querySelector("input[name='email']") ? form.querySelector("input[name='email']").value : "";
+			const nomeCompleto = form.querySelector("input[name='nome']") ? form.querySelector("input[name='nome']").value : ""; // <-- AJUSTADO AQUI
+			const email = form.querySelector("input[name='email']") ? form.querySelector("input[name='email']").value : "";
             const senha = form.querySelector("input[name='senha']") ? form.querySelector("input[name='senha']").value : "";
             
             const selectPerfil = form.querySelector("select[name='perfil']");
@@ -68,6 +72,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 action: action,
                 id: id ? parseInt(id) : 0,
                 username: username,
+				nomeCompleto: nomeCompleto, // <-- ADICIONADO AQUI
                 email: email,
                 senha: senha,
                 perfil: perfil,
@@ -95,7 +100,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     
                     // Redireciona para a tela correta após o fechamento do modal
                     // (Se o seu GerenciarUsuariosServlet chamar o jsp gerenciar-usuarios.jsp, pode manter o servlet ou apontar para o .jsp)
-                    window.location.href = window.contextPath + "/jsp/gerenciar-usuarios.jsp"; 
+                    window.location.href = window.contextPath + "/GerenciarUsuariosServlet"; 
                 } else {
                     // Dispara o Modal de Erro/Aviso customizado
                     await ModalService.error("Atenção", resultado.body.message);
@@ -169,6 +174,74 @@ function carregarUnidadesDinamicas() {
         }
 
         console.log("Unidades carregadas com destaque para Matriz via JS.");
+    }
+}
+
+// Adicione esta função no seu cadastro-usuario.js
+function preencherDadosEdicao() {
+    if (typeof usuarioEdicao !== 'undefined' && usuarioEdicao !== null) {
+        console.log("Modo de Edição detectado. Preenchendo dados:", usuarioEdicao);
+
+        // 1. Preenche dados textuais básicos
+        const usernameInput = document.getElementById("username");
+        if (usernameInput) usernameInput.value = usuarioEdicao.username || '';
+
+        const nomeCompletoInput = document.getElementById("nomeCompleto");
+        if (nomeCompletoInput) nomeCompletoInput.value = usuarioEdicao.nomeCompleto || '';
+
+        const emailInput = document.getElementById("email");
+        if (emailInput) emailInput.value = usuarioEdicao.email || '';
+
+        const perfilSelect = document.getElementById("perfil");
+        if (perfilSelect && usuarioEdicao.perfil) {
+            perfilSelect.value = usuarioEdicao.perfil.toUpperCase();
+        }
+
+        const ativoCheckbox = document.getElementById("ativo");
+        if (ativoCheckbox) {
+            ativoCheckbox.checked = usuarioEdicao.ativo;
+        }
+
+        // 2. Preenche a Filial Principal (Unidade Ativa/Padrão)
+        const selectFilial = document.getElementById("unidadePadrao");
+        if (selectFilial && usuarioEdicao.unidadesPermitidas) {
+            // Procura qual unidade está marcada como padrão no banco ou pega a primeira associada
+            // Como o DAO carrega a lista, podemos selecionar a que veio como principal ou correspondente
+            if (usuarioEdicao.unidadeAtivaId) {
+                selectFilial.value = usuarioEdicao.unidadeAtivaId;
+            }
+        }
+
+        // 3. Marca os Checkboxes de Unidades Permitidas
+        if (typeof unidadesPermitidasUsuario !== 'undefined' && Array.isArray(unidadesPermitidasUsuario)) {
+            setTimeout(() => {
+                unidadesPermitidasUsuario.forEach(idUnidade => {
+                    const checkbox = document.querySelector(`.unidade-checkbox[value="${idUnidade}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+                atualizarContadorUnidades();
+            }, 100); // Pequeno atraso para garantir que o DOM das unidades dinâmicas já foi renderizado
+        }
+
+        // 4. Preenche a Matriz Granular de Módulos
+        if (usuarioEdicao.permissoesModulos && Array.isArray(usuarioEdicao.permissoesModulos)) {
+            usuarioEdicao.permissoesModulos.forEach(perm => {
+                // Procura a linha do módulo correspondente pelo ID oculto
+                const linhas = document.querySelectorAll(".modulo-row");
+                linhas.forEach(linha => {
+                    const inputId = linha.querySelector(".modulo-id");
+                    if (inputId && parseInt(inputId.value) === perm.moduloId) {
+                        if (linha.querySelector(".check-consultar")) linha.querySelector(".check-consultar").checked = perm.consultar;
+                        if (linha.querySelector(".check-inserir")) linha.querySelector(".check-inserir").checked = perm.inserir;
+                        if (linha.querySelector(".check-editar")) linha.querySelector(".check-editar").checked = perm.editar;
+                        if (linha.querySelector(".check-excluir")) linha.querySelector(".check-excluir").checked = perm.excluir;
+                        if (linha.querySelector(".check-cancelar")) linha.querySelector(".check-cancelar").checked = perm.cancelar;
+                    }
+                });
+            });
+        }
     }
 }
 

@@ -1,0 +1,104 @@
+@charset "UTF-8";
+
+        body {
+            background: #f4f6f9;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #172033;
+        }
+
+        .page-title {
+            color: #123b82;
+            font-weight: 700;
+            font-size: 28px;
+        }
+
+        .breadcrumb-custom {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 25px;
+        }
+
+        .breadcrumb-custom a {
+            color: #1464e8;
+            text-decoration: none;
+        }
+
+        .card-nexa {
+            background: white;
+            border: 1px solid #dde3ec;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.04);
+        }
+
+        .card-header-nexa {
+            padding: 18px 22px;
+            border-bottom: 1px solid #e5e9ef;
+            font-size: 18px;
+            font-weight: 700;
+            color: #123b82;
+        }
+
+        .btn-nexa {
+            background: #1264e8;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .btn-nexa:hover {
+            background: #0d52c2;
+            color: white;
+        }
+
+        .table thead th {
+            background: #f7f9fc;
+            color: #334155;
+            font-size: 13px;
+            font-weight: 700;
+            border-bottom: 1px solid #dce2ea;
+        }
+
+        .table tbody td {
+            vertical-align: middle;
+            font-size: 14px;
+        }
+
+        .status-ativo {
+            background: #0aa36c;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-inativo {
+            background: #6c757d;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .btn-action {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 4px;
+        }
+
+        .search-box {
+            height: 42px;
+        }
+
+        .filter-label {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }

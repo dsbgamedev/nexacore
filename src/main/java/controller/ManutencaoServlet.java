@@ -8,12 +8,14 @@ import com.google.gson.stream.JsonToken;
 import com.google.gson.stream.JsonWriter;
 import dao.ManutencaoDAO;
 import model.ManutencaoChamado;
-
+import model.Usuario;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -21,7 +23,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-@WebServlet(name = "ManutencaoServlet", urlPatterns = {"/api/manutencoes/*"})
+@WebServlet(name = "ManutencaoServlet", urlPatterns = {"/ManutencaoServlet", "/ConsultaChamadosServlet", "/api/manutencoes/*"})
 public class ManutencaoServlet extends HttpServlet {
 
     private ManutencaoDAO dao = new ManutencaoDAO();
@@ -54,8 +56,48 @@ public class ManutencaoServlet extends HttpServlet {
             }
         })
         .create();
+    
+ // Método de validação igual ao que você usou no CadastrarUsuarioServlet
+    private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
+        // Valida se possui o módulo "manutencao_chamados" liberado
+        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("manutencao_chamados"); 
+
+        if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json; charset=UTF-8");
+            response.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Acesso negado. Você não possui permissão para o módulo de manutenção de chamados.\"}");
+            return false;
+        }
+        return true;
+    }
 
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    	String servletPath = req.getServletPath();
+    	
+    	// Direciona para a tela de Abertura de Chamado
+        if ("/ManutencaoServlet".equals(servletPath)) {
+            if (!validarPermissao(req, resp)) return;
+            req.getRequestDispatcher("/WEB-INF/jsp/manutencao-abertura.jsp").forward(req, resp);
+            return;
+        }
+        
+        // Direciona para a tela de Consulta de Chamados
+        if ("/ConsultaChamadosServlet".equals(servletPath)) {
+            if (!validarPermissao(req, resp)) return;
+            req.getRequestDispatcher("/WEB-INF/jsp/consulta-chamado.jsp").forward(req, resp);
+            return;
+        }
+
+           	
+    	// Valida a permissão antes de executar qualquer lógica
+        if (!validarPermissao(req, resp)) {
+            return;
+        }
+        
         resp.setContentType("application/json;charset=UTF-8");
         PrintWriter out = resp.getWriter();
 
@@ -94,6 +136,10 @@ public class ManutencaoServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    	// Valida a permissão antes de executar qualquer lógica
+        if (!validarPermissao(req, resp)) {
+            return;
+        }
         resp.setContentType("application/json;charset=UTF-8");
         PrintWriter out = resp.getWriter();
         String pathInfo = req.getPathInfo();

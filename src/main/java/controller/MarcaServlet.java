@@ -3,6 +3,7 @@ package controller;
 import com.google.gson.Gson;
 import dao.MarcaDAO;
 import model.Marca;
+import model.Usuario;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
@@ -20,14 +21,46 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
-@WebServlet("/api/marcas/*")
+@WebServlet(value = {"/MarcaServlet", "/api/marcas/*"})
 public class MarcaServlet extends HttpServlet {
     private MarcaDAO dao = new MarcaDAO();
     private Gson gson = new Gson();
+    
+    private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
+        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("marcas"); 
+
+        if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json; charset=UTF-8");
+            response.getWriter().write("{\"erro\": \"Acesso negado. Você não possui permissão para o módulo de marcas.\"}");
+            return false;
+        }
+        return true;
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+String servletPath = request.getServletPath();
+        
+        // Se acessar a rota principal do Servlet, valida a permissão e abre a tela JSP protegida
+        if ("/MarcaServlet".equals(servletPath)) {
+            if (!validarPermissao(request, response)) {
+                return;
+            }
+            request.getRequestDispatcher("/WEB-INF/jsp/marcas.jsp").forward(request, response);
+            return;
+        }
+        
+        // Se for requisição para a API (/api/marcas/*), valida a permissão e retorna JSON
+        if (!validarPermissao(request, response)) {
+            return;
+        }
+        
         String path = request.getPathInfo();
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
@@ -48,6 +81,10 @@ public class MarcaServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+    	if (!validarPermissao(request, response)) {
+            return;
+        }
+    	
         String path = request.getPathInfo();
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
@@ -82,6 +119,9 @@ public class MarcaServlet extends HttpServlet {
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+    	if (!validarPermissao(request, response)) {
+            return;
+        }
         
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");

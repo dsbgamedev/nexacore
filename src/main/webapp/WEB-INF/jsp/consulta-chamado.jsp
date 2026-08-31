@@ -24,13 +24,13 @@
             <h4 class="page-title text-uppercase fw-bold"><i class="fa-solid fa-clipboard-list me-2"></i> Consulta de Chamados de Manutenção</h4>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="#">Home</a></li>
-                    <li class="breadcrumb-item"><a href="#">Manutenções</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ManutencaoServlet">Novo Chamado</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Consulta de Chamados</li>
                 </ol>
             </nav>
         </div>
-        <a href="${pageContext.request.contextPath}/jsp/manutencao-abertura.jsp" class="btn btn-primary btn-sm">
+        <a href="${pageContext.request.contextPath}/ManutencaoServlet" class="btn btn-primary btn-sm">
             <i class="fa-solid fa-plus me-1"></i> Novo Chamado
         </a>
     </div>

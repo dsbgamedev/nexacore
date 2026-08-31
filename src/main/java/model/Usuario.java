@@ -7,6 +7,7 @@ import java.util.List;
 
 import dto.UnidadeDTO;
 
+
 /**
  * Representa um usuário no sistema, incluindo suas credenciais, perfil e módulos permitidos.
  * Esta classe é Serializable para que possa ser armazenada corretamente na sessão HTTP.
@@ -30,6 +31,9 @@ public class Usuario implements Serializable {
     private Integer unidadeAtivaId;    // O ID da unidade selecionada no momento
     private String unidadeAtivaNome;  // O Nome da unidade (ex: "ES - MATRIZ")
     private List<UnidadeDTO> unidadesPermitidasObjetos; // Lista com ID e Nome para o select do menu
+    
+    private String nomeCompleto; // Novo campo para o nome completo
+    private LocalDateTime ultimoAcesso; // ou String formatada
 
     /**
      * Construtor padrão. Inicializa a lista de módulos permitidos para evitar NullPointerException.
@@ -98,6 +102,14 @@ public class Usuario implements Serializable {
     public void setUsername(String username) {
         this.username = username;
     }
+    
+    public String getNomeCompleto() {
+        return nomeCompleto;
+    }
+
+    public void setNomeCompleto(String nomeCompleto) {
+        this.nomeCompleto = nomeCompleto;
+    }
 
     public String getEmail() {
         return email;
@@ -138,7 +150,14 @@ public class Usuario implements Serializable {
     public void setUnidadesPermitidas(List<String> unidadesPermitidas) {
         this.unidadesPermitidas = (unidadesPermitidas != null) ? new ArrayList<>(unidadesPermitidas) : new ArrayList<>();
     }
+    
+    public LocalDateTime getUltimoAcesso() {
+        return ultimoAcesso;
+    }
 
+    public void setUltimoAcesso(LocalDateTime ultimo_acesso) {
+        this.ultimoAcesso = ultimo_acesso;
+    }
     public boolean isAtivo() { 
         return ativo;
     }
@@ -287,4 +306,64 @@ public class Usuario implements Serializable {
             this.criadoEm = criadoEm;
         }
     }
+    
+    // Mapeia o nome do módulo para suas permissões detalhadas (Ex: "equipamentos" -> Objeto PermissaoModulo)
+     private java.util.Map<String, PermissaoModulo> permissoesModulos = new java.util.HashMap<>();
+     
+     public java.util.Map<String, PermissaoModulo> getPermissoesModulos() {
+         return permissoesModulos;
+     }
+
+     public void setPermissoesModulos(java.util.Map<String, PermissaoModulo> permissoesModulos) {
+         this.permissoesModulos = permissoesModulos != null ? permissoesModulos : new java.util.HashMap<>();
+     }
+
+     /**
+      * Verifica se o usuário possui uma ação específica (CONSULTAR, INSERIR, EDITAR, EXCLUIR, CANCELAR) em um módulo.
+      */
+     public boolean temPermissao(String nomeModulo, String acao) {
+         if (this.perfil != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(this.perfil) || "ADMINISTRADOR".equalsIgnoreCase(this.perfil))) {
+             return true; // Administradores possuem acesso total a tudo
+         }
+         
+         if (permissoesModulos == null || !permissoesModulos.containsKey(nomeModulo.toLowerCase())) {
+             return false;
+         }
+         
+         PermissaoModulo p = permissoesModulos.get(nomeModulo.toLowerCase());
+         if (p == null) return false;
+
+         switch (acao.toUpperCase()) {
+             case "CONSULTAR": return p.isPodeConsultar();
+             case "INSERIR":   return p.isPodeInserir();
+             case "EDITAR":    return p.isPodeEditar();
+             case "EXCLUIR":   return p.isPodeExcluir();
+             case "CANCELAR":  return p.isPodeCancelar();
+             default: return false;
+         }
+     }
+
+     // --- CLASSE AUXILIAR PARA GUARDAR AS 5 PERMISSÕES DO MÓDULO ---
+     public static class PermissaoModulo implements Serializable {
+         private static final long serialVersionUID = 1L;
+         private boolean podeConsultar;
+         private boolean podeInserir;
+         private boolean podeEditar;
+         private boolean podeExcluir;
+         private boolean podeCancelar;
+
+         public PermissaoModulo(boolean podeConsultar, boolean podeInserir, boolean podeEditar, boolean podeExcluir, boolean podeCancelar) {
+             this.podeConsultar = podeConsultar;
+             this.podeInserir = podeInserir;
+             this.podeEditar = podeEditar;
+             this.podeExcluir = podeExcluir;
+             this.podeCancelar = podeCancelar;
+         }
+
+         public boolean isPodeConsultar() { return podeConsultar; }
+         public boolean isPodeInserir() { return podeInserir; }
+         public boolean isPodeEditar() { return podeEditar; }
+         public boolean isPodeExcluir() { return podeExcluir; }
+         public boolean isPodeCancelar() { return podeCancelar; }
+     }
 }

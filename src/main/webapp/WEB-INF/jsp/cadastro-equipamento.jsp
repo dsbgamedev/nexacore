@@ -19,9 +19,9 @@
         <h4 class="page-title text-uppercase fw-bold">Cadastro de Equipamento (Unidade Física)</h4>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="#">Home</a></li>
-                <li class="breadcrumb-item"><a href="#">Equipamentos</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Novo Equipamento</li>
+                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaEquipamentosServlet">Consulta Equipamentos</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Equipamentos</li>
             </ol>
         </nav>
     </div>

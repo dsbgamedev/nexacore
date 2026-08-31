@@ -121,7 +121,7 @@ public class LoginServlet extends HttpServlet {
         request.setAttribute("forwardedFromLoginServlet", true);
         
         // Direciona para a view de login padrão
-        RequestDispatcher dispatcher = request.getRequestDispatcher("/jsp/login.jsp");
+        RequestDispatcher dispatcher = request.getRequestDispatcher("/WEB-INF/jsp/login.jsp");
         dispatcher.forward(request, response);
     }
 
@@ -180,6 +180,9 @@ public class LoginServlet extends HttpServlet {
             // if (usuarioDoBanco.getSenha() != null && usuarioDoBanco.getSenha().equals(password)) {//Sem criptografia
             if (usuarioDoBanco.getSenha() != null && BCrypt.checkpw(password, usuarioDoBanco.getSenha())) {
                 Usuario usuarioCompleto = usuarioDAO.buscarUsuarioPorId(usuarioDoBanco.getId());
+             // === ADICIONE ESTAS DUAS LINHAS AQUI ===
+                usuarioDAO.atualizarUltimoAcesso(usuarioDoBanco.getId());
+                System.out.println("NexaCore Login: Último acesso atualizado para o usuário ID: " + usuarioDoBanco.getId());
             	
                 // --- TRAVA DE SEGURANÇA: FILIAIS VINCULADAS ---
                 boolean ehAdmin = "SUPER_ADMINISTRADOR".equalsIgnoreCase(usuarioCompleto.getPerfil()) || 

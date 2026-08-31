@@ -25,7 +25,7 @@ public class MenuServlet extends HttpServlet {
         }
         
         // Encaminha de forma segura para o menu.jsp protegendo o layout
-        request.getRequestDispatcher("/jsp/menu.jsp").forward(request, response);
+        request.getRequestDispatcher("WEB-INF/jsp/menu.jsp").forward(request, response);
     }
 
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 

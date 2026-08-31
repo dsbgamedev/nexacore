@@ -25,8 +25,8 @@
             <h4 class="page-title text-uppercase fw-bold"><i class="fa-solid fa-screwdriver-wrench me-2"></i> Abertura de Chamado de Manutenção</h4>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="#">Home</a></li>
-                    <li class="breadcrumb-item"><a href="#">Manutenções</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaChamadosServlet">Consulta Chamados</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Abertura de Chamado</li>
                 </ol>
             </nav>

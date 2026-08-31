@@ -752,20 +752,20 @@ document.addEventListener('DOMContentLoaded', function() {
 				                unidadesSelecionadas = [idPadraoAtual, ...unidadesSelecionadas.filter(id => id !== idPadraoAtual)];
 				            }
 
-				            const formData = {
-				                id: document.getElementById('id').value,
-				                action: document.getElementById('action').value,
-				                username: usernameInput.value,
-				                email: emailInput.value,
-				                senha: senhaInput.value,
-				                perfil: perfilSelect.value,
-				                ativo: ativoCheckbox.checked,
-				                modulosPermitidos: Array.from(document.querySelectorAll('#modulosCheckboxes input[type="checkbox"]:checked')).map(cb => cb.value),
-				                
-								// NOVO: Enviamos a Unidade Principal e a lista de todas as marcadas
-								unidadePadrao: document.getElementById('unidadePadrao').value,
-								unidadesPermitidas: Array.from(document.querySelectorAll('#unidadesCheckboxes input[type="checkbox"]:checked')).map(cb => cb.value)
-				            };
+							const formData = {
+							    id: document.getElementById('id').value,
+							    action: document.getElementById('action').value,
+							    username: usernameInput.value,
+							    email: emailInput.value,
+							    senha: senhaInput.value,
+							    perfil: perfilSelect.value,
+							    ativo: ativoCheckbox.checked,
+							    modulosPermitidos: Array.from(document.querySelectorAll('#modulosCheckboxes input[type="checkbox"]:checked')).map(cb => cb.value),
+							    
+							    // Use a variável tratada com o padrão no topo e a unidade selecionada no select
+							    unidadePadrao: document.getElementById('unidadePadrao') ? document.getElementById('unidadePadrao').value : '',
+							    unidadesPermitidas: unidadesSelecionadas // Usando a const tratada acima no seu código!
+							};
                 console.log("DEBUG JS: Dados do formulário para envio (Objeto JS):", formData);
 
                 try {

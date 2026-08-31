@@ -14,7 +14,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexaCore - Cadastro de Usuário</title>
+    <title>NexaCore - ${title != null ? title : "Cadastro de Usuário"}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="<%=ctx%>/assets/css/cadastro-usuario.css">
@@ -27,16 +27,22 @@
     <!-- CABEÇALHO -->
     <div class="mb-4">
         <div class="page-title">
-            <i class="bi bi-person-gear me-2"></i> CADASTRO DE USUÁRIO
+            <i class="bi bi-person-gear me-2"></i> ${title != null ? title : "CADASTRO DE USUÁRIO"}
         </div>
-        <div class="breadcrumb-custom">
-            <a href="<%=ctx%>/jsp/menu.jsp"> Home </a> / 
-            <a href="<%=ctx%>/jsp/gerenciar-usuarios.jsp"> Administração </a> / 
-            Novo Usuário
-        </div>
+        <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/GerenciarUsuariosServlet">Consulta Usuarios</a></li>
+            <li class="breadcrumb-item active" aria-current="page">${title != null ? title : "Cadastrar Usuarios"}</li>
+        </ol>
+        </nav>
     </div>
 
-    <form action="<%=ctx%>/CadastrarUsuarioServlet" method="post">
+    <!-- O formulário agora envia a ação via JS ou input hidden para diferenciar cadastro/edição -->
+    <form id="formCadastroUsuario" onsubmit="salvarUsuario(event)">
+        <input type="hidden" id="usuarioId" value="${usuario != null ? usuario.id : ''}">
+        <input type="hidden" id="isEditing" value="${isEditing}">
+
         <!-- DADOS DO USUÁRIO -->
         <div class="card-nexa p-4 mb-4">
             <div class="section-title">
@@ -45,45 +51,45 @@
             <div class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label"> Usuário * </label>
-                    <input type="text" name="usuario" class="form-control" required placeholder="Ex.: joao.silva">
+                    <input type="text" id="username" name="usuario" class="form-control" required placeholder="Ex.: joao.silva" value="${usuario != null ? usuario.username : ''}">
                 </div>
 
                 <div class="col-md-3">
                     <label class="form-label"> Nome Completo * </label>
-                    <input type="text" name="nome" class="form-control" required placeholder="Nome do usuário">
+                    <input type="text" id="nomeCompleto" name="nome" class="form-control" required placeholder="Nome do usuário" value="${usuario != null ? usuario.nomeCompleto : ''}">
                 </div>
 
                 <div class="col-md-3">
                     <label class="form-label"> E-mail * </label>
-                    <input type="email" name="email" class="form-control" required placeholder="usuario@empresa.com.br">
+                    <input type="email" id="email" name="email" class="form-control" required placeholder="usuario@empresa.com.br" value="${usuario != null ? usuario.email : ''}">
                 </div>
 
                 <div class="col-md-3">
                     <label class="form-label"> Perfil </label>
-                    <select name="perfil" class="form-select">
+                    <select name="perfil" id="perfil" class="form-select" ${disablePerfilField ? 'disabled' : ''}>
                         <option value="">Selecione...</option>
-                        <option value="ADMINISTRADOR">Administrador</option>
-                        <option value="GESTOR">Gestor</option>
-                        <option value="USUARIO">Usuário</option>
-                        <option value="CONSULTA">Consulta</option>
+                        <c:forEach var="p" items="${perfisDisponiveisParaSelecao}">
+                            <option value="${fn:toUpperCase(p)}" ${usuario != null && fn:toUpperCase(usuario.perfil) == fn:toUpperCase(p) ? 'selected' : ''}>
+                                ${p}
+                            </option>
+                        </c:forEach>
                     </select>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label"> Senha * </label>
-                    <input type="password" name="senha" class="form-control" placeholder="Digite a senha" required>
+                    <input type="password" id="senha" name="senha" class="form-control" placeholder="${isEditing ? 'Deixe em branco para manter' : 'Digite a senha'}" ${isEditing ? '' : 'required'}>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label"> Confirmar Senha * </label>
-                    <input type="password" name="confirmarSenha" class="form-control" placeholder="Confirme a senha" required>
+                    <input type="password" id="confirmarSenha" name="confirmarSenha" class="form-control" placeholder="Confirme a senha" ${isEditing ? '' : 'required'}>
                 </div>
                                
                <!-- FILIAL PRINCIPAL DINÂMICA -->
 				<div class="col-md-4">
 				    <label class="form-label"> Filial Principal </label>
-				    <select name="filial" id="filial" class="form-select" required>
+				    <select name="filial" id="unidadePadrao" class="form-select" required>
 				        <option value="">Selecione a filial...</option>
 				        <c:forEach var="unidade" items="${todasUnidadesDisponiveis}">
-				          <%-- unidade[0] = id_filial | unidade[1] = origem_codigo | unidade[2] = sufixo --%>
 				          <c:set var="tipoTexto" value="${unidade[1] == '161' ? 'Matriz' : 'Filial'}" />
 				          <option value="${unidade[0]}">${unidade[1]} ${unidade[2]} (${tipoTexto})</option>
 				      </c:forEach>
@@ -92,7 +98,7 @@
 
                 <div class="col-md-12">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="ativo" id="ativo" checked>
+                        <input class="form-check-input" type="checkbox" name="ativo" id="ativo" ${usuario == null || usuario.ativo ? 'checked' : ''}>
                         <label class="form-check-label" for="ativo"> Usuário ativo </label>
                     </div>
                 </div>
@@ -122,7 +128,7 @@
 		                <td class="text-start module-name">
 		                    <i class="bi bi-box-seam module-icon"></i> ${modulo.nomeModulo}
 		                </td>
-		                <td><input type="checkbox" class="form-check-input check-consultar" checked></td>
+		                <td><input type="checkbox" class="form-check-input check-consultar"></td>
 		                <td><input type="checkbox" class="form-check-input check-inserir"></td>
 		                <td><input type="checkbox" class="form-check-input check-editar"></td>
 		                <td><input type="checkbox" class="form-check-input check-excluir"></td>
@@ -170,14 +176,10 @@
         <c:forEach var="unidade" items="${todasUnidadesDisponiveis}">
             <div class="col-md-4 unidade-item">
                 <label class="unidade-card" style="display: flex; align-items: center; gap: 10px; cursor: pointer; border: 1px solid #dee2e6; padding: 10px; border-radius: 6px;">
-                    <!-- value="${unidade[0]}" envia o id_filial real -->
                     <input type="checkbox" name="unidadesPermitidas" value="${unidade[0]}" class="form-check-input unidade-checkbox" style="margin-top: 0;">
                     <div class="unidade-info">
                         <div class="unidade-header">
-                            <!-- Exibe o origem_codigo e sufixo juntos sem traço -->
                             <span class="unidade-codigo fw-bold text-primary">${unidade[1]} ${unidade[2]}</span>
-                            
-                            <!-- Se for 161 (Matriz), exibe a tag verde 'Matriz', senão exibe 'Filial' -->
                             <c:choose>
                                 <c:when test="${unidade[1] == '161'}">
                                     <span class="badge bg-success text-white">Matriz</span>
@@ -198,7 +200,7 @@
         <!-- BOTÕES DE AÇÃO -->
         <div class="card-nexa p-3 mb-5">
             <div class="d-flex justify-content-between align-items-center">
-                <a href="<%=ctx%>/jsp/gerenciar-usuarios.jsp" class="btn btn-outline-secondary px-4">
+                <a href="<%=ctx%>/GerenciarUsuariosServlet" class="btn btn-outline-secondary px-4">
                     <i class="bi bi-arrow-left me-1"></i> Voltar
                 </a>
                 <div>
@@ -213,10 +215,8 @@
         </div>
     </form>
 </div>
-<!-- ==========================================================
-     MODAIS DO SISTEMA (NEXACORE MODAL SERVICE)
-========================================================== -->
-<!-- Modal de Alerta -->
+
+<!-- Modais -->
 <div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content-custom" id="alertBox">
@@ -229,7 +229,6 @@
     </div>
 </div>
 
-<!-- Modal de Confirmação -->
 <div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="background: transparent; border: none; box-shadow: none;">
@@ -244,13 +243,17 @@
         </div>
     </div>
 </div>
-<!-- Scripts -->
+
+<!-- Scripts e Injeção de Dados do Usuário Editado -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 <script>
-    // Injeta o JSON do Servlet de forma segura para o JavaScript ler
     const unidadesGlobais = <%= request.getAttribute("todasUnidadesJson") != null ? request.getAttribute("todasUnidadesJson") : "[]" %>;
     var contextPath = "<%= request.getContextPath() %>";
+    
+    // Injeta os dados do usuário para pré-preenchimento no modo de edição se existirem
+    const usuarioEdicao = <%= request.getAttribute("usuarioJson") != null ? request.getAttribute("usuarioJson") : "null" %>;
+    const unidadesPermitidasUsuario = <%= request.getAttribute("usuarioUnidadesJson") != null ? request.getAttribute("usuarioUnidadesJson") : "[]" %>;
 </script>
 <script src="<%=ctx%>/assets/js/cadastro-usuario.js"></script>
 </body>

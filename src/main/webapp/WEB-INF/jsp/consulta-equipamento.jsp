@@ -19,8 +19,8 @@
             <h4 class="page-title fw-bold text-primary-dark">CONSULTA DE EQUIPAMENTOS (UNIDADE FÍSICA)</h4>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/jsp/index.jsp">Home</a></li>
-                    <li class="breadcrumb-item"><a href="#">Equipamentos</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/CadastrarEquipamentoServlet">Equipamentos</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Consulta de Equipamentos</li>
                 </ol>
             </nav>
@@ -34,7 +34,7 @@
         </div>
         
         <div>
-            <a href="${pageContext.request.contextPath}/jsp/cadastro-equipamento.jsp" class="btn btn-success">
+            <a href="${pageContext.request.contextPath}/CadastrarEquipamentoServlet" class="btn btn-success">
                 <i class="fa fa-plus me-1"></i> Novo Equipamento
             </a>
         </div>
@@ -248,6 +248,15 @@
 <script>
     // Variável global de contexto padronizada para os arquivos JS externos
     const contextPath = "${pageContext.request.contextPath}";
+
+    // Injeta as permissões granulares do usuário logado diretamente no JS
+    <%
+        model.Usuario uLogado = (model.Usuario) session.getAttribute("usuarioLogado");
+        boolean podeEditarGlob = uLogado != null && uLogado.temPermissao("equipamentos", "EDITAR");
+        boolean podeExcluirGlob = uLogado != null && uLogado.temPermissao("equipamentos", "EXCLUIR");
+    %>
+    const permissaoEditarEquipamento = <%= podeEditarGlob %>;
+    const permissaoExcluirEquipamento = <%= podeExcluirGlob %>;
 </script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/consulta-equipamento.js"></script>

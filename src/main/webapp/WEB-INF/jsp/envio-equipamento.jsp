@@ -18,8 +18,8 @@
             <h4 class="page-title fw-bold text-primary-dark">ENVIO DE EQUIPAMENTOS</h4>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/jsp/index.jsp">Home</a></li>
-                    <li class="breadcrumb-item"><a href="#">Movimentações</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                       <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaEnvioServlet">Consulta Enivos Equipamentos</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Envio</li>
                 </ol>
             </nav>

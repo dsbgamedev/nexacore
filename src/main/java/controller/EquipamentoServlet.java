@@ -40,7 +40,7 @@ public class EquipamentoServlet extends HttpServlet {
         if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json; charset=UTF-8");
-            response.getWriter().write("{\"error\": \"Acesso negado. Você não possui permissão para executar esta ação.\"}");
+            response.getWriter().write("{\"error\": \"Acesso negado. Você não possui permissão para o módulo de equipamentos.\"}");
             return false;
         }
         return true;
@@ -191,15 +191,16 @@ public class EquipamentoServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        PrintWriter out = response.getWriter();
-        
-     // Validação de segurança de acesso ao módulo
+    	// Validação de segurança de acesso ao módulo
         if (!validarPermissao(request, response)) {
             return;
         }
 
+    	response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+        PrintWriter out = response.getWriter();
+        
+     
         String pathInfo = request.getPathInfo(); 
 
         try {
@@ -353,7 +354,12 @@ public class EquipamentoServlet extends HttpServlet {
 
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        String idStr = request.getParameter("id");
+    	// Validação de segurança de acesso ao módulo
+        if (!validarPermissao(request, response)) {
+            return;
+        }
+
+    	String idStr = request.getParameter("id");
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();

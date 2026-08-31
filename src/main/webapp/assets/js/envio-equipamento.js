@@ -172,11 +172,11 @@ document.addEventListener("DOMContentLoaded", function() {
                     
                     if (typeof ModalService !== 'undefined') {
                         ModalService.success("Sucesso", resposta.mensagem).then(() => {
-                            window.location.href = contextPath + '/jsp/consulta-envios.jsp'; // Redireciona para a consulta
+                            window.location.href = contextPath + '/ConsultaEnvioServlet'; // Redireciona para a consulta
                         });
                     } else {
                         alert(resposta.mensagem);
-                        window.location.href = contextPath + '/jsp/consulta-envios.jsp'; // Redireciona para a consulta
+                        window.location.href = contextPath + '/ConsultaEnvioServlet'; // Redireciona para a consulta
                     }
                 } else {
                     if (btnSubmit) btnSubmit.disabled = false; // Reativa o botão se houver erro

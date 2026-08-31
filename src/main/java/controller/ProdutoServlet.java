@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import dao.ProdutoDAO;
 import dto.ConfiguracaoCampoDTO;
 import model.TipoProduto;
+import model.Usuario;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
@@ -12,15 +13,62 @@ import java.sql.SQLException;
 import java.util.List;
 import dto.ProdutoDTO;
 
-@WebServlet("/api/produtos/*")
+@WebServlet(urlPatterns = {"/ProdutoServlet", "/api/produtos/*"})
 public class ProdutoServlet extends HttpServlet {
     private ProdutoDAO dao = new ProdutoDAO();
     private Gson gson = new Gson();
+    
+    private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
+        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("produtos"); 
+
+        // Libera automaticamente rotas de API de consulta/busca rápida se o usuário estiver logado (necessário para o formulário de equipamentos)
+        String path = request.getPathInfo();
+        boolean isConsultaInterna = path != null && (
+            path.equals("/consultar") || 
+            path.equals("/buscar") || 
+            path.equals("/listar-marcas") || 
+            path.equals("/listar-fabricantes") || 
+            path.equals("/listar-tipos") || 
+            path.equals("/buscar-campos")
+        );
+
+        if (usuario == null || (!isAdmin && !temPermissaoModulo && !isConsultaInterna)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json; charset=UTF-8");
+            response.getWriter().write("{\"erro\": \"Acesso negado. Você não possui permissão para o módulo de produtos.\"}");
+            return false;
+        }
+        return true;
+    }
 
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+    	String path = request.getPathInfo();
+
+        // Se acessado diretamente em /ProdutoServlet (sem sub-rotas da API), renderiza a tela JSP
+        if (path == null || path.equals("/")) {
+            HttpSession session = request.getSession(false);
+            Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+            boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
+            boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("produtos"); 
+
+            if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Acesso negado.");
+                return;
+            }
+
+            request.getRequestDispatcher("/WEB-INF/jsp/cadastro-produto.jsp").forward(request, response);
+            return;
+        }
+    	
+    	if (!validarPermissao(request, response)) {
+            return;
+        }
         
-        String path = request.getPathInfo();
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
@@ -118,6 +166,9 @@ public class ProdutoServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+    	if (!validarPermissao(request, response)) {
+            return;
+        }
         
         String path = request.getPathInfo();
         response.setContentType("application/json");
@@ -182,6 +233,10 @@ public class ProdutoServlet extends HttpServlet {
     @Override
     protected void doPut(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+    	if (!validarPermissao(request, response)) {
+            return;
+        }
+    	
         String path = request.getPathInfo();
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
@@ -246,6 +301,10 @@ public class ProdutoServlet extends HttpServlet {
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+    	if (!validarPermissao(request, response)) {
+            return;
+        }
+    	
         String path = request.getPathInfo();
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");

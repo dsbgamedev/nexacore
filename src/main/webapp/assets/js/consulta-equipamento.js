@@ -561,6 +561,7 @@ async function pesquisarEquipamentos() {
 }
 
 // Função dedicada a montar as linhas e aplicar todas as regras de negócio visuais
+// Função dedicada a montar as linhas e aplicar todas as regras de negócio visuais
 function renderizarTabelaEquipamentos(data) {
     const tbody = document.getElementById('tabelaEquipamentosBody');
     if (!tbody) return;
@@ -656,15 +657,17 @@ function renderizarTabelaEquipamentos(data) {
                 <span class="badge bg-warning text-dark" title="Operação bloqueada para esta situação">Bloqueado</span>
             `;
         } else {
-            if (!deveOcultarEditar) {
+            // Só exibe o botão de Editar se a regra de negócio permitir E o usuário tiver permissão granular de EDITAR
+            if (!deveOcultarEditar && (typeof permissaoEditarEquipamento === 'undefined' || permissaoEditarEquipamento)) {
                 acoesHtml += `
-                    <a href="${contextPath}/jsp/cadastro-equipamento.jsp?id=${eq.idEquipamento}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
+                    <a href="${contextPath}/CadastrarEquipamentoServlet?id=${eq.idEquipamento}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
                         <i class="fas fa-pen"></i>
                     </a>
                 `;
             }
 
-            if (ehDisponivel) {
+            // Só exibe o botão de Excluir se o equipamento estiver disponível E o usuário tiver permissão granular de EXCLUIR
+            if (ehDisponivel && (typeof permissaoExcluirEquipamento === 'undefined' || permissaoExcluirEquipamento)) {
                 acoesHtml += `
                     <button type="button" class="btn btn-sm btn-outline-danger me-1" title="Excluir" onclick="confirmarExclusaoEquipamento(${eq.idEquipamento})">
                         <i class="fas fa-trash-alt"></i>
@@ -686,6 +689,7 @@ function renderizarTabelaEquipamentos(data) {
             `;
         }
 
+		// Cria a linha da tabela com os dados processados e as ações com controle granular
         const row = `<tr>
             <td class="fw-bold text-primary">${eq.idSistema || '-'}</td>
             <td>${eq.patrimonio || '-'}</td>
@@ -875,5 +879,5 @@ async function confirmarExclusaoEquipamento(idEquipamento) {
 }
 
 function iniciarDevolucao(idEquipamento) {
-    window.location.href = `${contextPath}/jsp/envio-equipamento.jsp?tipo=devolucao&idEquipamento=${idEquipamento}`;
+    window.location.href = `${contextPath}/EnvioEquipamentoServlet?tipo=devolucao&idEquipamento=${idEquipamento}`;
 }

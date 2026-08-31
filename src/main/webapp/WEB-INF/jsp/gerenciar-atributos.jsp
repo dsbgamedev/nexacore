@@ -18,10 +18,18 @@
 <div class="container-fluid py-4">
 	<!-- Título e Introdução -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="mb-1 text-dark"><i class="fa-solid fa-sliders text-primary me-2"></i>Nexacore - Engenharia de Atributos</h4>
+         <div>
+              <h4 class="mb-1 text-dark"><i class="fa-solid fa-sliders text-primary me-2"></i>Nexacore - Engenharia de Atributos</h4>
             <p class="text-muted small mb-0">Modelagem de formulários dinâmicos e especificações técnicas.</p>
-        </div>
+              <nav aria-label="breadcrumb">
+                  <ol class="breadcrumb mb-0">
+                      <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                      <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MarcaServlet">Marca</a></li>
+                      <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet">Cadastro Produto</a></li>
+                      <li class="breadcrumb-item active" aria-current="page">Engenharia de Atributos</li>
+                  </ol>
+              </nav>
+          </div>
     </div>
 
     <div class="row g-4">

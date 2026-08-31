@@ -14,12 +14,16 @@
 <body class="bg-light">
 
 <div class="container-fluid px-4 py-4">
-    
-    <!-- Cabeçalho da Página e Breadcrumb -->
-    <div class="mb-3">
-        <h3 class="fw-bold text-dark mb-1">Consulta de Envios de Equipamentos</h3>
-        <p class="text-muted small mb-0">Visualize e acompanhe todos os envios realizados</p>
-    </div>
+ 	<div>
+      <h4 class="page-title fw-bold text-primary-dark">CONSULTA DE EQUIPAMENTOS (UNIDADE FÍSICA)</h4>
+      <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0">
+              <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+              <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/EnvioEquipamentoServlet">Enivos Equipamentos</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Consulta Enivos Equipamentos</li>
+          </ol>
+      </nav>     
+     </div>
 
     <!-- Barra Superior de Pesquisa e Ações (Filtros, Exportar, Novo Envio) -->
     <div class="card border-0 p-3 mb-4 shadow-sm">
@@ -46,7 +50,7 @@
                 <button class="btn btn-outline-secondary btn-sm me-2" type="button">
                     <i class="bi bi-download"></i> Exportar
                 </button>
-                <a href="${pageContext.request.contextPath}/jsp/envio-equipamento.jsp" class="btn btn-primary btn-sm">
+                <a href="${pageContext.request.contextPath}/EnvioEquipamentoServlet" class="btn btn-primary btn-sm">
                     <i class="bi bi-plus-lg"></i> Novo Envio
                 </a>
             </div>

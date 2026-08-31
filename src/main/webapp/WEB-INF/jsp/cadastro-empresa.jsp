@@ -15,8 +15,11 @@
         <!-- Cabeçalho da Página -->
         <div class="page-header mb-4">
             <h1 class="h3 fw-bold text-dark mb-1" style="color: #1e293b !important; letter-spacing: -0.5px;">CADASTRO DE EMPRESA</h1>
-            <nav class="breadcrumb text-muted small">
-                <span>Home</span> / <span>Cadastros</span> / <span>Empresas</span> / <strong class="text-dark">Nova Empresa</strong>
+            <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Empresa</li>
+             </ol>
             </nav>
         </div>
 

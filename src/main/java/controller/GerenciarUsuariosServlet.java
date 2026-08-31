@@ -1,6 +1,9 @@
 package controller;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializer;
 import dao.LogDAO;
 import dao.UsuarioDAO;
 import jakarta.servlet.ServletException;
@@ -16,11 +19,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Arrays;
 import java.util.stream.Collectors;
 
 import com.google.gson.JsonParser;
@@ -30,7 +34,11 @@ import com.google.gson.JsonArray;
 @WebServlet("/GerenciarUsuariosServlet")
 public class GerenciarUsuariosServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
-    private Gson gson = new Gson();
+ // Configura o Gson para formatar automaticamente campos LocalDateTime sem quebrar a serialização
+    private Gson gson = new GsonBuilder()
+        .registerTypeAdapter(LocalDateTime.class, (JsonSerializer<LocalDateTime>) (src, typeOfSrc, context) -> 
+            src == null ? null : new JsonPrimitive(src.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"))))
+        .create();
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -226,7 +234,7 @@ public class GerenciarUsuariosServlet extends HttpServlet {
             request.setAttribute("title", "Gerenciamento de Usuários");
             request.setAttribute("usuarioLogadoId", usuarioLogado.getId());
             request.setAttribute("perfilUsuarioLogado", usuarioLogado.getPerfil()); 
-            request.getRequestDispatcher("/listarUsuarios.jsp").forward(request, response);
+            request.getRequestDispatcher("/WEB-INF/jsp/gerenciar-usuarios.jsp").forward(request, response);
         }
     }
 }

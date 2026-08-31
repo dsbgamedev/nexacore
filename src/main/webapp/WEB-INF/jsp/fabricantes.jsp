@@ -20,8 +20,9 @@
                     <h4 class="page-title text-uppercase fw-bold">Fabricantes</h4>
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb mb-0">
-                            <li class="breadcrumb-item"><a href="#">Home</a></li>
-                            <li class="breadcrumb-item"><a href="#">Produtos</a></li>
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MarcaServlet">Marca</a></li>
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet">Cadastro Produto</a></li>
                             <li class="breadcrumb-item active" aria-current="page">Fabricantes</li>
                         </ol>
                     </nav>

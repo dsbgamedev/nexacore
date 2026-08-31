@@ -9,6 +9,9 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import model.Usuario;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Map;
@@ -26,10 +29,30 @@ public class MovimentacaoRecebimentoServlet extends HttpServlet {
 
     private final MovimentacaoRecebimentoDAO dao = new MovimentacaoRecebimentoDAO();
     private final Gson gson = new Gson();
+    
+    private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
+        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("movimentacao_recebimento"); 
+
+        if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json; charset=UTF-8");
+            response.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Acesso negado. Você não possui permissão para o módulo de recebimento de movimentações.\"}");
+            return false;
+        }
+        return true;
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        String path = request.getServletPath();
+    	if (!validarPermissao(request, response)) {
+            return;
+        }
+    	
+    	String path = request.getServletPath();
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
@@ -66,7 +89,11 @@ public class MovimentacaoRecebimentoServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        String path = request.getServletPath();
+    	if (!validarPermissao(request, response)) {
+            return;
+        }
+    	
+    	String path = request.getServletPath();
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();

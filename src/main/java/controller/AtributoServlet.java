@@ -3,6 +3,7 @@ package controller;
 import com.google.gson.Gson;
 import dao.AtributoDAO;
 import model.Atributo;
+import model.Usuario;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
@@ -14,7 +15,7 @@ import java.io.IOException;
  * Gerencia as requisições HTTP, realiza o parsing dos dados e coordena 
  * as chamadas para a camada de persistência (DAO).
  */
-@WebServlet("/api/atributos/*")
+@WebServlet(value = {"/AtributosServlet", "/api/atributos/*"})
 public class AtributoServlet extends HttpServlet {
     private AtributoDAO dao = new AtributoDAO();
     
@@ -22,10 +23,43 @@ public class AtributoServlet extends HttpServlet {
      * Gerencia requisições de consulta (GET).
      * Mapeia caminhos como: /todos, /listar-tipos, /listar-grupos.
      */
+    
+   // Método de validação igual ao que você usou no CadastrarUsuarioServlet
+    private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
+        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("atributos"); 
+
+        if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json; charset=UTF-8");
+            response.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Acesso negado. Você não possui permissão para o módulo de atributos.\"}");
+            return false;
+        }
+        return true;
+    }
+    
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+    	
+       String servletPath = request.getServletPath();
+        
+        // Se acessar a rota principal do Servlet, encaminha para a página JSP protegida
+        if ("/AtributosServlet".equals(servletPath)) {
+        	// Valida permissão antes de encaminhar para a JSP do módulo
+            if (!validarPermissao(request, response)) {
+                return;
+            }
+            request.getRequestDispatcher("/WEB-INF/jsp/gerenciar-atributos.jsp").forward(request, response);
+            return;
+        }
         
         String path = request.getPathInfo();
+        
+        
+        
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         // Roteamento baseado no PATH
@@ -59,6 +93,10 @@ public class AtributoServlet extends HttpServlet {
      */
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+    	// Valida permissão antes de encaminhar para a JSP do módulo
+        if (!validarPermissao(request, response)) {
+            return;
+        }
     	// Implementação robusta que utiliza Gson para parsear JSON e aciona o DAO	
         String path = request.getPathInfo();
         response.setContentType("application/json");

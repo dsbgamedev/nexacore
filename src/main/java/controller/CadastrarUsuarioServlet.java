@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
@@ -33,7 +34,9 @@ import java.util.stream.Collectors;
 @WebServlet("/CadastrarUsuarioServlet")
 public class CadastrarUsuarioServlet extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private Gson gson = new Gson();
+	private Gson gson = new GsonBuilder()
+		    .registerTypeAdapter(java.time.LocalDateTime.class, (com.google.gson.JsonSerializer<java.time.LocalDateTime>) (src, typeOfSrc, context) -> new com.google.gson.JsonPrimitive(src.toString()))
+		    .create();
 	
 	private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession(false);
@@ -112,6 +115,21 @@ public class CadastrarUsuarioServlet extends HttpServlet {
 				if (usuarioEncontrado != null) {
 					usuarioParaForm = usuarioEncontrado;
 					request.setAttribute("title", "Editar Usuário");
+					
+					// -------------------------------------------------------------
+				    // ADICIONE ESTE BLOCO AQUI PARA CARREGAR AS PERMISSÕES DO USUÁRIO
+				    // -------------------------------------------------------------
+				    try (Connection conn = Conexao.conectar()) {
+				        // Carrega as unidades que este usuário já possui salvas no banco
+				        List<String> unidadesDoUsuario = usuarioDAO.carregarUnidadesDoUsuario(conn, idUsuarioSendoEditado);
+				        usuarioParaForm.setUnidadesPermitidas(unidadesDoUsuario);
+
+				        // Carrega os módulos granulares que este usuário já possui salvos no banco
+				        List<String> modulosDoUsuario = usuarioDAO.carregarModulosDoUsuario(conn, idUsuarioSendoEditado);
+				        usuarioParaForm.setModulosPermitidos(modulosDoUsuario);
+				    } catch (SQLException ex) {
+				        System.err.println("Erro ao carregar unidades/módulos do usuário para edição: " + ex.getMessage());
+				    }
 
 					boolean isUsuarioLogadoSuperAdmin = PerfilUsuario.SUPER_ADMINISTRADOR.name()
 							.equalsIgnoreCase(usuarioLogado.getPerfil());
@@ -237,22 +255,23 @@ public class CadastrarUsuarioServlet extends HttpServlet {
 		request.setAttribute("todasUnidadesJson", gson.toJson(todasUnidadesDisponiveis));
 		request.setAttribute("usuarioUnidadesJson", gson.toJson(usuarioParaForm.getUnidadesPermitidas()));
 
-		request.getRequestDispatcher("/jsp/cadastro-usuario.jsp").forward(request, response);
+		request.getRequestDispatcher("/WEB-INF/jsp/cadastro-usuario.jsp").forward(request, response);
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
 
+		// Adicione esta validação no início para bloquear acessos negados via GET
+	    if (!validarPermissao(request, response)) {
+	        return;
+	    }
+
 		response.setContentType("application/json");
 		response.setCharacterEncoding("UTF-8");
 		PrintWriter out = response.getWriter();
 		JsonObject jsonResponse = new JsonObject();
 		
-		// Adicione esta validação no início para bloquear acessos negados via GET
-	    if (!validarPermissao(request, response)) {
-	        return;
-	    }
 
 		HttpSession session = request.getSession(false);
 		Usuario usuarioLogado = null;
@@ -295,6 +314,7 @@ public class CadastrarUsuarioServlet extends HttpServlet {
 					? jsonRequest.get("id").getAsInt()
 					: 0;
 			String username = jsonRequest.has("username") ? jsonRequest.get("username").getAsString() : "";
+			String nomeCompleto = jsonRequest.has("nomeCompleto") ? jsonRequest.get("nomeCompleto").getAsString() : "";
 			String email = jsonRequest.has("email") ? jsonRequest.get("email").getAsString() : "";
 			String senha = jsonRequest.has("senha") ? jsonRequest.get("senha").getAsString() : "";
 			String perfil = jsonRequest.has("perfil") ? jsonRequest.get("perfil").getAsString() : "";
@@ -336,12 +356,25 @@ public class CadastrarUsuarioServlet extends HttpServlet {
 			UsuarioDAO usuarioDAO = new UsuarioDAO();
 			Usuario usuarioOperacao = new Usuario();
 			usuarioOperacao.setUsername(username);
+			usuarioOperacao.setNomeCompleto(nomeCompleto); // <-- ADICIONE ESTA LINHA AQUI
 			usuarioOperacao.setEmail(email);
 			usuarioOperacao.setSenha(senha);
 			usuarioOperacao.setPerfil(perfil);
 			usuarioOperacao.setAtivo(ativo);
 			usuarioOperacao.setModulosPermitidos(modulosPermitidos);
 			usuarioOperacao.setUnidadesPermitidas(unidadesPermitidas);
+			
+			// CORREÇÃO AQUI: Convertendo a String do JSON para Integer compatível com o Model
+			if (unidadePadrao != null && !unidadePadrao.trim().isEmpty()) {
+			    try {
+			        usuarioOperacao.setUnidadeAtivaId(Integer.parseInt(unidadePadrao));
+			    } catch (NumberFormatException e) {
+			        usuarioOperacao.setUnidadeAtivaId(null);
+			    }
+			} else {
+			    usuarioOperacao.setUnidadeAtivaId(null);
+			}
+			
 			usuarioOperacao.setId(id);
 
 			if (username.trim().isEmpty() || email.trim().isEmpty() || perfil.trim().isEmpty()) {

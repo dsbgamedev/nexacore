@@ -40,18 +40,38 @@
     <c:set var="isSuperAdmin" value="${fn:contains(perfilLogado, 'super')}" />
     <c:set var="isAdmin" value="${fn:contains(perfilLogado, 'admin')}" />
     <c:set var="hasFullAccess" value="${isSuperAdmin or isAdmin}" />
-    <c:set var="modulos" value="${fn:toLowerCase(sessionScope.usuarioLogado.modulosPermitidos)}" />
+    <%-- Mantém como objeto de coleção/lista vindo da sessão --%>
+    <c:set var="listaModulos" value="${sessionScope.usuarioLogado.modulosPermitidos}" />
+    
+    <%-- Processamento seguro da lista de módulos com delimitadores de vírgula --%>
+    <% 
+        model.Usuario userLogado = (model.Usuario) session.getAttribute("usuarioLogado");
+        java.util.List<String> listaMod = (userLogado != null) ? userLogado.getModulosPermitidos() : null;
+        String modulosStr = "";
+        if (listaMod != null && !listaMod.isEmpty()) {
+            StringBuilder sb = new StringBuilder(",");
+            for (String m : listaMod) {
+                if (m != null) {
+                    sb.append(m.toLowerCase().trim()).append(",");
+                }
+            }
+            modulosStr = sb.toString();
+        }
+        request.setAttribute("modulosStr", modulosStr);
+    %>
 
-    <%-- Controle granular flexível (aceita variações no plural/singular do banco) --%>
-    <c:set var="canSeeEquipamentos" value="${hasFullAccess or fn:contains(modulos, 'equipamento')}" />
-    <c:set var="canSeeMovimentacao" value="${hasFullAccess or fn:contains(modulos, 'movimentacao')}" />
-    <c:set var="canSeeManutencao" value="${hasFullAccess or fn:contains(modulos, 'manutencao')}" />
-    <c:set var="canSeeFabricantes" value="${hasFullAccess or fn:contains(modulos, 'fabricante')}" />
-    <c:set var="canSeeMarcas" value="${hasFullAccess or fn:contains(modulos, 'marca')}" />
-    <c:set var="canSeeEmpresas" value="${hasFullAccess or fn:contains(modulos, 'empresa') or fn:contains(modulos, 'filial')}" />
-    <c:set var="canSeeAtributos" value="${hasFullAccess or fn:contains(modulos, 'atributo')}" />
-    <c:set var="canSeeUsuarios" value="${hasFullAccess or fn:contains(modulos, 'usuario')}" />
-
+   <%-- Controle granular flexível --%>
+    <%-- Controle granular flexível (ajustado para corresponder exatamente às chaves) --%>
+    <c:set var="canSeeEquipamentos" value="${hasFullAccess or fn:contains(modulosStr, ',equipamento,') or fn:contains(modulosStr, ',equipamentos,')}" />
+    <c:set var="canSeeProdutos" value="${hasFullAccess or fn:contains(modulosStr, ',produto,') or fn:contains(modulosStr, ',produtos,')}" />
+    <c:set var="canSeeMovimentacao" value="${hasFullAccess or fn:contains(modulosStr, ',movimentacao,')}" />
+    <c:set var="canSeeManutencao" value="${hasFullAccess or fn:contains(modulosStr, ',manutencao,') or fn:contains(modulosStr, ',manutencao_chamados,')}" />
+    <c:set var="canSeeFabricantes" value="${hasFullAccess or fn:contains(modulosStr, ',fabricante,') or fn:contains(modulosStr, ',fabricantes,')}" />
+    <c:set var="canSeeMarcas" value="${hasFullAccess or fn:contains(modulosStr, ',marca,') or fn:contains(modulosStr, ',marcas,')}" />
+    <c:set var="canSeeEmpresas" value="${hasFullAccess or fn:contains(modulosStr, ',empresa,') or fn:contains(modulosStr, ',filial,') or fn:contains(modulosStr, ',filiais,')}" />
+    <c:set var="canSeeAtributos" value="${hasFullAccess or fn:contains(modulosStr, ',atributo,') or fn:contains(modulosStr, ',atributos,')}" />
+    <c:set var="canSeeUsuarios" value="${hasFullAccess or fn:contains(modulosStr, ',usuario,') or fn:contains(modulosStr, ',usuarios,')}" />
+     <c:set var="canSeeGerenciarUsuarios" value="${hasFullAccess or fn:contains(modulosStr, ',usuario,') or fn:contains(modulosStr, ',usuarios,')}" />
     <!-- SIDEBAR LATERAL ESQUERDA -->
     <aside id="sidebar" class="nexacore-sidebar">
         <div class="sidebar-brand">
@@ -70,12 +90,17 @@
             </ul>
 
             <%-- EQUIPAMENTOS --%>
-            <c:if test="${canSeeEquipamentos}">
+            <c:if test="${canSeeEquipamentos or canSeeProdutos}">
                 <span class="menu-category">EQUIPAMENTOS</span>
                 <ul class="sidebar-menu">
+                	<c:if test="${canSeeEquipamentos}">
                     <li><a href="<%=ctx%>/ConsultaEquipamentosServlet"><i class="bi bi-cpu"></i> Consulta de Equipamentos</a></li>
                     <li><a href="<%=ctx%>/CadastrarEquipamentoServlet"><i class="bi bi-plus-circle"></i> Novo Equipamento</a></li>
-                    <li><a href="<%=ctx%>/ProdutoServlet"><i class="bi bi-box-seam"></i> Produtos (Catálogo)</a></li>
+                     </c:if>
+                    <c:if test="${canSeeProdutos}">
+                    <%-- Substitua ProdutoServlet pelo servlet correto de produtos, ex: CadastrarProdutoServlet --%>
+                    <li><a href="<%=ctx%>/ProdutoServlet"><i class="bi bi-box-seam"></i> Produtos (Catálogo)</a></li>                  
+                   </c:if>
                 </ul>
             </c:if>
 
@@ -83,11 +108,12 @@
             <c:if test="${canSeeMovimentacao}">
                 <span class="menu-category">MOVIMENTAÇÕES</span>
                 <ul class="sidebar-menu">
+                <c:if test="${canSeeMovimentacao}">
                     <li><a href="<%=ctx%>/EnvioEquipamentoServlet"><i class="bi bi-arrow-up-right-circle"></i> Envios</a></li>
-                    <li><a href="<%=ctx%>/MovimentacaoRecebimentoServlet"><i class="bi bi-arrow-down-left-circle"></i> Recebimentos</a></li>
-                    <li><a href="<%=ctx%>/TransferenciaServlet"><i class="bi bi-arrow-left-right"></i> Transferências</a></li>
-                    <li><a href="<%=ctx%>/MovimentacaoRecebimentoServlet"><i class="bi bi-arrow-counterclockwise"></i> Devoluções</a></li>
-                    <li><a href="<%=ctx%>/HistoricoMovimentacoesServlet"><i class="bi bi-clock-history"></i> Histórico de Movimentações</a></li>
+                    <li><a href="<%=ctx%>/ConsultaEnvioServlet"><i class="bi bi-search"></i> Consulta de Envios</a></li>
+                    <li><a href="<%=ctx%>/RecebimentoServlet"><i class="bi bi-arrow-down-left-circle"></i> Recebimentos</a></li>
+                    <li><a href="<%=ctx%>/DevolucaoServlet"><i class="bi bi-arrow-counterclockwise"></i> Devoluções</a></li>  
+                  </c:if>        
                 </ul>
             </c:if>
 
@@ -95,14 +121,15 @@
             <c:if test="${canSeeManutencao}">
                 <span class="menu-category">MANUTENÇÕES</span>
                 <ul class="sidebar-menu">
+                	<c:if test="${canSeeManutencao}">
                     <li><a href="<%=ctx%>/ManutencaoServlet"><i class="bi bi-tools"></i> Abrir Chamado</a></li>
                     <li><a href="<%=ctx%>/ConsultaChamadosServlet"><i class="bi bi-list-check"></i> Consulta de Chamados</a></li>
-                    <li><a href="<%=ctx%>/HistoricoManutencoesServlet"><i class="bi bi-journal-medical"></i> Histórico de Manutenções</a></li>
+                    </c:if>
                 </ul>
             </c:if>
 
-            <%-- CADASTROS --%>
-            <c:if test="${canSeeFabricantes or canSeeMarcas or canSeeEmpresas or canSeeAtributos or canSeeUsuarios}">
+            <%-- CADASTROS E GERENCIAMENTOS--%>
+            <c:if test="${canSeeFabricantes or canSeeMarcas or canSeeEmpresas or canSeeAtributos or canSeeUsuarios or canSeeGerenciarUsuarios}">
                 <span class="menu-category">CADASTROS</span>
                 <ul class="sidebar-menu">
                     <c:if test="${canSeeFabricantes}">
@@ -119,6 +146,9 @@
                     </c:if>
                     <c:if test="${canSeeUsuarios}">
                         <li><a href="<%=ctx%>/CadastrarUsuarioServlet"><i class="bi bi-people"></i> Usuários</a></li>
+                    </c:if>
+                    <c:if test="${canSeeGerenciarUsuarios}">
+                        <li><a href="<%=ctx%>/GerenciarUsuariosServlet"><i class="bi bi-people"></i>Gerenciar Usuários</a></li>
                     </c:if>
                 </ul>
             </c:if>

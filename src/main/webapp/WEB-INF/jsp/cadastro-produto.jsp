@@ -12,12 +12,14 @@
 </head>
 <body class="p-4 bg-light">
 <div class="container-fluid mb-4">
-    <h4 class="page-title"> CADASTRO DE PRODUTO (CATÁLOGO)</h4>
+    <h4 class="page-title fw-bold text-primary-dark"> CADASTRO DE PRODUTO (CATÁLOGO)</h4>
     <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="#">Home</a></li>
-            <li class="breadcrumb-item"><a href="#">Produtos</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Novo Produto</li>
+        <ol class="breadcrumb mb-0">
+           <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+           <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MarcaServlet">Marca</a></li>
+           <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/FabricanteServlet">Fabricante</a></li>
+           <li class="breadcrumb-item active" aria-current="page">Produtos</li>
+            
         </ol>
     </nav>
 </div>
