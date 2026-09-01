@@ -1,5 +1,7 @@
 document.addEventListener("DOMContentLoaded", function() {
+	
     carregarFiltros();
+	
     
     // Vincula o botão de pesquisa azul
     const btnPesquisar = document.querySelector('.btn-primary');
@@ -86,6 +88,7 @@ function configurarEventosDinamicos() {
 
 async function pesquisarProdutos() {
     const tbody = document.getElementById('tabela-produtos');
+	
     if (!tbody) return;
 
     const getVal = (id) => {
@@ -134,6 +137,28 @@ async function pesquisarProdutos() {
         }
 
         data.forEach(p => {
+            // Botão de Visualização (Sempre visível para quem pode consultar)
+            let botoesAcao = `
+                <button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Visualizar" onclick="visualizarDetalhesProduto(${p.id})">
+                    <i class="fas fa-search"></i>
+                </button>`;
+
+            // Adiciona o botão de Editar apenas se o usuário tiver permissão
+            if (typeof usuarioPodeEditar !== 'undefined' && usuarioPodeEditar) {
+                botoesAcao += `
+                    <a href="/nexacore/ProdutoServlet?id=${p.id}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
+                        <i class="fas fa-pen"></i>
+                    </a>`;
+            }
+
+            // Adiciona o botão de Excluir apenas se o usuário tiver permissão
+            if (typeof usuarioPodeExcluir !== 'undefined' && usuarioPodeExcluir) {
+                botoesAcao += `
+                    <button type="button" class="btn btn-sm btn-outline-danger" title="Excluir" onclick="confirmarExclusaoProduto(${p.id})">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>`;
+            }
+
             const row = `<tr>
                 <td>${p.sku || '-'}</td>
                 <td>${p.nomeTipo || '-'}</td>
@@ -146,15 +171,7 @@ async function pesquisarProdutos() {
                     </span>
                 </td>
                 <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Visualizar" onclick="visualizarDetalhesProduto(${p.id})">
-                        <i class="fas fa-search"></i>
-                    </button>
-                    <a href="/nexacore/jsp/cadastro-produto.jsp?id=${p.id}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
-                        <i class="fas fa-pen"></i>
-                    </a>
-                    <button type="button" class="btn btn-sm btn-outline-danger" title="Excluir" onclick="confirmarExclusaoProduto(${p.id})">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
+                    ${botoesAcao}
                 </td>
             </tr>`;
             tbody.innerHTML += row;

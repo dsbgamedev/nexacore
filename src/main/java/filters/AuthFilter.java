@@ -95,6 +95,7 @@ public class AuthFilter implements Filter {
         PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/cadastro-produto.jsp", "produtos");
         PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/consulta-produto.jsp", "produtos");
         PROTECTED_RESOURCES_MODULES.put("/ProdutoServlet", "produtos");
+        PROTECTED_RESOURCES_MODULES.put("/ConsultaProdutoServlet", "produtos"); // <--- Adicionado
         PROTECTED_RESOURCES_MODULES.put("/api/produtos", "produtos");
         PROTECTED_RESOURCES_MODULES.put("/api/produtos/", "produtos");
               

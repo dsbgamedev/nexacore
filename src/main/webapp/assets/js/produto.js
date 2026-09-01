@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", function() {
         btnCancelar.addEventListener('click', function(event) {
             event.preventDefault();
             if (produtoIdEmEdicao) {
-                window.location.href = 'consulta-produto.jsp'; 
+                window.location.href = '/nexacore/ConsultaProdutoServlet'; 
             } else {
                 limparFormulario();
             }
@@ -477,7 +477,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     function limparFormulario() {
         if (produtoIdEmEdicao) {
-            window.location.href = 'consulta-produto.jsp';
+            window.location.href = '/nexacore/ConsultaProdutoServlet';
             return;
         }
 
@@ -612,7 +612,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
             if (response.ok) {
                 await ModalService.success("Sucesso", "Produto atualizado com sucesso!");
-                window.location.href = 'consulta-produto.jsp';
+                window.location.href = '/nexacore/ConsultaProdutoServlet';
             } else {
                 ModalService.error("Erro", result.erro || "Erro ao atualizar produto.");
             }

@@ -18,56 +18,70 @@ public class ProdutoServlet extends HttpServlet {
     private ProdutoDAO dao = new ProdutoDAO();
     private Gson gson = new Gson();
     
-    private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response, String acaoDesejada) throws IOException {
         HttpSession session = request.getSession(false);
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
-        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
-        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("produtos"); 
-
-        // Libera automaticamente rotas de API de consulta/busca rápida se o usuário estiver logado (necessário para o formulário de equipamentos)
-        String path = request.getPathInfo();
-        boolean isConsultaInterna = path != null && (
-            path.equals("/consultar") || 
-            path.equals("/buscar") || 
-            path.equals("/listar-marcas") || 
-            path.equals("/listar-fabricantes") || 
-            path.equals("/listar-tipos") || 
-            path.equals("/buscar-campos")
-        );
-
-        if (usuario == null || (!isAdmin && !temPermissaoModulo && !isConsultaInterna)) {
+        if (usuario == null) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json; charset=UTF-8");
-            response.getWriter().write("{\"erro\": \"Acesso negado. Você não possui permissão para o módulo de produtos.\"}");
+            response.getWriter().write("{\"erro\": \"Acesso negado. Usuário não autenticado.\"}");
+            return false;
+        }
+
+        // Utiliza o método inteligente do objeto Usuario para validar se tem permissão no módulo
+        // (Ele já valida automaticamente se o usuário é ADMIN ou SUPER_ADMINISTRADOR)
+        boolean temPermissao = usuario.temPermissao("produtos", acaoDesejada) || usuario.temPermissao("produto", acaoDesejada);
+
+        if (!temPermissao) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json; charset=UTF-8");
+            response.getWriter().write("{\"erro\": \"Acesso negado. Você não possui permissão para " + acaoDesejada.toLowerCase() + " produtos.\"}");
             return false;
         }
         return true;
     }
-
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
     	String path = request.getPathInfo();
+        HttpSession session = request.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
-        // Se acessado diretamente em /ProdutoServlet (sem sub-rotas da API), renderiza a tela JSP
+        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
+
+        // Se a chamada for para acessar a tela principal de cadastro (/ProdutoServlet puro), exigimos escrita
         if (path == null || path.equals("/")) {
-            HttpSession session = request.getSession(false);
-            Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
-            boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
-            boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("produtos"); 
+            boolean temAcessoEscrita = usuario != null && (
+                isAdmin ||
+                usuario.temPermissao("produtos", "INSERIR") ||
+                usuario.temPermissao("produtos", "EDITAR") ||
+                usuario.temPermissao("produto", "INSERIR") ||
+                usuario.temPermissao("produto", "EDITAR")
+            );
 
-            if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Acesso negado.");
+            if (!temAcessoEscrita) {
+                response.sendRedirect(request.getContextPath() + "/MenuServlet?erro=sem_permissao");
                 return;
             }
+
+            boolean podeEditar = isAdmin || usuario.temPermissao("produtos", "EDITAR") || usuario.temPermissao("produto", "EDITAR");
+            boolean podeExcluir = isAdmin || usuario.temPermissao("produtos", "EXCLUIR") || usuario.temPermissao("produto", "EXCLUIR");
+
+            request.setAttribute("podeEditar", podeEditar);
+            request.setAttribute("podeExcluir", podeExcluir);
 
             request.getRequestDispatcher("/WEB-INF/jsp/cadastro-produto.jsp").forward(request, response);
             return;
         }
-    	
-    	if (!validarPermissao(request, response)) {
-            return;
-        }
+
+        // Para rotas de API (/api/produtos/*), permitimos quem tem CONSULTAR para as listagens/consultas
+        boolean temPermissaoLeitura = usuario != null && (
+            isAdmin ||
+            usuario.temPermissao("produtos", "CONSULTAR") ||
+            usuario.temPermissao("produtos", "EDITAR") ||
+            usuario.temPermissao("produtos", "INSERIR") ||
+            usuario.temPermissao("produto", "CONSULTAR")
+        );
         
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
@@ -166,7 +180,10 @@ public class ProdutoServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-    	if (!validarPermissao(request, response)) {
+    	String acao = request.getParameter("action");
+        String acaoPermissao = ("editar".equalsIgnoreCase(acao) || (request.getParameter("id") != null && !request.getParameter("id").isEmpty())) ? "EDITAR" : "INSERIR";
+
+        if (!validarPermissao(request, response, acaoPermissao)) {
             return;
         }
         
@@ -233,7 +250,7 @@ public class ProdutoServlet extends HttpServlet {
     @Override
     protected void doPut(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-    	if (!validarPermissao(request, response)) {
+    	if (!validarPermissao(request, response, "EDITAR")) {
             return;
         }
     	
@@ -301,7 +318,7 @@ public class ProdutoServlet extends HttpServlet {
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-    	if (!validarPermissao(request, response)) {
+    	if (!validarPermissao(request, response, "EXCLUIR")) {
             return;
         }
     	

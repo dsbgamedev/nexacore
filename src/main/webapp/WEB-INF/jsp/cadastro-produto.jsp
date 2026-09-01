@@ -18,6 +18,7 @@
            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MarcaServlet">Marca</a></li>
            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/FabricanteServlet">Fabricante</a></li>
+           <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaProdutoServlet">Consulta Produtos</a></li>
            <li class="breadcrumb-item active" aria-current="page">Produtos</li>
             
         </ol>

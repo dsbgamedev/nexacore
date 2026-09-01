@@ -98,9 +98,11 @@
                     <li><a href="<%=ctx%>/CadastrarEquipamentoServlet"><i class="bi bi-plus-circle"></i> Novo Equipamento</a></li>
                      </c:if>
                     <c:if test="${canSeeProdutos}">
-                    <%-- Substitua ProdutoServlet pelo servlet correto de produtos, ex: CadastrarProdutoServlet --%>
-                    <li><a href="<%=ctx%>/ProdutoServlet"><i class="bi bi-box-seam"></i> Produtos (Catálogo)</a></li>                  
-                   </c:if>
+                        <li><a href="<%=ctx%>/ProdutoServlet"><i class="bi bi-plus-circle"></i> Novo Produto</a></li>                  
+                    </c:if>
+                    <c:if test="${canSeeProdutos}">
+                        <li><a href="<%=ctx%>/ConsultaProdutoServlet"><i class="bi bi-box-seam"></i> Consulta de Produtos</a></li>                  
+                    </c:if>
                 </ul>
             </c:if>
 

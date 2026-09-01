@@ -1,5 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <!DOCTYPE html>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -19,9 +20,9 @@
             <h4 class="page-title fw-bold text-primary-dark">CONSULTA DE PRODUTOS (CATÁLOGO)</h4>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="#">Home</a></li>
-                    <li class="breadcrumb-item"><a href="#">Produtos</a></li>
-                    <li class="breadcrumb-item active">Consulta de Produtos</li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet">Novo Produto</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Consulta de Produtos</li>
                 </ol>
             </nav>
         </div>
@@ -34,11 +35,13 @@
             </button>
         </div>
 
-        <!-- Direita: Botão Novo Produto -->
+        <!-- Direita: Botão Novo Produto (Exibido apenas se tiver permissão de escrita/edição) -->
         <div>
-            <a href="cadastro-produto.jsp" class="btn btn-success">
-                <i class="fas fa-plus"></i> Novo Produto
-            </a>
+            <c:if test="${podeEditar}">
+                <a href="${pageContext.request.contextPath}/ProdutoServlet" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Novo Produto
+                </a>
+            </c:if>
         </div>
     </div>
 
@@ -145,6 +148,11 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // O servidor substitui isso pelos booleanos true/false do Java
+    const usuarioPodeEditar = ${podeEditar};
+    const usuarioPodeExcluir = ${podeExcluir};
+</script>
 <script src="${pageContext.request.contextPath}/assets/js/consulta-produtos.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 </body>

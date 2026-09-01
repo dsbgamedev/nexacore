@@ -57,47 +57,97 @@ public class ManutencaoServlet extends HttpServlet {
         })
         .create();
     
- // Método de validação igual ao que você usou no CadastrarUsuarioServlet
-    private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response) throws IOException {
+ // Validação estrita apenas para ações de escrita (Inserir, Editar, Excluir)
+    private boolean validarPermissaoEscrita(HttpServletRequest request, HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession(false);
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
         boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
-        // Valida se possui o módulo "manutencao_chamados" liberado
-        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("manutencao_chamados"); 
+        
+        // Exige explicitamente permissão de INSERIR ou EDITAR (removendo consultas genéricas)
+        boolean temEscrita = usuario != null && (
+            isAdmin ||
+            (usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("manutencao_chamados")) ||
+            usuario.temPermissao("manutencoes", "INSERIR") ||
+            usuario.temPermissao("manutencoes", "EDITAR") ||
+            usuario.temPermissao("manutencao", "INSERIR") ||
+            usuario.temPermissao("manutencao", "EDITAR") ||
+            usuario.temPermissao("chamados", "INSERIR") ||
+            usuario.temPermissao("chamados", "EDITAR")
+        );
 
-        if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
+        // Se o usuário tiver apenas CONSULTAR, ele não cairá aqui, logo será bloqueado.
+        if (!temEscrita) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json; charset=UTF-8");
-            response.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Acesso negado. Você não possui permissão para o módulo de manutenção de chamados.\"}");
+            response.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Acesso negado. Você não possui permissão de escrita para este módulo.\"}");
             return false;
         }
         return true;
     }
 
+    // Validação branda para leitura/consulta
+    private boolean validarPermissaoLeitura(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        HttpSession session = request.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
+        
+        boolean temLeitura = usuario != null && (
+            isAdmin ||
+            (usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("manutencao_chamados")) ||
+            usuario.temPermissao("manutencoes", "CONSULTAR") || 
+            usuario.temPermissao("manutencoes", "EDITAR") ||
+            usuario.temPermissao("manutencoes", "EXCLUIR") ||
+            usuario.temPermissao("manutencao", "CONSULTAR") ||
+            usuario.temPermissao("chamados", "CONSULTAR") ||
+            usuario.temPermissao("chamados", "EDITAR")
+        );
+
+        return temLeitura;
+    }
+
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     	String servletPath = req.getServletPath();
-    	
-    	// Direciona para a tela de Abertura de Chamado
+        HttpSession session = req.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
+        
+        // Direciona para a tela de Abertura de Chamado (Exige Escrita)
         if ("/ManutencaoServlet".equals(servletPath)) {
-            if (!validarPermissao(req, resp)) return;
+        	if (!validarPermissaoEscrita(req, resp)) {
+                // Redireciona imediatamente caso não tenha escrita
+                resp.sendRedirect(req.getContextPath() + "/MenuServlet?erro=sem_permissao");
+                return;
+            }
+            boolean podeEditar = isAdmin || (usuario != null && (usuario.temPermissao("manutencoes", "EDITAR") || usuario.temPermissao("chamados", "EDITAR")));
+            req.setAttribute("podeEditar", podeEditar);
             req.getRequestDispatcher("/WEB-INF/jsp/manutencao-abertura.jsp").forward(req, resp);
             return;
         }
         
-        // Direciona para a tela de Consulta de Chamados
+        // Direciona para a tela de Consulta de Chamados (Permite apenas Consulta)
         if ("/ConsultaChamadosServlet".equals(servletPath)) {
-            if (!validarPermissao(req, resp)) return;
+            if (!validarPermissaoLeitura(req, resp)) {
+                resp.sendRedirect(req.getContextPath() + "/MenuServlet?erro=sem_permissao");
+                return;
+            }
+            boolean podeEditar = isAdmin || (usuario != null && (usuario.temPermissao("manutencoes", "EDITAR") || usuario.temPermissao("chamados", "EDITAR")));
+            boolean podeExcluir = isAdmin || (usuario != null && (usuario.temPermissao("manutencoes", "EXCLUIR") || usuario.temPermissao("chamados", "EXCLUIR")));
+            
+            req.setAttribute("podeEditar", podeEditar);
+            req.setAttribute("podeExcluir", podeExcluir);
             req.getRequestDispatcher("/WEB-INF/jsp/consulta-chamado.jsp").forward(req, resp);
             return;
         }
 
-           	
-    	// Valida a permissão antes de executar qualquer lógica
-        if (!validarPermissao(req, resp)) {
+        // Requisições para a API (/api/manutencoes/*) exigem pelo menos permissão de leitura
+        if (!validarPermissaoLeitura(req, resp)) {
+            resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            resp.setContentType("application/json; charset=UTF-8");
+            resp.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Acesso negado para consulta.\"}");
             return;
         }
-        
         resp.setContentType("application/json;charset=UTF-8");
         PrintWriter out = resp.getWriter();
 
@@ -111,17 +161,20 @@ public class ManutencaoServlet extends HttpServlet {
                 List<ManutencaoChamado> historico = dao.listarPorEquipamento(idEquipamento);
                 out.print(gson.toJson(historico));
             } else if (pathInfo != null && pathInfo.equals("/listar")) {
-                // ADICIONADO: Atende a rota /api/manutencoes/listar da nova tela de consulta
-                List<ManutencaoChamado> todos = dao.listarTodos();
-                out.print(gson.toJson(todos));
-            } else if (pathInfo != null && pathInfo.equals("/listar")) {
+                // Atende a rota /api/manutencoes/listar aplicando os filtros se existirem
                 String busca = req.getParameter("busca");
                 String status = req.getParameter("status");
                 String tipo = req.getParameter("tipo");
                 String prioridade = req.getParameter("prioridade");
 
-                List<ManutencaoChamado> todos = dao.listarComFiltros(busca, status, tipo, prioridade);
-                out.print(gson.toJson(todos));
+                if ((busca != null && !busca.isEmpty()) || (status != null && !status.isEmpty()) || 
+                    (tipo != null && !tipo.isEmpty()) || (prioridade != null && !prioridade.isEmpty())) {
+                    List<ManutencaoChamado> filtrados = dao.listarComFiltros(busca, status, tipo, prioridade);
+                    out.print(gson.toJson(filtrados));
+                } else {
+                    List<ManutencaoChamado> todos = dao.listarTodos();
+                    out.print(gson.toJson(todos));
+                }
             } else {
                 // Se chamado sem parâmetros específicos, tenta retornar todos por segurança
                 List<ManutencaoChamado> todos = dao.listarTodos();
@@ -136,8 +189,8 @@ public class ManutencaoServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-    	// Valida a permissão antes de executar qualquer lógica
-        if (!validarPermissao(req, resp)) {
+    	// Operações de POST (Criar, Atualizar, Excluir) exigem obrigatoriamente permissão de escrita
+        if (!validarPermissaoEscrita(req, resp)) {
             return;
         }
         resp.setContentType("application/json;charset=UTF-8");
@@ -186,7 +239,7 @@ public class ManutencaoServlet extends HttpServlet {
 
             if (chamado == null || chamado.getIdEquipamento() == null) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                out.print("{\"sucesso: false, \"mensagem\": \"Dados incompletos para abertura do chamado.\"}");
+                out.print("{\"sucesso\": false, \"mensagem\": \"Dados incompletos para abertura do chamado.\"}");
                 return;
             }
 
