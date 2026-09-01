@@ -39,8 +39,8 @@
     </div>
 
     <!-- O formulário agora envia a ação via JS ou input hidden para diferenciar cadastro/edição -->
-    <form id="formCadastroUsuario" onsubmit="salvarUsuario(event)">
-        <input type="hidden" id="usuarioId" value="${usuario != null ? usuario.id : ''}">
+    <form id="formCadastroUsuario">
+        <input type="hidden" id="usuarioId" name="id" value="${usuarioEdicao != null ? usuarioEdicao.id : (usuario != null ? usuario.id : '')}">
         <input type="hidden" id="isEditing" value="${isEditing}">
 
         <!-- DADOS DO USUÁRIO -->
@@ -51,17 +51,17 @@
             <div class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label"> Usuário * </label>
-                    <input type="text" id="username" name="usuario" class="form-control" required placeholder="Ex.: joao.silva" value="${usuario != null ? usuario.username : ''}">
+                    <input type="text" id="username" name="usuario" class="form-control" required placeholder="Ex.: joao.silva" value="${usuarioEdicao != null ? usuarioEdicao.username : (usuario != null ? usuario.username : '')}">
                 </div>
 
                 <div class="col-md-3">
                     <label class="form-label"> Nome Completo * </label>
-                    <input type="text" id="nomeCompleto" name="nome" class="form-control" required placeholder="Nome do usuário" value="${usuario != null ? usuario.nomeCompleto : ''}">
+                    <input type="text" id="nomeCompleto" name="nome" class="form-control" required placeholder="Nome do usuário" value="${usuarioEdicao != null ? usuarioEdicao.nomeCompleto : (usuario != null ? usuario.nomeCompleto : '')}">
                 </div>
 
                 <div class="col-md-3">
                     <label class="form-label"> E-mail * </label>
-                    <input type="email" id="email" name="email" class="form-control" required placeholder="usuario@empresa.com.br" value="${usuario != null ? usuario.email : ''}">
+                    <input type="email" id="email" name="email" class="form-control" required placeholder="usuario@empresa.com.br" value="${usuarioEdicao != null ? usuarioEdicao.email : (usuario != null ? usuario.email : '')}">
                 </div>
 
                 <div class="col-md-3">
@@ -69,7 +69,7 @@
                     <select name="perfil" id="perfil" class="form-select" ${disablePerfilField ? 'disabled' : ''}>
                         <option value="">Selecione...</option>
                         <c:forEach var="p" items="${perfisDisponiveisParaSelecao}">
-                            <option value="${fn:toUpperCase(p)}" ${usuario != null && fn:toUpperCase(usuario.perfil) == fn:toUpperCase(p) ? 'selected' : ''}>
+                            <option value="${fn:toUpperCase(p)}" ${(usuarioEdicao != null && fn:toUpperCase(usuarioEdicao.perfil) == fn:toUpperCase(p)) || (usuario != null && fn:toUpperCase(usuario.perfil) == fn:toUpperCase(p)) ? 'selected' : ''}>
                                 ${p}
                             </option>
                         </c:forEach>
@@ -89,16 +89,12 @@
 				    <label class="form-label"> Filial Principal </label>
 				    <select name="filial" id="unidadePadrao" class="form-select" required>
 				        <option value="">Selecione a filial...</option>
-				        <c:forEach var="unidade" items="${todasUnidadesDisponiveis}">
-				          <c:set var="tipoTexto" value="${unidade[1] == '161' ? 'Matriz' : 'Filial'}" />
-				          <option value="${unidade[0]}">${unidade[1]} ${unidade[2]} (${tipoTexto})</option>
-				      </c:forEach>
 				    </select>
 				</div>
 
                 <div class="col-md-12">
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="ativo" id="ativo" ${usuario == null || usuario.ativo ? 'checked' : ''}>
+                        <input class="form-check-input" type="checkbox" name="ativo" id="ativo" ${usuarioEdicao != null ? (usuarioEdicao.ativo ? 'checked' : '') : (usuario == null || usuario.ativo ? 'checked' : '')}>
                         <label class="form-check-label" for="ativo"> Usuário ativo </label>
                     </div>
                 </div>
@@ -248,13 +244,14 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 <script>
-    const unidadesGlobais = <%= request.getAttribute("todasUnidadesJson") != null ? request.getAttribute("todasUnidadesJson") : "[]" %>;
-    var contextPath = "<%= request.getContextPath() %>";
+    // Variáveis globais do sistema injetadas via JSP
+    const contextPath = "${pageContext.request.contextPath}";
+    const unidadesGlobais = ${not empty todasUnidadesJson ? todasUnidadesJson : '[]'};
     
-    // Injeta os dados do usuário para pré-preenchimento no modo de edição se existirem
-    const usuarioEdicao = <%= request.getAttribute("usuarioJson") != null ? request.getAttribute("usuarioJson") : "null" %>;
-    const unidadesPermitidasUsuario = <%= request.getAttribute("usuarioUnidadesJson") != null ? request.getAttribute("usuarioUnidadesJson") : "[]" %>;
+    // Dados do usuário para pré-preenchimento no modo de edição
+    const usuarioEdicao = ${not empty usuarioJson ? usuarioJson : 'null'};
+    const unidadesPermitidasUsuario = ${not empty usuarioUnidadesJson ? usuarioUnidadesJson : '[]'};
 </script>
-<script src="<%=ctx%>/assets/js/cadastro-usuario.js"></script>
+<script src="${pageContext.request.contextPath}/assets/js/cadastro-usuario.js"></script>
 </body>
 </html>

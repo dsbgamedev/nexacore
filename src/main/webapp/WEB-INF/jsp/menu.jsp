@@ -468,6 +468,21 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- ==========================================================
+         	NEXACORE - MODAL SERVICE (Modais Globais)
+		   ========================================================== -->
+		   <div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+		       <div class="modal-dialog modal-dialog-centered">
+		           <div class="modal-content-custom" id="alertBox">
+		               <h3 id="alertTitle"></h3>
+		               <p id="alertMessage"></p>
+		               <div class="modal-buttons">
+		                   <button type="button" class="btn-confirmar" id="alertOkBtn">OK</button>
+		               </div>
+		           </div>
+		       </div>
+		   </div>
 
             <!-- RODAPÉ -->
             <footer class="mt-5 text-center text-muted small pb-3 d-flex justify-content-between border-top pt-3">
@@ -484,5 +499,22 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Script Externo -->
     <script src="<%=ctx%>/assets/js/menu.js"></script>
+    <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('erro') === 'sem_permissao') {
+                if (typeof ModalService !== 'undefined') {
+                    ModalService.error(
+                        "Acesso Negado", 
+                        "Você não possui permissão para acessar o cadastro de equipamentos."
+                    ).then(() => {
+                        const novaUrl = window.location.pathname;
+                        window.history.replaceState({}, document.title, novaUrl);
+                    });
+                }
+            }
+        });
+    </script>
 </body>
 </html>

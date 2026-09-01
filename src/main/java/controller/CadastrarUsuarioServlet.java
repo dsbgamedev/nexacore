@@ -254,6 +254,9 @@ public class CadastrarUsuarioServlet extends HttpServlet {
 		request.setAttribute("usuarioModulosJson", gson.toJson(usuarioParaForm.getModulosPermitidos()));
 		request.setAttribute("todasUnidadesJson", gson.toJson(todasUnidadesDisponiveis));
 		request.setAttribute("usuarioUnidadesJson", gson.toJson(usuarioParaForm.getUnidadesPermitidas()));
+		
+		// ADICIONE ESTA LINHA PARA ENVIAR O OBJETO COMPLETO DO USUÁRIO EM JSON PARA O JS:
+		request.setAttribute("usuarioJson", gson.toJson(usuarioParaForm));
 
 		request.getRequestDispatcher("/WEB-INF/jsp/cadastro-usuario.jsp").forward(request, response);
 	}

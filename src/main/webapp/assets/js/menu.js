@@ -85,3 +85,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+// --- Tratamento de Acesso Negado via Parâmetro na URL ---
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('erro') === 'sem_permissao') {
+        if (typeof ModalService !== 'undefined') {
+            ModalService.error(
+                "Acesso Negado", 
+                "Você não possui permissão para acessar o cadastro de equipamentos."
+            ).then(() => {
+                // Remove o parâmetro da URL de forma limpa para o modal não reaparecer ao atualizar
+                const novaUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, novaUrl);
+            });
+        }
+    }
