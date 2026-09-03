@@ -10,11 +10,12 @@ import java.util.List;
 public class ManutencaoDAO {
 
 	public Long inserir(ManutencaoChamado chamado) throws SQLException {
+	    // 1. Incluído 'responsavel_tecnico' na lista de colunas e um placeholder '?' a mais
 	    String sqlChamado = "INSERT INTO manutencao_chamados (" +
 	            "id_equipamento, filial_origem_id, departamento_id, data_abertura, " +
 	            "solicitante, tipo_problema, prioridade, descricao_problema, " +
-	            "previsao_atendimento, observacoes, id_status_chamado" +
-	            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_chamado";
+	            "previsao_atendimento, observacoes, id_status_chamado, responsavel_tecnico" +
+	            ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_chamado";
 	                        
 	    String sqlStatusEquipamento = "UPDATE equipamentos SET situacao_id = 6, status_id = 2 WHERE id_equipamento = ?";
 
@@ -28,7 +29,6 @@ public class ManutencaoDAO {
 	        conn = Conexao.conectar();
 	        conn.setAutoCommit(false);
 
-	        // 1. Inserir o chamado
 	        stmtChamado = conn.prepareStatement(sqlChamado);
 	        stmtChamado.setLong(1, chamado.getIdEquipamento());
 	        
@@ -38,7 +38,6 @@ public class ManutencaoDAO {
 	            stmtChamado.setNull(2, Types.INTEGER);
 	        }
 	        
-	        // Adicionado o departamento_id na posição 3
 	        if (chamado.getIdDepartamento() != null) {
 	            stmtChamado.setLong(3, chamado.getIdDepartamento());
 	        } else {
@@ -59,13 +58,19 @@ public class ManutencaoDAO {
 	        
 	        stmtChamado.setString(10, chamado.getObservacoes());
 	        stmtChamado.setLong(11, 1L); // ID 1 = Status inicial "Aberto"
+	        
+	        // 2. Definir o valor do responsável técnico na posição 12
+	        if (chamado.getResponsavelTecnico() != null && !chamado.getResponsavelTecnico().trim().isEmpty()) {
+	            stmtChamado.setString(12, chamado.getResponsavelTecnico());
+	        } else {
+	            stmtChamado.setNull(12, Types.VARCHAR);
+	        }
 
 	        rs = stmtChamado.executeQuery();
 	        if (rs.next()) {
 	            idGerado = rs.getLong(1);
 	        }
 
-	        // 2. Atualizar a situação do equipamento para "Na Assistência" (6)
 	        stmtStatus = conn.prepareStatement(sqlStatusEquipamento);
 	        stmtStatus.setLong(1, chamado.getIdEquipamento());
 	        stmtStatus.executeUpdate();
@@ -265,6 +270,59 @@ public class ManutencaoDAO {
         }
 
         return lista;
+    }
+    /*Consulta o banco por meio desse buscarPorId(idChamado), recuperando o responsavel_tecnico (ou solicitante) 
+     * gravado na base de dados para validar se ele realmente tem o direito de alterar ou excluir 
+     * aquele registro específico.*/
+    public ManutencaoChamado buscarPorId(Long idChamado) throws SQLException {
+        String sql = "SELECT c.*, s.nome_status, e.nome_identificador, e.patrimonio FROM manutencao_chamados c " +
+                     "LEFT JOIN status_chamado s ON c.id_status_chamado = s.id_status_chamado " +
+                     "LEFT JOIN equipamentos e ON c.id_equipamento = e.id_equipamento " +
+                     "WHERE c.id_chamado = ?";
+
+        Connection conn = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        ManutencaoChamado m = null;
+
+        try {
+            conn = Conexao.conectar();
+            stmt = conn.prepareStatement(sql);
+            stmt.setLong(1, idChamado);
+            rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                m = new ManutencaoChamado();
+                m.setIdChamado(rs.getLong("id_chamado"));
+                m.setIdEquipamento(rs.getLong("id_equipamento"));
+                
+                String nomeEquip = rs.getString("nome_identificador");
+                String patrimonio = rs.getString("patrimonio");
+                m.setNomeEquipamento(nomeEquip != null ? nomeEquip + " (Pat: " + patrimonio + ")" : "EQ-" + m.getIdEquipamento());
+
+                if (rs.getDate("data_abertura") != null) {
+                    m.setDataAbertura(rs.getDate("data_abertura").toLocalDate());
+                }
+                m.setSolicitante(rs.getString("solicitante"));
+                m.setTipoProblema(rs.getString("tipo_problema"));
+                m.setPrioridade(rs.getString("prioridade"));
+                m.setDescricaoProblema(rs.getString("descricao_problema"));
+                m.setResponsavelTecnico(rs.getString("responsavel_tecnico"));
+                m.setDiagnostico(rs.getString("diagnostico"));
+                m.setSolucaoRealizada(rs.getString("solucao_realizada"));
+                
+                String nomeStatus = rs.getString("nome_status");
+                m.setNomeStatus(nomeStatus != null ? nomeStatus : "Aberto");
+                m.setIdStatusChamado(rs.getLong("id_status_chamado"));
+                
+                // Caso seu modelo tenha o campo de ID do usuário que criou o registro:
+                // m.setIdUsuarioCriacao(rs.getLong("id_usuario_criacao")); 
+            }
+        } finally {
+            Conexao.fechar(rs, stmt, conn);
+        }
+
+        return m;
     }
     
     public void atualizar(ManutencaoChamado chamado, boolean reparado) throws SQLException {

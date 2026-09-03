@@ -17,7 +17,18 @@ public class RecebimentoServlet extends HttpServlet {
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
         boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
-        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("movimentacao"); 
+        // Aceita as variações de nomes do módulo de recebimento
+        boolean temPermissaoModulo = false;
+        if (usuario != null && usuario.getModulosPermitidos() != null) {
+            for (String m : usuario.getModulosPermitidos()) {
+                if (m.equalsIgnoreCase("movimentacao") || 
+                    m.equalsIgnoreCase("movimentacoes") || 
+                    m.equalsIgnoreCase("movimentacao_recebimento")) {
+                    temPermissaoModulo = true;
+                    break;
+                }
+            }
+        }
 
         if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Acesso negado.");

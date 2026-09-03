@@ -133,7 +133,6 @@ public class AuthFilter implements Filter {
         PROTECTED_RESOURCES_MODULES.put("/Atributos", "atributos");
         PROTECTED_RESOURCES_MODULES.put("/AtributoServlet", "atributos");
         PROTECTED_RESOURCES_MODULES.put("/api/atributos", "atributos"); 
-        PROTECTED_RESOURCES_MODULES.put("/api/atributos/", "atributos"); 
         
         // 9. marcas
         PROTECTED_RESOURCES_MODULES.put("/WEB-INF/marcas.jsp", "marcas");

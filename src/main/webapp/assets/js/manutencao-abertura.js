@@ -21,11 +21,27 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    const formChamado = document.getElementById('formChamado');
+//Validação obrigatoria previsõ data nao pdoe ser menor que data atual	
+const formChamado = document.getElementById('formChamado');
     if (formChamado) {
         formChamado.addEventListener('submit', function(e) {
             e.preventDefault();
             
+            const inputDataAbertura = document.getElementById('dataAbertura').value;
+            const inputPrevisao = document.getElementById('previsaoAtendimento').value;
+
+            // 1. Validação: Verifica se o campo foi preenchido
+            if (!inputPrevisao) {
+                ModalService.error("Atenção", "Por favor, preencha a Previsão de Atendimento.");
+                return;
+            }
+
+            // 2. Validação: Verifica se a previsão é menor que a data de abertura
+            if (inputPrevisao < inputDataAbertura) {
+                ModalService.error("Atenção", "A data de previsão de atendimento não pode ser inferior à data de abertura do chamado.");
+                return;
+            }
+
             ModalService.confirm("Confirmação", "Deseja realmente abrir este chamado de manutenção?").then(confirmado => {
                 if (confirmado) {
                     enviarChamadoManutencao();
@@ -63,7 +79,7 @@ function carregarSelectEquipamentos() {
 }
 
 function carregarSelectFiliais() {
-    fetch(contextPath + '/api/empresas')
+    fetch(contextPath + '/api/filiais')
         .then(res => res.json())
         .then(data => {
             const select = document.getElementById('selectFilial');
@@ -364,10 +380,10 @@ function visualizarChamado(id) {
         });
 }
 
+
 function enviarChamadoManutencao() {
     const form = document.getElementById('formChamado');
     
-    // Habilita temporariamente os selects travados para que seus valores entrem no FormData
     const selectFilial = document.getElementById('selectFilial');
     const selectDepto = document.getElementById('selectDepartamento');
     
@@ -380,9 +396,14 @@ function enviarChamadoManutencao() {
     const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
 
-    // Restaura o estado travado dos selects para o usuário logo em seguida
     if (selectFilial) selectFilial.disabled = filialWasDisabled;
     if (selectDepto) selectDepto.disabled = deptoWasDisabled;
+
+    // Garantia extra: se o campo não veio do form, injeta o username do solicitante atual
+    if (!payload.responsavelTecnico) {
+        const inputSolicitante = form.querySelector('[name="solicitante"]');
+        payload.responsavelTecnico = inputSolicitante ? inputSolicitante.value : "superuser";
+    }
 
     fetch(contextPath + '/api/manutencoes', {
         method: 'POST',

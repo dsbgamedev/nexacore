@@ -17,14 +17,24 @@ public class CadastrarEmpresaServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
-        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
-        // Ajustado para o módulo correto de empresas (substitua pela string exata salva no banco se for diferente)
-        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("empresas"); 
+        // Regra restrita: Apenas SUPER_ADMINISTRADOR pode acessar empresas
+        boolean isSuperAdmin = usuario != null && usuario.getPerfil() != null && 
+                               usuario.getPerfil().toUpperCase().contains("SUPER");
 
-        if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.setContentType("application/json; charset=UTF-8");
-            response.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Acesso negado. Você não possui permissão para o módulo de empresas.\"}");
+        if (!isSuperAdmin) {
+            // Verifica se é uma requisição AJAX/API ou carregamento de página normal
+            String acceptHeader = request.getHeader("Accept");
+            String requestedWith = request.getHeader("X-Requested-With");
+            
+            if ((acceptHeader != null && acceptHeader.contains("application/json")) || 
+                "XMLHttpRequest".equals(requestedWith)) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Acesso negado! Apenas Super Administradores podem acessar o módulo de empresas.\"}");
+            } else {
+                // Redireciona para o Menu com parâmetro de erro para disparar o ModalService na página principal
+                response.sendRedirect(request.getContextPath() + "/MenuServlet?erro=sem_permissao_empresa");
+            }
             return false;
         }
         return true;

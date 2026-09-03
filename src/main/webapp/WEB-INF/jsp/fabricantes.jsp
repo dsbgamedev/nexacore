@@ -94,11 +94,11 @@
     <!-- ================= VIEW 2: CADASTRO / EDIÇÃO ================= -->
     <div id="view-formulario" style="display: none;">
         <div class="container-fluid mb-4">
-            <h4 class="page-title text-uppercase fw-bold" id="form-titulo">Cadastro de Fabricante</h4>
+            <h4 class="page-title text-uppercase fw-bold" id="form-titulo">Editar Cadastro de Fabricante</h4>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="#">Home</a></li>
-                    <li class="breadcrumb-item"><a href="#">Produtos</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet">Cadastro Produto</a></li>
                     <li class="breadcrumb-item"><a href="#" id="link-voltar-breadcrumb">Fabricantes</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Gerenciamento</li>
                 </ol>

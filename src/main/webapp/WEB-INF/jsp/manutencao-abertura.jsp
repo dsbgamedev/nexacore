@@ -95,7 +95,6 @@
                             <option value="Preventiva">Preventiva</option>
                         </select>
                     </div>
-                    <!-- CAMPO ADICIONADO PARA EVITAR O ERRO DE NULO NO BANCO -->
                     <div class="col-md-3 mb-3">
                         <label class="form-label">Tipo de Problema *</label>
                         <select class="form-select form-select-sm" name="tipoProblema" required>
@@ -119,22 +118,24 @@
                         <label class="form-label">Data da Abertura *</label>
                         <input type="date" class="form-control form-control-sm" id="dataAbertura" name="dataAbertura" required>
                     </div>
+                    
                     <div class="col-md-3 mb-3">
-                        <label class="form-label">Previsão de Atendimento</label>
-                        <input type="date" class="form-control form-control-sm" name="previsaoAtendimento">
-                    </div>
-
-                    <div class="col-md-4 mb-3">
+					    <label class="form-label">Previsão de Atendimento *</label>
+					    <input type="date" class="form-control form-control-sm" id="previsaoAtendimento" name="previsaoAtendimento" required>
+					</div>
+                    <div class="col-md-3 mb-3">
                         <label class="form-label">Responsável pela Abertura *</label>
-                        <input type="text" class="form-control form-control-sm" name="solicitante" required placeholder="Ex: Maria Souza">
+                        <input type="text" class="form-control form-control-sm bg-light" name="solicitante" value="${sessionScope.usuarioLogado.username}" readonly required>                 
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <!-- ADICIONE ESTA LINHA LOGO ABAIXO OU AO LADO -->
+					<input type="hidden" name="responsavelTecnico" value="${sessionScope.usuarioLogado.username}">
+                    <div class="col-md-3 mb-3">
 					    <label class="form-label">Departamento Solicitante *</label>
 					    <select class="form-select form-select-sm" name="idDepartamento" id="selectDepartamento" required disabled>
 					        <option value="">Selecione um equipamento...</option>
 					    </select>
 					</div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
 					    <label class="form-label">Local para Atendimento *</label>
 					    <select class="form-select form-select-sm" name="filialOrigemId" id="selectFilial" required disabled>
 					        <option value="">Selecione um equipamento...</option>
@@ -151,10 +152,10 @@
                     </div>
                 </div>
 
-                <!-- SEÇÃO 3: HISTÓRICO DO EQUIPAMENTO (COM LAYOUT DE 2 COLUNAS IGUAL AO PRINT) -->
+                <!-- SEÇÃO 3: HISTÓRICO DO EQUIPAMENTO -->
                 <div class="section-title"><i class="fa-solid fa-clock-rotate-left me-1"></i> 3. Histórico do Equipamento</div>
                 <div class="row mb-4">
-                    <!-- Coluna da Esquerda: Abas de Tabelas (Manutenções e Movimentações) -->
+                    <!-- Coluna da Esquerda: Abas de Tabelas -->
                     <div class="col-md-9">
                         <ul class="nav nav-tabs mb-3" id="historicoTabs" role="tablist">
                             <li class="nav-item"><button class="nav-link active small py-1" data-bs-toggle="tab" data-bs-target="#tabManutencoes" type="button">Histórico de Manutenções</button></li>
@@ -264,6 +265,7 @@
             </form>
         </div>
     </div>
+    
     <!-- HTML DOS MODAIS PADRÃO DO SISTEMA -->
     <div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
@@ -291,111 +293,116 @@
             </div>
         </div>
     </div>
-    <!-- ========================================================== -->
-<!-- MODAL DE HISTÓRICO COMPLETO DO EQUIPAMENTO                 -->
-<!-- ========================================================== -->
-<div class="modal fade" id="modalHistoricoCompleto" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-dark text-white py-2">
-                <h5 class="modal-title fs-6"><i class="fa-solid fa-clock-rotate-left me-1"></i> Histórico Completo do Equipamento</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body bg-light">
-                <div class="mb-3 p-3 bg-white rounded border">
-                    <span class="text-muted small d-block">Equipamento Selecionado:</span>
-                    <strong id="modalHistEquipNome" class="text-primary fs-5">---</strong>
-                </div>
 
-                <div class="card shadow-sm p-3">
-                    <h6 class="fw-bold mb-3 text-secondary"><i class="fa-solid fa-list-check me-1"></i> Todos os Chamados Registrados</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-striped table-hover align-middle small">
-                            <thead class="table-secondary">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Data Abertura</th>
-                                    <th>Tipo</th>
-                                    <th>Problema</th>
-                                    <th>Responsável Técnico</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabelaHistoricoCompletoModal">
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted py-3">Nenhum registro encontrado.</td>
-                                </tr>
-                            </tbody>
-                        </table>
+    <!-- MODAL DE HISTÓRICO COMPLETO DO EQUIPAMENTO -->
+    <div class="modal fade" id="modalHistoricoCompleto" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white py-2">
+                    <h5 class="modal-title fs-6"><i class="fa-solid fa-clock-rotate-left me-1"></i> Histórico Completo do Equipamento</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <div class="mb-3 p-3 bg-white rounded border">
+                        <span class="text-muted small d-block">Equipamento Selecionado:</span>
+                        <strong id="modalHistEquipNome" class="text-primary fs-5">---</strong>
+                    </div>
+
+                    <div class="card shadow-sm p-3">
+                        <h6 class="fw-bold mb-3 text-secondary"><i class="fa-solid fa-list-check me-1"></i> Todos os Chamados Registrados</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped table-hover align-middle small">
+                                <thead class="table-secondary">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Data Abertura</th>
+                                        <th>Tipo</th>
+                                        <th>Problema</th>
+                                        <th>Responsável Técnico</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelaHistoricoCompletoModal">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-3">Nenhum registro encontrado.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer py-2">
-                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Fechar</button>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Fechar</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
-<!-- MODAL DE VISUALIZAÇÃO DE DETALHES DO CHAMADO -->
-<div class="modal fade" id="modalDetalhesChamado" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-secondary text-white py-2">
-                <h5 class="modal-title fs-6"><i class="fa-solid fa-circle-info me-1"></i> Detalhes do Chamado de Manutenção</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body bg-light">
-                <div class="row g-3 bg-white p-3 rounded border shadow-sm">
-                    <div class="col-md-4">
-                        <span class="text-muted small d-block">ID do Chamado:</span>
-                        <strong id="detalhesId" class="text-primary">---</strong>
-                    </div>
-                    <div class="col-md-4">
-                        <span class="text-muted small d-block">Data de Abertura:</span>
-                        <strong id="detalhesData">---</strong>
-                    </div>
-                    <div class="col-md-4">
-                        <span class="text-muted small d-block">Status:</span>
-                        <span id="detalhesStatus" class="badge bg-secondary">---</span>
-                    </div>
-                    <div class="col-md-4">
-                        <span class="text-muted small d-block">Tipo de Manutenção:</span>
-                        <strong id="detalhesTipo">---</strong>
-                    </div>
-                    <div class="col-md-4">
-                        <span class="text-muted small d-block">Tipo de Problema:</span>
-                        <strong id="detalhesProblemaTipo">---</strong>
-                    </div>
-                    <div class="col-md-4">
-                        <span class="text-muted small d-block">Prioridade:</span>
-                        <strong id="detalhesPrioridade">---</strong>
-                    </div>
-                    <div class="col-md-6">
-                        <span class="text-muted small d-block">Solicitante:</span>
-                        <strong id="detalhesSolicitante">---</strong>
-                    </div>
-                    <div class="col-md-6">
-                        <span class="text-muted small d-block">Técnico Responsável:</span>
-                        <strong id="detalhesTecnico">---</strong>
-                    </div>
-                    <div class="col-12">
-                        <span class="text-muted small d-block">Descrição do Problema:</span>
-                        <p class="text-dark mb-0 bg-light p-2 rounded small border" id="detalhesDescricao">---</p>
-                    </div>
-                    <div class="col-12">
-                        <span class="text-muted small d-block">Solução / Observações:</span>
-                        <p class="text-dark mb-0 bg-light p-2 rounded small border" id="detalhesSolucao">---</p>
+
+    <!-- MODAL DE VISUALIZAÇÃO DE DETALHES DO CHAMADO -->
+    <div class="modal fade" id="modalDetalhesChamado" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white py-2">
+                    <h5 class="modal-title fs-6"><i class="fa-solid fa-circle-info me-1"></i> Detalhes do Chamado de Manutenção</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-light">
+                    <div class="row g-3 bg-white p-3 rounded border shadow-sm">
+                        <div class="col-md-4">
+                            <span class="text-muted small d-block">ID do Chamado:</span>
+                            <strong id="detalhesId" class="text-primary">---</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <span class="text-muted small d-block">Data de Abertura:</span>
+                            <strong id="detalhesData">---</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <span class="text-muted small d-block">Status:</span>
+                            <span id="detalhesStatus" class="badge bg-secondary">---</span>
+                        </div>
+                        <div class="col-md-4">
+                            <span class="text-muted small d-block">Tipo de Manutenção:</span>
+                            <strong id="detalhesTipo">---</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <span class="text-muted small d-block">Tipo de Problema:</span>
+                            <strong id="detalhesProblemaTipo">---</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <span class="text-muted small d-block">Prioridade:</span>
+                            <strong id="detalhesPrioridade">---</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="text-muted small d-block">Solicitante:</span>
+                            <strong id="detalhesSolicitante">---</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="text-muted small d-block">Técnico Responsável:</span>
+                            <strong id="detalhesTecnico">---</strong>
+                        </div>
+                        <div class="col-12">
+                            <span class="text-muted small d-block">Descrição do Problema:</span>
+                            <p class="text-dark mb-0 bg-light p-2 rounded small border" id="detalhesDescricao">---</p>
+                        </div>
+                        <div class="col-12">
+                            <span class="text-muted small d-block">Solução / Observações:</span>
+                            <p class="text-dark mb-0 bg-light p-2 rounded small border" id="detalhesSolucao">---</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer py-2">
-                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Fechar</button>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Fechar</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+	<script>
+	    var contextPath = "<%= request.getContextPath() %>";
+	    var usuarioPodeEditar = ${podeEditar}; // Recebe true/false direto do Servlet
+	</script>
     <script src="${pageContext.request.contextPath}/assets/js/manutencao-abertura.js"></script>   
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 </body>

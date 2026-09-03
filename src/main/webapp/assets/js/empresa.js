@@ -358,7 +358,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 // --- FUNÇÕES AUXILIARES DO MODAL DE BUSCA DE EMPRESAS ---
-
 async function abrirModalBusca() {
     try {
         const basePath = typeof contextPath !== 'undefined' ? contextPath : '';

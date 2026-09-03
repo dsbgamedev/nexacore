@@ -337,12 +337,12 @@
         </div>
     </div>
 
-    <!-- Seus scripts existentes -->
+   <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>   
     <script>
         const contextPath = '${pageContext.request.contextPath}';
     </script>
+    <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>   
     <script src="${pageContext.request.contextPath}/assets/js/empresa.js"></script>
 </body>
 </html>

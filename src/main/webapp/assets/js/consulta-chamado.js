@@ -25,14 +25,22 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // Monitora mudança de status no modal para exibir a opção de reparo se for finalizado
+    // Monitora mudança de status no modal para gerenciar a obrigatoriedade/habilitação da Solução Realizada e bloco de reparo
     const selectStatusModal = document.getElementById('modalStatusChamado');
     const blocoReparo = document.getElementById('blocoReparoCheck');
+    const solInput = document.getElementById('modalSolucao');
+
     if (selectStatusModal) {
         selectStatusModal.addEventListener('change', function() {
-            if (this.value === '6' || this.value === 'Finalizado') {
+            const statusVal = parseInt(this.value);
+            
+            // Se o status for Finalizado (6), habilita o campo de solução e mostra o check de reparo
+            if (statusVal === 6) {
+                solInput.disabled = false;
                 blocoReparo.style.display = 'block';
             } else {
+                solInput.disabled = true;
+                solInput.value = ''; // Limpa se desabilitar
                 blocoReparo.style.display = 'none';
             }
         });
@@ -50,7 +58,6 @@ function definirDataAtualNosFiltros() {
 }
 
 function carregarChamados() {
-    // Busca todos os chamados do servidor uma única vez
     fetch(contextPath + '/api/manutencoes/listar')
         .then(res => res.json())
         .then(lista => {
@@ -68,7 +75,6 @@ function carregarChamados() {
         });
 }
 
-// Função que filtra os dados direto na memória do navegador
 function aplicarFiltrosNaTabela() {
     const busca = (document.getElementById('filtroBusca').value || '').toLowerCase().trim();
     const statusFiltro = document.getElementById('filtroStatus').value;
@@ -84,7 +90,6 @@ function aplicarFiltrosNaTabela() {
         let solicitante = (chamado.solicitante || '').toLowerCase();
         let tecnico = (chamado.responsavelTecnico || '').toLowerCase();
 
-        // Pesquisa geral
         let matchBusca = !busca || 
             idFmt.includes(busca) || 
             String(chamado.idChamado).includes(busca) ||
@@ -93,22 +98,18 @@ function aplicarFiltrosNaTabela() {
             solicitante.includes(busca) ||
             tecnico.includes(busca);
 
-        // Status
         let statusVal = String(chamado.idStatusChamado || '');
         let matchStatus = !statusFiltro || statusVal === statusFiltro;
 
-        // Tipo
         let tipoVal = chamado.tipoProblema || '';
         let matchTipo = !tipoFiltro || tipoVal.toLowerCase() === tipoFiltro.toLowerCase();
 
-        // Prioridade
         let prioVal = chamado.prioridade || '';
         let matchPrioridade = !prioridadeFiltro || prioVal.toLowerCase() === prioridadeFiltro.toLowerCase();
 
-        // Período de Data: SÓ É APLICADO se o usuário NÃO estiver digitando na Pesquisa Geral
         let matchData = true;
         if (!busca) {
-            let dataChamado = chamado.dataAbertura; // Formato esperado vindo do Java: "AAAA-MM-DD"
+            let dataChamado = chamado.dataAbertura;
             if (dataChamado) {
                 if (dataInicio && dataChamado < dataInicio) matchData = false;
                 if (dataFim && dataChamado > dataFim) matchData = false;
@@ -123,7 +124,6 @@ function aplicarFiltrosNaTabela() {
     renderizarTabela(listaFiltrada);
 }
 
-// Converte "AAAA-MM-DD" para "DD/MM/AAAA"
 function formatarDataBR(dataStr) {
     if (!dataStr) return '';
     const partes = dataStr.split('-');
@@ -133,7 +133,6 @@ function formatarDataBR(dataStr) {
     return dataStr;
 }
 
-// Desenha a tabela com a lista informada
 function renderizarTabela(lista) {
     const tbody = document.getElementById('tabelaChamados');
     tbody.innerHTML = '';
@@ -146,11 +145,10 @@ function renderizarTabela(lista) {
 
     document.getElementById('contadorRegistros').innerText = `${lista.length} registro(s) encontrado(s)`;
 
-    lista.forEach(chamado => {
+	lista.forEach(chamado => {
         let idFmt = 'MAN-' + String(chamado.idChamado || 0).padStart(6, '0');
         let statusVal = chamado.nomeStatus || 'Aberto';
         
-        // Verifica se o chamado está Finalizado (6) ou Cancelado (7)
         let isFinalizadoOuCancelado = (chamado.idStatusChamado === 6 || chamado.idStatusChamado === 7 || statusVal === 'Finalizado' || statusVal === 'Cancelado');
         
         let badgeClass = 'bg-secondary';
@@ -159,10 +157,34 @@ function renderizarTabela(lista) {
         else if (statusVal === 'Finalizado') badgeClass = 'bg-success';
         else if (statusVal === 'Cancelado') badgeClass = 'bg-danger';
 
-        // Oculta botão de excluir/cancelar se já estiver finalizado ou cancelado
-        let btnExcluirHtml = isFinalizadoOuCancelado 
-            ? '' 
-            : `<button class="btn btn-sm btn-outline-danger" onclick="excluirChamado(${chamado.idChamado})" title="Cancelar Chamado"><i class="fa fa-ban"></i></button>`;
+        // Regras de permissão por propriedade e perfil
+        let isSuperAdmin = typeof usuarioLogadoPerfil !== 'undefined' && usuarioLogadoPerfil && usuarioLogadoPerfil.toUpperCase().includes("SUPER");
+        let isAdmin = typeof usuarioLogadoPerfil !== 'undefined' && usuarioLogadoPerfil && usuarioLogadoPerfil.toUpperCase().includes("ADMIN");
+        
+        // Verifica se o usuário logado é o solicitante ou o técnico responsável por este chamado
+        let isDonoOuResponsavel = (
+            (chamado.solicitante && usuarioLogadoUsername && chamado.solicitante.toLowerCase() === usuarioLogadoUsername.toLowerCase()) || 
+            (chamado.responsavelTecnico && usuarioLogadoUsername && chamado.responsavelTecnico.toLowerCase() === usuarioLogadoUsername.toLowerCase())
+        );
+
+        // Pode editar/excluir se for Super Admin, Admin ou se for o dono/responsável E tiver a permissão geral do módulo
+        let podeMexerNoChamado = isSuperAdmin || isAdmin || isDonoOuResponsavel;
+
+        let btnEditarHtml = (podeEditarGeral && podeMexerNoChamado) 
+            ? `<button class="btn btn-outline-warning me-1" onclick="editarChamado(${chamado.idChamado})" title="Editar"><i class="fa fa-pen"></i></button>`
+            : '';
+
+        let btnExcluirHtml = (!isFinalizadoOuCancelado && podeExcluirGeral && podeMexerNoChamado) 
+            ? `<button class="btn btn-outline-danger me-1" onclick="excluirChamado(${chamado.idChamado})" title="Cancelar Chamado"><i class="fa fa-ban"></i></button>`
+            : '';
+
+        let botoesAcao = `
+            <div class="btn-group btn-group-sm" role="group">
+                <button class="btn btn-outline-primary me-1" onclick='abrirModalGerenciar(${JSON.stringify(chamado)})' title="Visualizar"><i class="fa fa-eye"></i></button>
+                ${btnEditarHtml}
+                ${btnExcluirHtml}
+            </div>
+        `;
 
         let tr = document.createElement('tr');
         tr.innerHTML = `
@@ -174,16 +196,11 @@ function renderizarTabela(lista) {
             <td>${chamado.prioridade || 'Média'}</td>
             <td><span class="badge ${badgeClass}">${statusVal}</span></td>
             <td>${chamado.responsavelTecnico || 'Não atribuído'}</td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-outline-primary" onclick='abrirModalGerenciar(${JSON.stringify(chamado)})' title="Visualizar"><i class="fa fa-eye"></i></button>
-                <button class="btn btn-sm btn-outline-warning" onclick="editarChamado(${chamado.idChamado})" title="Editar"><i class="fa fa-pen"></i></button>
-                ${btnExcluirHtml}
-            </td>
+            <td class="acoes-col">${botoesAcao}</td>
         `;
         tbody.appendChild(tr);
     });
 }
-
 function abrirModalGerenciar(chamado) {
     document.getElementById('modalIdChamado').value = chamado.idChamado;
     document.getElementById('detalheEquip').innerText = chamado.nomeEquipamento || `Equipamento ID: ${chamado.idEquipamento}`;
@@ -193,27 +210,42 @@ function abrirModalGerenciar(chamado) {
     
     const statusAtualId = parseInt(chamado.idStatusChamado || '1');
     document.getElementById('modalStatusChamado').value = statusAtualId;
-    document.getElementById('modalResponsavelTecnico').value = chamado.responsavelTecnico || '';
+    
+    // TÉCNICO RESPONSÁVEL: Preenche com o responsável atual do chamado, ou se estiver vazio, define o usuário logado e trava o campo
+    const tecnicoInput = document.getElementById('modalResponsavelTecnico');
+    if (chamado.responsavelTecnico && chamado.responsavelTecnico.trim() !== '') {
+        tecnicoInput.value = chamado.responsavelTecnico;
+    } else if (typeof usuarioLogadoGlobal !== 'undefined' && usuarioLogadoGlobal) {
+        tecnicoInput.value = usuarioLogadoGlobal;
+    }
+    tecnicoInput.readOnly = true; // Trava o campo para não ser editado manualmente
+    tecnicoInput.classList.add('bg-light');
+
     document.getElementById('modalDiagnostico').value = chamado.diagnostico || '';
     document.getElementById('modalSolucao').value = chamado.solucaoRealizada || '';
 
     const statusSelect = document.getElementById('modalStatusChamado');
-    const tecnicoInput = document.getElementById('modalResponsavelTecnico');
     const diagInput = document.getElementById('modalDiagnostico');
     const solInput = document.getElementById('modalSolucao');
     const checkReparo = document.getElementById('modalFoiReparado');
     const btnSalvar = document.querySelector('#modalGerenciarChamado .btn-primary');
 
-    // MÁQUINA DE ESTADOS: Bloqueia status anteriores (menores que o atual)
+    // Trava o campo de solução se o status atual não for 6 (Finalizado)
+    if (statusAtualId === 6) {
+        solInput.disabled = false;
+        document.getElementById('blocoReparoCheck').style.display = 'block';
+    } else {
+        solInput.disabled = true;
+        document.getElementById('blocoReparoCheck').style.display = 'none';
+    }
+
     for (let i = 0; i < statusSelect.options.length; i++) {
         let opt = statusSelect.options[i];
         let optVal = parseInt(opt.value);
 
         if (statusAtualId === 6 || statusAtualId === 7) {
-            // Se já estiver finalizado ou cancelado, trava tudo
             opt.disabled = true;
         } else {
-            // Bloqueia se o ID for menor que o atual, exceto o status 7 (Cancelado) que pode ser acionado a qualquer momento
             if (optVal < statusAtualId && optVal !== 7) {
                 opt.disabled = true;
             } else {
@@ -226,20 +258,15 @@ function abrirModalGerenciar(chamado) {
 
     if (isFinalizadoOuCancelado) {
         statusSelect.disabled = true;
-        tecnicoInput.disabled = true;
         diagInput.disabled = true;
         solInput.disabled = true;
         checkReparo.disabled = true;
         if (btnSalvar) btnSalvar.style.display = 'none';
-        document.getElementById('blocoReparoCheck').style.display = (statusAtualId === 6) ? 'block' : 'none';
     } else {
         statusSelect.disabled = false;
-        tecnicoInput.disabled = false;
         diagInput.disabled = false;
-        solInput.disabled = false;
         checkReparo.disabled = false;
         if (btnSalvar) btnSalvar.style.display = 'inline-block';
-        document.getElementById('blocoReparoCheck').style.display = (statusAtualId === 6) ? 'block' : 'none';
     }
 
     const modal = new bootstrap.Modal(document.getElementById('modalGerenciarChamado'));
@@ -287,8 +314,6 @@ function salvarAtualizacaoChamado() {
 function limparFiltros() {
     const formFiltro = document.getElementById('formFiltroChamados');
     if (formFiltro) formFiltro.reset();
-    
-    // Restaura as datas para o dia atual após limpar
     definirDataAtualNosFiltros();
     aplicarFiltrosNaTabela();
 }

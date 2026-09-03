@@ -60,18 +60,26 @@
         request.setAttribute("modulosStr", modulosStr);
     %>
 
-   <%-- Controle granular flexível --%>
     <%-- Controle granular flexível (ajustado para corresponder exatamente às chaves) --%>
     <c:set var="canSeeEquipamentos" value="${hasFullAccess or fn:contains(modulosStr, ',equipamento,') or fn:contains(modulosStr, ',equipamentos,')}" />
     <c:set var="canSeeProdutos" value="${hasFullAccess or fn:contains(modulosStr, ',produto,') or fn:contains(modulosStr, ',produtos,')}" />
-    <c:set var="canSeeMovimentacao" value="${hasFullAccess or fn:contains(modulosStr, ',movimentacao,')}" />
+    <%--<c:set var="canSeeMovimentacao" value="${hasFullAccess or fn:contains(modulosStr, ',movimentacao,')}" /> --%>
+    <%-- MOVIMENTAÇÕES (Aceita tanto envio quanto recebimento) --%>
+    <c:set var="canSeeMovimentacao" value="${hasFullAccess or fn:contains(modulosStr, ',movimentacao,') or fn:contains(modulosStr, ',movimentacoes,') or fn:contains(modulosStr, ',movimentacao_envio,') or fn:contains(modulosStr, ',movimentacao_recebimento,')}" />
     <c:set var="canSeeManutencao" value="${hasFullAccess or fn:contains(modulosStr, ',manutencao,') or fn:contains(modulosStr, ',manutencao_chamados,')}" />
     <c:set var="canSeeFabricantes" value="${hasFullAccess or fn:contains(modulosStr, ',fabricante,') or fn:contains(modulosStr, ',fabricantes,')}" />
     <c:set var="canSeeMarcas" value="${hasFullAccess or fn:contains(modulosStr, ',marca,') or fn:contains(modulosStr, ',marcas,')}" />
-    <c:set var="canSeeEmpresas" value="${hasFullAccess or fn:contains(modulosStr, ',empresa,') or fn:contains(modulosStr, ',filial,') or fn:contains(modulosStr, ',filiais,')}" />
-    <c:set var="canSeeAtributos" value="${hasFullAccess or fn:contains(modulosStr, ',atributo,') or fn:contains(modulosStr, ',atributos,')}" />
+    <%--<c:set var="canSeeEmpresas" value="${hasFullAccess or fn:contains(modulosStr, ',empresa,') or fn:contains(modulosStr, ',filial,') or fn:contains(modulosStr, ',filiais,')}" /> --%>
+    <%--<c:set var="canSeeAtributos" value="${hasFullAccess or fn:contains(modulosStr, ',atributo,') or fn:contains(modulosStr, ',atributos,')}" />--%>
+    <c:set var="canSeeEmpresas" value="${isSuperAdmin}" />
+    <c:set var="canSeeAtributo" value="${isSuperAdmin}" />   
     <c:set var="canSeeUsuarios" value="${hasFullAccess or fn:contains(modulosStr, ',usuario,') or fn:contains(modulosStr, ',usuarios,')}" />
      <c:set var="canSeeGerenciarUsuarios" value="${hasFullAccess or fn:contains(modulosStr, ',usuario,') or fn:contains(modulosStr, ',usuarios,')}" />
+     <%-- Variáveis granulares para ações de escrita (Inserir/Editar) --%>
+    <c:set var="canWriteEquipamentos" value="${hasFullAccess or usuarioLogado.temPermissao('equipamentos', 'INSERIR') or usuarioLogado.temPermissao('equipamentos', 'EDITAR')}" />
+    <c:set var="canWriteProdutos" value="${hasFullAccess or usuarioLogado.temPermissao('produtos', 'INSERIR') or usuarioLogado.temPermissao('produtos', 'EDITAR')}" />
+    <c:set var="canWriteManutencao" value="${hasFullAccess or usuarioLogado.temPermissao('manutencao_chamados', 'INSERIR') or usuarioLogado.temPermissao('manutencao_chamados', 'EDITAR')}" />
+   
     <!-- SIDEBAR LATERAL ESQUERDA -->
     <aside id="sidebar" class="nexacore-sidebar">
         <div class="sidebar-brand">
@@ -88,19 +96,21 @@
                 <%-- Alterado de /jsp/menu.jsp para o Servlet correspondente --%>
                 <li><a href="<%=ctx%>/MenuServlet" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
             </ul>
-
+           
             <%-- EQUIPAMENTOS --%>
             <c:if test="${canSeeEquipamentos or canSeeProdutos}">
                 <span class="menu-category">EQUIPAMENTOS</span>
                 <ul class="sidebar-menu">
                 	<c:if test="${canSeeEquipamentos}">
-                    <li><a href="<%=ctx%>/ConsultaEquipamentosServlet"><i class="bi bi-cpu"></i> Consulta de Equipamentos</a></li>
-                    <li><a href="<%=ctx%>/CadastrarEquipamentoServlet"><i class="bi bi-plus-circle"></i> Novo Equipamento</a></li>
-                     </c:if>
-                    <c:if test="${canSeeProdutos}">
-                        <li><a href="<%=ctx%>/ProdutoServlet"><i class="bi bi-plus-circle"></i> Novo Produto</a></li>                  
+                        <li><a href="<%=ctx%>/ConsultaEquipamentosServlet"><i class="bi bi-cpu"></i> Consulta de Equipamentos</a></li>
+                        <c:if test="${canWriteEquipamentos}">
+                            <li><a href="<%=ctx%>/CadastrarEquipamentoServlet"><i class="bi bi-plus-circle"></i> Novo Equipamento</a></li>
+                        </c:if>
                     </c:if>
                     <c:if test="${canSeeProdutos}">
+                        <c:if test="${canWriteProdutos}">
+                            <li><a href="<%=ctx%>/ProdutoServlet"><i class="bi bi-plus-circle"></i> Novo Produto</a></li>                  
+                        </c:if>
                         <li><a href="<%=ctx%>/ConsultaProdutoServlet"><i class="bi bi-box-seam"></i> Consulta de Produtos</a></li>                  
                     </c:if>
                 </ul>
@@ -110,12 +120,9 @@
             <c:if test="${canSeeMovimentacao}">
                 <span class="menu-category">MOVIMENTAÇÕES</span>
                 <ul class="sidebar-menu">
-                <c:if test="${canSeeMovimentacao}">
                     <li><a href="<%=ctx%>/EnvioEquipamentoServlet"><i class="bi bi-arrow-up-right-circle"></i> Envios</a></li>
                     <li><a href="<%=ctx%>/ConsultaEnvioServlet"><i class="bi bi-search"></i> Consulta de Envios</a></li>
-                    <li><a href="<%=ctx%>/RecebimentoServlet"><i class="bi bi-arrow-down-left-circle"></i> Recebimentos</a></li>
-                    <li><a href="<%=ctx%>/DevolucaoServlet"><i class="bi bi-arrow-counterclockwise"></i> Devoluções</a></li>  
-                  </c:if>        
+                    <li><a href="<%=ctx%>/RecebimentoServlet"><i class="bi bi-arrow-down-left-circle"></i> Recebimentos/Devoluções</a></li>
                 </ul>
             </c:if>
 
@@ -123,10 +130,10 @@
             <c:if test="${canSeeManutencao}">
                 <span class="menu-category">MANUTENÇÕES</span>
                 <ul class="sidebar-menu">
-                	<c:if test="${canSeeManutencao}">
-                    <li><a href="<%=ctx%>/ManutencaoServlet"><i class="bi bi-tools"></i> Abrir Chamado</a></li>
-                    <li><a href="<%=ctx%>/ConsultaChamadosServlet"><i class="bi bi-list-check"></i> Consulta de Chamados</a></li>
+                    <c:if test="${canWriteManutencao}">
+                        <li><a href="<%=ctx%>/ManutencaoServlet"><i class="bi bi-tools"></i> Abrir Chamado</a></li>
                     </c:if>
+                    <li><a href="<%=ctx%>/ConsultaChamadosServlet"><i class="bi bi-list-check"></i> Consulta de Chamados</a></li>
                 </ul>
             </c:if>
 
@@ -143,8 +150,8 @@
                     <c:if test="${canSeeEmpresas}">
                         <li><a href="<%=ctx%>/CadastrarEmpresaServlet"><i class="bi bi-grid"></i> Empresas</a></li>
                     </c:if>
-                    <c:if test="${canSeeAtributos}">
-                        <li><a href="<%=ctx%>/AtributosServlet"><i class="bi bi-list-nested"></i> Atributos</a></li>
+                    <c:if test="${canSeeAtributo}">
+                        <li><a href="<%=ctx%>/AtributoServlet"><i class="bi bi-list-nested"></i> Atributos</a></li>
                     </c:if>
                     <c:if test="${canSeeUsuarios}">
                         <li><a href="<%=ctx%>/CadastrarUsuarioServlet"><i class="bi bi-people"></i> Usuários</a></li>
@@ -290,7 +297,7 @@
                                 </a>
                             </div>
                             <div class="col-md-3 col-6">
-                                <a href="<%=ctx%>/MovimentacaoRecebimentoServlet" class="quick-action-card">
+                                <a href="<%=ctx%>/RecebimentoServlet" class="quick-action-card">
                                     <div class="quick-icon text-info"><i class="bi bi-box-arrow-down"></i></div>
                                     <span>Receber Equipamentos</span>
                                     <small>Confirmar recebimento</small>
@@ -318,7 +325,7 @@
                                 </a>
                             </div>
                             <div class="col-md-3 col-6">
-                                <a href="<%=ctx%>/HistoricoMovimentacoesServlet" class="quick-action-card">
+                                <a href="<%=ctx%>/ConsultaEnvioServlet" class="quick-action-card">
                                     <div class="quick-icon text-success"><i class="bi bi-arrow-left-right"></i></div>
                                     <span>Histórico de Movimentações</span>
                                     <small>Ver movimentações</small>
@@ -502,21 +509,5 @@
     <!-- Script Externo -->
     <script src="<%=ctx%>/assets/js/menu.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('erro') === 'sem_permissao') {
-                if (typeof ModalService !== 'undefined') {
-                    ModalService.error(
-                        "Acesso Negado", 
-                        "Você não possui permissão para acessar o cadastro de equipamentos."
-                    ).then(() => {
-                        const novaUrl = window.location.pathname;
-                        window.history.replaceState({}, document.title, novaUrl);
-                    });
-                }
-            }
-        });
-    </script>
 </body>
 </html>

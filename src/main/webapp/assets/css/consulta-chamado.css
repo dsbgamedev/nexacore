@@ -1,0 +1,33 @@
+@charset "UTF-8";
+
+/* Estilos específicos para a Tela de Consulta de Chamados */
+.filter-card {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.section-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1e293b;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+}
+
+/* Tratamento da coluna de Ações para evitar quebra de linha com zoom em 100% */
+.table td.acoes-col, 
+.table th.acoes-col {
+    white-space: nowrap !important;
+    width: 1%;
+    text-align: center;
+}
+
+/* Compactação dos botões de ação para caber perfeitamente no espaço */
+.table .btn-group-sm > .btn {
+    padding: 0.25rem 0.45rem;
+    font-size: 0.8rem;
+}

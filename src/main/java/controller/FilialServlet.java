@@ -30,7 +30,7 @@ public class FilialServlet extends HttpServlet {
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
         boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
-        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("empresas"); 
+        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("filiais"); 
 
         if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);

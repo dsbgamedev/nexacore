@@ -6,9 +6,15 @@
     <title>Nexacore - Consulta de Chamados de Manutenção</title>
     <script>
         var contextPath = "<%= request.getContextPath() %>";
+        var usuarioLogadoUsername = "${sessionScope.usuarioLogado.username}";
+        var usuarioLogadoId = "${sessionScope.usuarioLogado.id}";
+        var usuarioLogadoPerfil = "${sessionScope.usuarioLogado.perfil}";
+        var podeEditarGeral = ${podeEditar}; 
+        var podeExcluirGeral = ${podeExcluir};
     </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/consulta-chamado.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
     <style>
@@ -41,14 +47,14 @@
         <div class="filter-card shadow-sm">
             <div class="section-title"><i class="fa-solid fa-filter me-1"></i> Filtros de Pesquisa</div>
             <form id="formFiltroChamados">
-                <div class="row">
-                <!-- Pesquisa Geral -->
-                    <div class="col-md-3 mb-3">
+                <div class="row g-3">
+                    <!-- Pesquisa Geral -->
+                    <div class="col-md-3">
                         <label class="form-label small fw-bold">Pesquisa Geral</label>
                         <input type="text" class="form-control form-control-sm" id="filtroBusca" placeholder="ID, patrimônio, descrição...">
                     </div>
                     <!-- Status do Chamado -->
-                    <div class="col-md-2 mb-3">
+                    <div class="col-md-3">
                         <label class="form-label small fw-bold">Status do Chamado</label>
                         <select class="form-select form-select-sm" id="filtroStatus">
                             <option value="">Todos</option>
@@ -62,7 +68,7 @@
                         </select>
                     </div>
                     <!-- Tipo de Manutenção -->
-                    <div class="col-md-2 mb-3">
+                    <div class="col-md-3">
                         <label class="form-label small fw-bold">Tipo de Manutenção</label>
                         <select class="form-select form-select-sm" id="filtroTipo">
                             <option value="">Todas</option>
@@ -71,7 +77,7 @@
                         </select>
                     </div>
                     <!-- Prioridade -->
-                    <div class="col-md-2 mb-3">
+                    <div class="col-md-3">
                         <label class="form-label small fw-bold">Prioridade</label>
                         <select class="form-select form-select-sm" id="filtroPrioridade">
                             <option value="">Todas</option>
@@ -81,18 +87,18 @@
                             <option value="Urgente">Urgente</option>
                         </select>
                     </div>
-                    <!-- NOVO: Data Início -->
-				    <div class="col-md-3">
-				        <label for="filtroDataInicio" class="form-label">Data Início</label>
-				        <input type="date" class="form-control" id="filtroDataInicio">
-				    </div>
-				
-				    <!-- NOVO: Data Fim -->
-				    <div class="col-md-3">
-				        <label for="filtroDataFim" class="form-label">Data Fim</label>
-				        <input type="date" class="form-control" id="filtroDataFim">
-				    </div>
-                    <div class="col-md-3 mb-3 d-flex align-items-end justify-content-end">
+                    <!-- Data Início -->
+                    <div class="col-md-3">
+                        <label for="filtroDataInicio" class="form-label small fw-bold">Data Início</label>
+                        <input type="date" class="form-control form-control-sm" id="filtroDataInicio">
+                    </div>
+                    <!-- Data Fim -->
+                    <div class="col-md-3">
+                        <label for="filtroDataFim" class="form-label small fw-bold">Data Fim</label>
+                        <input type="date" class="form-control form-control-sm" id="filtroDataFim">
+                    </div>
+                    <!-- Botões alinhados na mesma linha da Data Fim ocupando o espaço restante (col-md-6) -->
+                    <div class="col-md-6 d-flex align-items-end justify-content-end">
                         <button type="button" class="btn btn-outline-secondary btn-sm me-2 px-3" onclick="limparFiltros()">
                             <i class="fa fa-eraser me-1"></i> Limpar
                         </button>

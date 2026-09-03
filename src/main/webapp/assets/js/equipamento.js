@@ -770,7 +770,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     } else {
                         alert(result.mensagem);
                     }
-                    window.location.href = '/nexacore/jsp/consulta-equipamento.jsp';
+                    window.location.href = contextPath + '/ConsultaEquipamentosServlet';
                 } else {
                     if (typeof ModalService !== 'undefined') {
                         await ModalService.error("Erro", result.erro || "Não foi possível salvar o equipamento.");

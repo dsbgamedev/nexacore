@@ -15,7 +15,7 @@ import java.io.IOException;
  * Gerencia as requisições HTTP, realiza o parsing dos dados e coordena 
  * as chamadas para a camada de persistência (DAO).
  */
-@WebServlet(value = {"/AtributosServlet", "/api/atributos/*"})
+@WebServlet(value = {"/AtributoServlet", "/api/atributos/*"})
 public class AtributoServlet extends HttpServlet {
     private AtributoDAO dao = new AtributoDAO();
     
@@ -29,13 +29,22 @@ public class AtributoServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
-        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
-        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("atributos"); 
+        // Regra restrita: Apenas SUPER_ADMINISTRADOR pode acessar (igual ao CadastrarEmpresaServlet)
+        boolean isSuperAdmin = usuario != null && usuario.getPerfil() != null && 
+                               usuario.getPerfil().toUpperCase().contains("SUPER");
 
-        if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.setContentType("application/json; charset=UTF-8");
-            response.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Acesso negado. Você não possui permissão para o módulo de atributos.\"}");
+        if (!isSuperAdmin) {
+            String acceptHeader = request.getHeader("Accept");
+            String requestedWith = request.getHeader("X-Requested-With");
+            
+            if ((acceptHeader != null && acceptHeader.contains("application/json")) || 
+                "XMLHttpRequest".equals(requestedWith)) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json; charset=UTF-8");
+                response.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Acesso negado! Apenas Super Administradores podem acessar o módulo de atributos.\"}");
+            } else {
+                response.sendRedirect(request.getContextPath() + "/MenuServlet?erro=sem_permissao_atributo");
+            }
             return false;
         }
         return true;
@@ -47,7 +56,7 @@ public class AtributoServlet extends HttpServlet {
        String servletPath = request.getServletPath();
         
         // Se acessar a rota principal do Servlet, encaminha para a página JSP protegida
-        if ("/AtributosServlet".equals(servletPath)) {
+        if ("/AtributoServlet".equals(servletPath)) {
         	// Valida permissão antes de encaminhar para a JSP do módulo
             if (!validarPermissao(request, response)) {
                 return;
@@ -285,6 +294,10 @@ public class AtributoServlet extends HttpServlet {
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
+    	// 1. Protege o POST contra acessos indevidos
+        if (!validarPermissao(request, response)) {
+            return;
+        }
     	// Lógica de exclusão com validação isValido() e tratamento de FK (foreign keys)
         String path = request.getPathInfo();
         response.setContentType("application/json");

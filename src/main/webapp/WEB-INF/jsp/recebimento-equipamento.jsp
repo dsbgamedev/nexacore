@@ -12,8 +12,14 @@
 </head>
 <body>
     <div class="container mt-4">
-        <h2 class="recebimento-titulo">Recebimento de Equipamentos</h2>
-        <p class="text-muted">Movimentações / Recebimento</p>
+        <h4  class="recebimento-titulo">Recebimento de Equipamentos</h4>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaEnvioServlet">Consulta Envio Equipamentos</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Recebimento/Devolucão</li>
+            </ol>
+        </nav>
 
         <form id="formRecebimento">
             <!-- Seletor de Tipo de Operação (Cards) -->
