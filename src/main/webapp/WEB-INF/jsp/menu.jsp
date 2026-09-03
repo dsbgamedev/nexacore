@@ -72,13 +72,15 @@
     <%--<c:set var="canSeeEmpresas" value="${hasFullAccess or fn:contains(modulosStr, ',empresa,') or fn:contains(modulosStr, ',filial,') or fn:contains(modulosStr, ',filiais,')}" /> --%>
     <%--<c:set var="canSeeAtributos" value="${hasFullAccess or fn:contains(modulosStr, ',atributo,') or fn:contains(modulosStr, ',atributos,')}" />--%>
     <c:set var="canSeeEmpresas" value="${isSuperAdmin}" />
-    <c:set var="canSeeAtributo" value="${isSuperAdmin}" />   
+    <c:set var="canSeeAtributo" value="${isSuperAdmin}" /> 
+    <c:set var="canSeeAuditoria" value="${isSuperAdmin}" />  
     <c:set var="canSeeUsuarios" value="${hasFullAccess or fn:contains(modulosStr, ',usuario,') or fn:contains(modulosStr, ',usuarios,')}" />
      <c:set var="canSeeGerenciarUsuarios" value="${hasFullAccess or fn:contains(modulosStr, ',usuario,') or fn:contains(modulosStr, ',usuarios,')}" />
      <%-- Variáveis granulares para ações de escrita (Inserir/Editar) --%>
     <c:set var="canWriteEquipamentos" value="${hasFullAccess or usuarioLogado.temPermissao('equipamentos', 'INSERIR') or usuarioLogado.temPermissao('equipamentos', 'EDITAR')}" />
     <c:set var="canWriteProdutos" value="${hasFullAccess or usuarioLogado.temPermissao('produtos', 'INSERIR') or usuarioLogado.temPermissao('produtos', 'EDITAR')}" />
     <c:set var="canWriteManutencao" value="${hasFullAccess or usuarioLogado.temPermissao('manutencao_chamados', 'INSERIR') or usuarioLogado.temPermissao('manutencao_chamados', 'EDITAR')}" />
+    
    
     <!-- SIDEBAR LATERAL ESQUERDA -->
     <aside id="sidebar" class="nexacore-sidebar">
@@ -96,7 +98,7 @@
                 <%-- Alterado de /jsp/menu.jsp para o Servlet correspondente --%>
                 <li><a href="<%=ctx%>/MenuServlet" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
             </ul>
-           
+            
             <%-- EQUIPAMENTOS --%>
             <c:if test="${canSeeEquipamentos or canSeeProdutos}">
                 <span class="menu-category">EQUIPAMENTOS</span>
@@ -161,6 +163,17 @@
                     </c:if>
                 </ul>
             </c:if>
+            
+            <%-- AUDITORIA --%>
+             <c:if test="${canSeeAuditoria}">
+             <span class="menu-category">AUDITORIA</span>
+                <ul class="sidebar-menu">
+                	<c:if test="${canSeeAuditoria}">
+                        <li><a href="<%=ctx%>/AuditoriaServlet"><i class="bi bi-cpu"></i> Consulta Auditoria</a></li>
+                    </c:if>  
+                </ul>       
+            </c:if>
+             
 
             <span class="menu-category">CONFIGURAÇÕES</span>
             <ul class="sidebar-menu">

@@ -275,9 +275,12 @@ public class ManutencaoDAO {
      * gravado na base de dados para validar se ele realmente tem o direito de alterar ou excluir 
      * aquele registro específico.*/
     public ManutencaoChamado buscarPorId(Long idChamado) throws SQLException {
-        String sql = "SELECT c.*, s.nome_status, e.nome_identificador, e.patrimonio FROM manutencao_chamados c " +
+        // 1. Adicionado u.perfil AS perfil_solicitante no SELECT e o LEFT JOIN com a tabela usuarios
+        String sql = "SELECT c.*, s.nome_status, e.nome_identificador, e.patrimonio, u.perfil AS perfil_solicitante " +
+                     "FROM manutencao_chamados c " +
                      "LEFT JOIN status_chamado s ON c.id_status_chamado = s.id_status_chamado " +
                      "LEFT JOIN equipamentos e ON c.id_equipamento = e.id_equipamento " +
+                     "LEFT JOIN usuarios u ON c.solicitante = u.username " +
                      "WHERE c.id_chamado = ?";
 
         Connection conn = null;
@@ -304,6 +307,10 @@ public class ManutencaoDAO {
                     m.setDataAbertura(rs.getDate("data_abertura").toLocalDate());
                 }
                 m.setSolicitante(rs.getString("solicitante"));
+                
+                // 2. Popula o perfil do solicitante para a hierarquia no front-end funcionar
+                m.setPerfilSolicitante(rs.getString("perfil_solicitante"));
+
                 m.setTipoProblema(rs.getString("tipo_problema"));
                 m.setPrioridade(rs.getString("prioridade"));
                 m.setDescricaoProblema(rs.getString("descricao_problema"));
@@ -314,15 +321,25 @@ public class ManutencaoDAO {
                 String nomeStatus = rs.getString("nome_status");
                 m.setNomeStatus(nomeStatus != null ? nomeStatus : "Aberto");
                 m.setIdStatusChamado(rs.getLong("id_status_chamado"));
-                
-                // Caso seu modelo tenha o campo de ID do usuário que criou o registro:
-                // m.setIdUsuarioCriacao(rs.getLong("id_usuario_criacao")); 
             }
         } finally {
             Conexao.fechar(rs, stmt, conn);
         }
 
         return m;
+    }
+    public String buscarPerfilUsuarioPorUsername(String username) throws SQLException {
+        String sql = "SELECT perfil FROM usuarios WHERE username = ?";
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, username);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("perfil");
+                }
+            }
+        }
+        return "usuario"; // Padrão caso não encontre
     }
     
     public void atualizar(ManutencaoChamado chamado, boolean reparado) throws SQLException {

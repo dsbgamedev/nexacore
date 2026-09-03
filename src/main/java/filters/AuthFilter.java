@@ -36,6 +36,7 @@ public class AuthFilter implements Filter {
     // Lista de JSPs que DEVEM ser explicitamente bloqueados para acesso direto
     // Acesso a estes JSPs deve ser feito via Servlet que lida com a lógica e permissões.
     private static final List<String> PROTECTED_JSP_PAGES = Arrays.asList(
+    		"/WEB-INF/jsp/auditoria.jsp",
     		"/WEB-INF/jsp/cadastro-empresa.jsp",
             "/WEB-INF/jsp/cadastro-equipamento.jsp",
             "/WEB-INF/jsp/cadastro-produto.jsp",
@@ -52,6 +53,8 @@ public class AuthFilter implements Filter {
             "/WEB-INF/jsp/manutencao-abertura.jsp",
             "/WEB-INF/jsp/marcas.jsp",
             "/WEB-INF/jsp/recebimento-equipamento.jsp"
+            
+            
     	     // Protegendo o acesso direto		
     );
 
@@ -158,6 +161,10 @@ public class AuthFilter implements Filter {
         PROTECTED_RESOURCES_MODULES.put("/PasswordResetServlet", "password_reset_tokens");
         PROTECTED_RESOURCES_MODULES.put("/api/password_reset_tokens", "password_reset_tokens"); 
         PROTECTED_RESOURCES_MODULES.put("/api/password_reset_tokens/", "password_reset_tokens");
+        
+        // 12. auditoria
+        PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/auditoria.jsp", "auditoria");
+        PROTECTED_RESOURCES_MODULES.put("/AuditoriaServlet", "auditoria");
 
     }
 

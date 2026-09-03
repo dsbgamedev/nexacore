@@ -145,11 +145,24 @@ function renderizarTabela(lista) {
 
     document.getElementById('contadorRegistros').innerText = `${lista.length} registro(s) encontrado(s)`;
 
-	lista.forEach(chamado => {
+    const hierarquias = {
+        "SUPER_ADMINISTRADOR": 0,
+        "ADMINISTRADOR": 1,
+        "GERENTE": 2,
+        "TECNICO": 3,
+        "USUARIO": 4
+    };
+
+    let perfilLogadoKey = (typeof usuarioLogadoPerfil !== 'undefined' && usuarioLogadoPerfil ? usuarioLogadoPerfil : "USUARIO").toUpperCase().replace(/[^A-Z]/g, "_");
+    let hierarquiaLogado = hierarquias[perfilLogadoKey] !== undefined ? hierarquias[perfilLogadoKey] : 4;
+
+    lista.forEach(chamado => {
         let idFmt = 'MAN-' + String(chamado.idChamado || 0).padStart(6, '0');
         let statusVal = chamado.nomeStatus || 'Aberto';
         
         let isFinalizadoOuCancelado = (chamado.idStatusChamado === 6 || chamado.idStatusChamado === 7 || statusVal === 'Finalizado' || statusVal === 'Cancelado');
+        // Identifica especificamente se está cancelado para ocultar a edição
+        let isCancelado = (chamado.idStatusChamado === 7 || statusVal === 'Cancelado');
         
         let badgeClass = 'bg-secondary';
         if (statusVal === 'Aberto') badgeClass = 'bg-warning text-dark';
@@ -157,33 +170,43 @@ function renderizarTabela(lista) {
         else if (statusVal === 'Finalizado') badgeClass = 'bg-success';
         else if (statusVal === 'Cancelado') badgeClass = 'bg-danger';
 
-        // Regras de permissão por propriedade e perfil
-        let isSuperAdmin = typeof usuarioLogadoPerfil !== 'undefined' && usuarioLogadoPerfil && usuarioLogadoPerfil.toUpperCase().includes("SUPER");
-        let isAdmin = typeof usuarioLogadoPerfil !== 'undefined' && usuarioLogadoPerfil && usuarioLogadoPerfil.toUpperCase().includes("ADMIN");
-        
-        // Verifica se o usuário logado é o solicitante ou o técnico responsável por este chamado
         let isDonoOuResponsavel = (
-            (chamado.solicitante && usuarioLogadoUsername && chamado.solicitante.toLowerCase() === usuarioLogadoUsername.toLowerCase()) || 
-            (chamado.responsavelTecnico && usuarioLogadoUsername && chamado.responsavelTecnico.toLowerCase() === usuarioLogadoUsername.toLowerCase())
+            (chamado.solicitante && typeof usuarioLogadoUsername !== 'undefined' && usuarioLogadoUsername && chamado.solicitante.toLowerCase() === usuarioLogadoUsername.toLowerCase()) || 
+            (chamado.responsavelTecnico && typeof usuarioLogadoUsername !== 'undefined' && usuarioLogadoUsername && chamado.responsavelTecnico.toLowerCase() === usuarioLogadoUsername.toLowerCase())
         );
 
-        // Pode editar/excluir se for Super Admin, Admin ou se for o dono/responsável E tiver a permissão geral do módulo
-        let podeMexerNoChamado = isSuperAdmin || isAdmin || isDonoOuResponsavel;
+        let perfilDonoKey = (chamado.perfilSolicitante || "USUARIO").toUpperCase().replace(/[^A-Z]/g, "_");
+        let hierarquiaDono = hierarquias[perfilDonoKey] !== undefined ? hierarquias[perfilDonoKey] : 4;
 
-        let btnEditarHtml = (podeEditarGeral && podeMexerNoChamado) 
+        let podeMexerNoChamado = false;
+        if (hierarquiaLogado === 0) {
+            podeMexerNoChamado = true;
+        } else if (hierarquiaLogado === 1) {
+            if (isDonoOuResponsavel || hierarquiaDono > 1) {
+                podeMexerNoChamado = true;
+            } else {
+                podeMexerNoChamado = false; 
+            }
+        } else {
+            podeMexerNoChamado = isDonoOuResponsavel;
+        }
+
+        // SOLICITAÇÃO 1: Se estiver cancelado, o botão de edição NÃO deve aparecer
+		let btnEditarHtml = (!isFinalizadoOuCancelado && typeof podeEditarGeral !== 'undefined' && podeEditarGeral && podeMexerNoChamado) 
             ? `<button class="btn btn-outline-warning me-1" onclick="editarChamado(${chamado.idChamado})" title="Editar"><i class="fa fa-pen"></i></button>`
             : '';
 
-        let btnExcluirHtml = (!isFinalizadoOuCancelado && podeExcluirGeral && podeMexerNoChamado) 
+        let btnExcluirHtml = (!isFinalizadoOuCancelado && typeof podeExcluirGeral !== 'undefined' && podeExcluirGeral && podeMexerNoChamado) 
             ? `<button class="btn btn-outline-danger me-1" onclick="excluirChamado(${chamado.idChamado})" title="Cancelar Chamado"><i class="fa fa-ban"></i></button>`
             : '';
 
-        let botoesAcao = `
-            <div class="btn-group btn-group-sm" role="group">
-                <button class="btn btn-outline-primary me-1" onclick='abrirModalGerenciar(${JSON.stringify(chamado)})' title="Visualizar"><i class="fa fa-eye"></i></button>
-                ${btnEditarHtml}
-                ${btnExcluirHtml}
-            </div>
+		let botoesAcao = `
+        <div class="btn-group btn-group-sm" role="group">
+            <!-- Alterado aqui para passar 'true' no segundo parâmetro (modoVisualizacao) -->
+            <button class="btn btn-outline-primary me-1" onclick='abrirModalGerenciar(${JSON.stringify(chamado)}, true)' title="Visualizar"><i class="fa fa-eye"></i></button>
+            ${btnEditarHtml}
+            ${btnExcluirHtml}
+        </div>
         `;
 
         let tr = document.createElement('tr');
@@ -201,7 +224,9 @@ function renderizarTabela(lista) {
         tbody.appendChild(tr);
     });
 }
-function abrirModalGerenciar(chamado) {
+
+function abrirModalGerenciar(chamado, modoVisualizacao = false) {
+    // Limpa ou reseta os campos antes de popular para evitar resquícios anteriores
     document.getElementById('modalIdChamado').value = chamado.idChamado;
     document.getElementById('detalheEquip').innerText = chamado.nomeEquipamento || `Equipamento ID: ${chamado.idEquipamento}`;
     document.getElementById('detalheSolicitante').innerText = chamado.solicitante || '---';
@@ -209,28 +234,54 @@ function abrirModalGerenciar(chamado) {
     document.getElementById('detalheDescricao').innerText = chamado.descricaoProblema || '---';
     
     const statusAtualId = parseInt(chamado.idStatusChamado || '1');
-    document.getElementById('modalStatusChamado').value = statusAtualId;
-    
-    // TÉCNICO RESPONSÁVEL: Preenche com o responsável atual do chamado, ou se estiver vazio, define o usuário logado e trava o campo
-    const tecnicoInput = document.getElementById('modalResponsavelTecnico');
-    if (chamado.responsavelTecnico && chamado.responsavelTecnico.trim() !== '') {
-        tecnicoInput.value = chamado.responsavelTecnico;
-    } else if (typeof usuarioLogadoGlobal !== 'undefined' && usuarioLogadoGlobal) {
-        tecnicoInput.value = usuarioLogadoGlobal;
-    }
-    tecnicoInput.readOnly = true; // Trava o campo para não ser editado manualmente
-    tecnicoInput.classList.add('bg-light');
-
-    document.getElementById('modalDiagnostico').value = chamado.diagnostico || '';
-    document.getElementById('modalSolucao').value = chamado.solucaoRealizada || '';
-
     const statusSelect = document.getElementById('modalStatusChamado');
     const diagInput = document.getElementById('modalDiagnostico');
     const solInput = document.getElementById('modalSolucao');
     const checkReparo = document.getElementById('modalFoiReparado');
     const btnSalvar = document.querySelector('#modalGerenciarChamado .btn-primary');
+    const tecnicoInput = document.getElementById('modalResponsavelTecnico');
 
-    // Trava o campo de solução se o status atual não for 6 (Finalizado)
+    statusSelect.value = statusAtualId;
+    
+    if (chamado.responsavelTecnico && chamado.responsavelTecnico.trim() !== '') {
+        tecnicoInput.value = chamado.responsavelTecnico;
+    } else if (typeof usuarioLogadoGlobal !== 'undefined' && usuarioLogadoGlobal) {
+        tecnicoInput.value = usuarioLogadoGlobal;
+    }
+    tecnicoInput.readOnly = true;
+    tecnicoInput.classList.add('bg-light');
+
+    diagInput.value = chamado.diagnostico || '';
+    solInput.value = chamado.solucaoRealizada || '';
+    checkReparo.checked = false;
+
+    // Validação de Permissão e Estado (Finalizado ou Cancelado)
+    const isFinalizadoOuCancelado = (statusAtualId === 6 || statusAtualId === 7);
+
+    // Mapeamento de hierarquia igual ao da tabela para verificar se o usuário pode alterar este registro específico
+    const hierarquias = { "SUPER_ADMINISTRADOR": 0, "ADMINISTRADOR": 1, "GERENTE": 2, "TECNICO": 3, "USUARIO": 4 };
+    let perfilLogadoKey = (typeof usuarioLogadoPerfil !== 'undefined' && usuarioLogadoPerfil ? usuarioLogadoPerfil : "USUARIO").toUpperCase().replace(/[^A-Z]/g, "_");
+    let hierarquiaLogado = hierarquias[perfilLogadoKey] !== undefined ? hierarquias[perfilLogadoKey] : 4;
+
+    let isDonoOuResponsavel = (
+        (chamado.solicitante && typeof usuarioLogadoUsername !== 'undefined' && usuarioLogadoUsername && chamado.solicitante.toLowerCase() === usuarioLogadoUsername.toLowerCase()) || 
+        (chamado.responsavelTecnico && typeof usuarioLogadoUsername !== 'undefined' && usuarioLogadoUsername && chamado.responsavelTecnico.toLowerCase() === usuarioLogadoUsername.toLowerCase())
+    );
+    let perfilDonoKey = (chamado.perfilSolicitante || "USUARIO").toUpperCase().replace(/[^A-Z]/g, "_");
+    let hierarquiaDono = hierarquias[perfilDonoKey] !== undefined ? hierarquias[perfilDonoKey] : 4;
+
+    let podeMexerNoChamado = false;
+    if (hierarquiaLogado === 0) {
+        podeMexerNoChamado = true;
+    } else if (hierarquiaLogado === 1) {
+        if (isDonoOuResponsavel || hierarquiaDono > 1) podeMexerNoChamado = true;
+    } else {
+        podeMexerNoChamado = isDonoOuResponsavel;
+    }
+
+    let semPermissaoEdicao = (!podeEditarGeral || !podeMexerNoChamado);
+
+    // Configurações normais de habilitar/desabilitar baseadas no status
     if (statusAtualId === 6) {
         solInput.disabled = false;
         document.getElementById('blocoReparoCheck').style.display = 'block';
@@ -254,25 +305,23 @@ function abrirModalGerenciar(chamado) {
         }
     }
 
-    const isFinalizadoOuCancelado = (statusAtualId === 6 || statusAtualId === 7);
-
-    if (isFinalizadoOuCancelado) {
+    // TRAVAMENTO DEFINITIVO: Se o usuário não tiver permissão, estiver em modo visualização ou finalizado/cancelado, 
+    // bloqueia tudo por cima de qualquer regra anterior.
+    if (modoVisualizacao || isFinalizadoOuCancelado || semPermissaoEdicao) {
         statusSelect.disabled = true;
         diagInput.disabled = true;
         solInput.disabled = true;
         checkReparo.disabled = true;
-        if (btnSalvar) btnSalvar.style.display = 'none';
-    } else {
-        statusSelect.disabled = false;
-        diagInput.disabled = false;
-        checkReparo.disabled = false;
-        if (btnSalvar) btnSalvar.style.display = 'inline-block';
+    }
+
+    // O botão de Salvar Alterações continua aparecendo para disparar a mensagem de restrição ao clicar
+    if (btnSalvar) {
+        btnSalvar.style.display = 'inline-block';
     }
 
     const modal = new bootstrap.Modal(document.getElementById('modalGerenciarChamado'));
     modal.show();
 }
-
 function salvarAtualizacaoChamado() {
     const statusId = document.getElementById('modalStatusChamado').value;
     const solucao = document.getElementById('modalSolucao').value.trim();
@@ -324,7 +373,8 @@ function editarChamado(idChamado) {
         .then(lista => {
             const chamado = lista.find(c => c.idChamado === idChamado);
             if (chamado) {
-                abrirModalGerenciar(chamado);
+                // Passa false para abrir em modo de edição (o modal vai barrar ou liberar dependendo da permissão)
+                abrirModalGerenciar(chamado, false);
             } else {
                 ModalService.error("Atenção", "Chamado não encontrado.");
             }

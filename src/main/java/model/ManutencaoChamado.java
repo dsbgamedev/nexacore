@@ -9,6 +9,7 @@ public class ManutencaoChamado {
     private Long idDepartamento; 
     private LocalDate dataAbertura;
     private String solicitante;
+    private String perfilSolicitante; // <-- Adicionado para suportar a hierarquia no front-end
     private String tipoProblema;
     private String prioridade;
     private String descricaoProblema;
@@ -75,6 +76,9 @@ public class ManutencaoChamado {
     public String getObservacoes() { return observacoes; }
     public void setObservacoes(String observacoes) { this.observacoes = observacoes; }
 
+    public String getperfilSolicitante() { return perfilSolicitante; }
+    public void setPerfilSolicitante(String perfilSolicitante) { this.perfilSolicitante = perfilSolicitante; }
+      
     public Long getIdStatusChamado() { return idStatusChamado; }
     public void setIdStatusChamado(Long idStatusChamado) { this.idStatusChamado = idStatusChamado; }
 

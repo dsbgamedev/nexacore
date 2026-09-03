@@ -110,9 +110,15 @@ function carregarSelectFiliais() {
 
 function buscarDetalhesEquipamento(idEquipamento) {
     fetch(`${contextPath}/api/equipamentos?id=${idEquipamento}`)
-        .then(res => res.json())
+	.then(res => res.json())
         .then(eq => {
             if (!eq) return;
+
+            // ADICIONE ESTE LOG PARA VER EXATAMENTE AS PROPRIEDADES DO USUÁRIO QUE A API RETORNA
+            /*console.log("Objeto Equipamento Completo:", eq);
+            console.log("Propriedade usuarioAtual:", eq.usuarioAtual);
+            console.log("Propriedade usuario:", eq.usuario);
+            console.log("Propriedade nomeUsuario:", eq.nomeUsuario);*/
 
             document.getElementById('patrimonio').value = eq.patrimonio || '---';
             document.getElementById('idSistema').value = eq.idSistema || '---';
@@ -122,9 +128,13 @@ function buscarDetalhesEquipamento(idEquipamento) {
 
             const lblSerie = document.getElementById('lblSerie');
             if (lblSerie) lblSerie.innerText = eq.numeroSerie || '---';
-
-            const lblUsuario = document.getElementById('lblUsuario');
-            if (lblUsuario) lblUsuario.innerText = eq.usuarioAtual || eq.responsavel || '---';
+			
+			const lblUsuario = document.getElementById('lblUsuario');
+            if (lblUsuario) {
+                // Se a API retornar um objeto aninhado (ex: eq.usuario.nome ou eq.colaborador.nome), 
+                // ajuste aqui conforme o que aparecer no console.log
+                lblUsuario.innerText = eq.usuarioAtual || eq.usuario || eq.responsavel || eq.nomeUsuario || eq.usuarioAtualNome || '---';
+            }
 
             // 1. TRATAMENTO CORRETO PARA A FILIAL / LOCAL
             const selectFilial = document.getElementById('selectFilial');
@@ -399,10 +409,17 @@ function enviarChamadoManutencao() {
     if (selectFilial) selectFilial.disabled = filialWasDisabled;
     if (selectDepto) selectDepto.disabled = deptoWasDisabled;
 
-    // Garantia extra: se o campo não veio do form, injeta o username do solicitante atual
+    // Busca o input do solicitante independentemente do nome do atributo no HTML
+    const inputSolicitante = form.querySelector('[name="solicitante"]') || 
+                             form.querySelector('[name="responsavelAbertura"]') || 
+                             form.querySelector('[name="responsavel"]');
+                             
+    const valorSolicitante = inputSolicitante ? inputSolicitante.value : "superuser";
+
+    // Força o envio correto para a propriedade que o Java espera
+    payload.solicitante = valorSolicitante;
     if (!payload.responsavelTecnico) {
-        const inputSolicitante = form.querySelector('[name="solicitante"]');
-        payload.responsavelTecnico = inputSolicitante ? inputSolicitante.value : "superuser";
+        payload.responsavelTecnico = valorSolicitante;
     }
 
     fetch(contextPath + '/api/manutencoes', {

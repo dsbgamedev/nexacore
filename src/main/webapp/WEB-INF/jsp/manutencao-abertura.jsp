@@ -68,8 +68,7 @@
                                     <span class="text-muted d-block small">Local Atual: <strong id="lblLocal">---</strong></span>
                                 </div>
                                 <div class="col-md-3">
-                                    <span class="text-muted d-block small">Usuário Atual</span>
-                                    <strong id="lblUsuario">---</strong>
+                                    <span class="text-muted d-block small">Usuário Atual: <strong id="lblUsuario">---</strong></span>                              
                                     <span class="text-muted d-block small mt-1">Departamento: <strong id="lblDepto">---</strong></span>
                                 </div>
                                 <div class="col-md-3">

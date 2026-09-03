@@ -9,6 +9,7 @@ import com.google.gson.stream.JsonWriter;
 import dao.ManutencaoDAO;
 import model.ManutencaoChamado;
 import model.Usuario;
+import util.AuditoriaService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -268,23 +269,57 @@ private ManutencaoDAO dao = new ManutencaoDAO();
                     return;
                 }
                 
-             // 2. Valida regras de permissão e propriedade
-             // Valida regras de permissão e propriedade utilizando o solicitante ou responsável
-                boolean isSuperAdmin = usuario != null && "SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil());
-                boolean isAdmin = usuario != null && "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil());
+                /*2. Valida regras de permissão e propriedade
+                Valida regras de permissão e propriedade utilizando o solicitante ou responsável         
+                Busca o perfil do solicitante para descobrir a hierarquia do dono do chamado
+                (Seu DAO ou método precisa retornar o perfil do usuário criador, ex: "usuario", "tecnico", "administrador")
+                Validação hierárquica rigorosa */
+                int hierarquiaLogado = model.enums.PerfilUsuario.fromString(usuario.getPerfil()).getHierarquia();
                 
-                boolean isDono = usuario != null && (
-                    (chamado.getSolicitante() != null && chamado.getSolicitante().equalsIgnoreCase(usuario.getUsername())) ||
-                    (chamado.getResponsavelTecnico() != null && chamado.getResponsavelTecnico().equalsIgnoreCase(usuario.getUsername()))
-                );
+                // Busca o perfil do solicitante diretamente no banco pelo DAO
+                String perfilDonoStr = dao.buscarPerfilUsuarioPorUsername(chamado.getSolicitante()); 
+                int hierarquiaDono = model.enums.PerfilUsuario.fromString(perfilDonoStr).getHierarquia();
 
-                if (!isSuperAdmin && !isAdmin && !isDono) {
-                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    out.print("{\"sucesso\": false, \"mensagem\": \"Acesso negado: Você só pode excluir chamados abertos ou geridos por você.\"}");
-                    return;
+                boolean isDono = chamado.getSolicitante() != null && chamado.getSolicitante().equalsIgnoreCase(usuario.getUsername());
+
+                // REGRA DE OURO DA HIERARQUIA:
+                // - Super Administrador (0): Pode tudo.
+                // - Administrador (1): Só pode mexer se for o dono OU se o dono estiver abaixo dele (hierarquiaDono > 1). Nunca se for outro Admin (1) ou Super (0).
+                // - Demais perfis (>1): Apenas se forem os donos.
+                if (hierarquiaLogado > 0) { 
+                    if (!isDono) {
+                        if (hierarquiaLogado == 1) { 
+                            if (hierarquiaDono <= 1) {
+                                resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                                out.print("{\"sucesso\": false, \"mensagem\": \"Acesso negado: Você não pode modificar registros de usuários do mesmo nível (Administrador) ou superior.\"}");
+                                return;
+                            }
+                        } else {
+                            resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            out.print("{\"sucesso\": false, \"mensagem\": \"Acesso negado: Permissão insuficiente para alterar este registro.\"}");
+                            return;
+                        }
+                    }
                 }
 
                 dao.excluir(idChamado);
+                
+             // ---> INSERIR AQUI A AUDITORIA DE EXCLUSÃO/CANCELAMENTO <---
+                String ipCliente = req.getHeader("X-Forwarded-For");
+                if (ipCliente == null || ipCliente.isEmpty()) ipCliente = req.getRemoteAddr();
+
+                util.AuditoriaService.registrar(
+                	    Long.valueOf(usuario.getId()), // 1. usuarioId
+                	    usuario.getUsername(),          // 2. usuarioNome
+                	    "Manutenção",                   // 3. modulo
+                	    "EXCLUIR",                      // 4. acao
+                	    "manutencao_chamados",          // 5. entidade
+                	    idChamado,                      // 6. registroId
+                	    "Chamado cancelado",            // 7. descricao
+                	    gson.toJson(chamado),           // 8. dadosAnteriores
+                	    "{\"status\": \"Cancelado\"}",  // 9. dadosNovos
+                	    ipCliente                       // 10. ipOrigem
+                	);
 
                 resp.setStatus(HttpServletResponse.SC_OK);
                 out.print("{\"sucesso\": true, \"mensagem\": \"Chamado cancelado e equipamento liberado com sucesso!\"}");
@@ -309,22 +344,52 @@ private ManutencaoDAO dao = new ManutencaoDAO();
                     return;
                 }
 
-                // 2. Valida regras de permissão para edição
-                boolean isSuperAdmin = usuario != null && "SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil());
-                boolean isAdmin = usuario != null && "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil());
+                // Validação hierárquica rigorosa
+                int hierarquiaLogado = model.enums.PerfilUsuario.fromString(usuario.getPerfil()).getHierarquia();
                 
-                boolean isDonoOuResponsavel = usuario != null && (
-                    (chamadoOriginal.getSolicitante() != null && chamadoOriginal.getSolicitante().equalsIgnoreCase(usuario.getUsername())) ||
-                    (chamadoOriginal.getResponsavelTecnico() != null && chamadoOriginal.getResponsavelTecnico().equalsIgnoreCase(usuario.getUsername()))
-                );
+                // CORREÇÃO: Usa chamadoOriginal para garantir que pega o solicitante real salvo no banco
+                String perfilDonoStr = dao.buscarPerfilUsuarioPorUsername(chamadoOriginal.getSolicitante()); 
+                int hierarquiaDono = model.enums.PerfilUsuario.fromString(perfilDonoStr).getHierarquia();
 
-                if (!isSuperAdmin && !isAdmin && !isDonoOuResponsavel) {
-                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    out.print("{\"sucesso\": false, \"mensagem\": \"Acesso negado: Você não tem permissão para editar chamados de outros usuários.\"}");
-                    return;
+                boolean isDono = chamadoOriginal.getSolicitante() != null && chamadoOriginal.getSolicitante().equalsIgnoreCase(usuario.getUsername());
+
+                // REGRA DE OURO DA HIERARQUIA:
+                // - Super Administrador (0): Pode tudo.
+                // - Administrador (1): Só pode mexer se for o dono OU se o dono estiver abaixo dele (hierarquiaDono > 1). Nunca se for outro Admin (1) ou Super (0).
+                // - Demais perfis (>1): Apenas se forem os donos.
+                if (hierarquiaLogado > 0) { 
+                    if (!isDono) {
+                        if (hierarquiaLogado == 1) { 
+                            if (hierarquiaDono <= 1) {
+                                resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                                out.print("{\"sucesso\": false, \"mensagem\": \"Acesso negado: Você não pode modificar registros de usuários do mesmo nível (Administrador) ou superior.\"}");
+                                return;
+                            }
+                        } else {
+                            resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            out.print("{\"sucesso\": false, \"mensagem\": \"Acesso negado: Permissão insuficiente para alterar este registro.\"}");
+                            return;
+                        }
+                    }
                 }
-
                 dao.atualizar(chamadoRecebido, chamadoRecebido.isReparado());
+                
+             // ---> INSERIR AQUI A AUDITORIA DE ATUALIZAÇÃO <---
+                String ipCliente = req.getHeader("X-Forwarded-For");
+                if (ipCliente == null || ipCliente.isEmpty()) ipCliente = req.getRemoteAddr();
+
+                util.AuditoriaService.registrar(
+            	    Long.valueOf(usuario.getId()),
+            	    usuario.getUsername(),
+            	    "Manutenção",
+            	    "EDITAR",
+            	    "manutencao_chamados",
+            	    chamadoRecebido.getIdChamado(),
+            	    "Atualização de dados do chamado de manutenção",
+            	    gson.toJson(chamadoOriginal),
+            	    gson.toJson(chamadoRecebido),
+            	    ipCliente
+            	);
 
                 resp.setStatus(HttpServletResponse.SC_OK);
                 out.print("{\"sucesso\": true, \"mensagem\": \"Chamado atualizado com sucesso!\"}");
@@ -353,7 +418,24 @@ private ManutencaoDAO dao = new ManutencaoDAO();
             }
 
             Long idGerado = dao.inserir(chamado);
+            
+         // ---> INSERIR AQUI A AUDITORIA DE CRIAÇÃO <---
+            String ipCliente = req.getHeader("X-Forwarded-For");
+            if (ipCliente == null || ipCliente.isEmpty()) ipCliente = req.getRemoteAddr();
 
+            util.AuditoriaService.registrar(
+        	    Long.valueOf(usuario.getId()),
+        	    usuario.getUsername(),
+        	    "Manutenção",
+        	    "CRIAR",
+        	    "manutencao_chamados",
+        	    idGerado,
+        	    "Abertura de novo chamado de manutenção",
+        	    "{}",
+        	    gson.toJson(chamado),
+        	    ipCliente
+        	);
+            
             resp.setStatus(HttpServletResponse.SC_OK);
             out.print("{\"sucesso\": true, \"idChamado\": " + idGerado + ", \"mensagem\": \"Chamado aberto com sucesso!\"}");
 
