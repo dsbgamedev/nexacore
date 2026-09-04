@@ -37,13 +37,37 @@
                     <input type="text" id="inputPesquisaGlobal" class="form-control border-start-0 ps-0" placeholder="Pesquisar por ID, origem, destino, status, produto, nota ou rastreio...">
                 </div>
             </div>
+            
+            <!-- Filtro por Status -->
+            <div class="col-md-2">
+                <select id="filtroStatus" class="form-select form-select-sm">
+                    <option value="ativos_padrao">Ativos (Aguardando / Trânsito)</option>
+                    <option value="">Todos os Status</option>
+                    <option value="Aguardando Envio">Aguardando Envio</option>
+                    <option value="Em Trânsito">Em Trânsito</option>
+                    <option value="Recebido">Recebido</option>
+                    <option value="Cancelado">Cancelado</option>
+                </select>
+            </div>
+            
+            <!-- Filtro Data Início -->
+            <div class="col-md-2">
+                <input type="date" id="filtroDataInicio" class="form-control form-control-sm" title="Data Início">
+            </div>
 
-            <!-- Botões Superiores de Ação -->
-            <div class="col-md-6 text-md-end">
-            <!-- Botão de Atualizar dados sem precisar de F5 -->
-			    <button type="button" class="btn btn-outline-secondary btn-sm me-2" id="btnAtualizarTela" title="Atualizar Lista">
-			        <i class="fas fa-sync-alt"></i> Atualizar
+            <!-- Filtro Data Fim -->
+            <div class="col-md-2">
+                <input type="date" id="filtroDataFim" class="form-control form-control-sm" title="Data Fim">
+            </div>
+
+            <!-- Botões Superiores de Ação (Alinhados rigidamente à direita) -->
+            <div class="col-12 text-end mt-3">
+            	<button type="button" class="btn btn-outline-secondary btn-sm me-2" id="btnLimparFiltros" title="Limpar Filtros">
+			        <i class="fas fa-eraser"></i> Limpar
 			    </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm me-2" id="btnAtualizarTela" title="Atualizar Lista">
+                    <i class="fas fa-sync-alt"></i> Atualizar
+                </button>
                 <button class="btn btn-outline-secondary btn-sm me-2" type="button">
                     <i class="bi bi-funnel"></i> Filtros
                 </button>

@@ -8,7 +8,7 @@ import model.Auditoria;
 
 public class AuditoriaDAO {
 
-	public List<Auditoria> listarComFiltros(String usuario, String modulo, String acao, String entidade, String dataInicio, String dataFim) {
+	public List<Auditoria> listarComFiltros(String usuario, String modulo, String acao, String entidade, String dataInicio, String dataFim, int limite, int offset) {
 	    List<Auditoria> lista = new ArrayList<>();
 	    StringBuilder sql = new StringBuilder("SELECT id, data_hora, usuario_id, usuario_nome, modulo, acao, entidade, registro_id, ip_origem, sucesso FROM auditoria WHERE 1=1");
 	    
@@ -39,7 +39,10 @@ public class AuditoriaDAO {
 	        parametros.add(dataFim + " 23:59:59");
 	    }
 
-	    sql.append(" ORDER BY data_hora DESC LIMIT 100");
+	    // Aplica ordenação e paginação dinâmica (limitando a 15 por padrão)
+	    sql.append(" ORDER BY data_hora DESC LIMIT ? OFFSET ?");
+	    parametros.add(limite);
+	    parametros.add(offset);
 
 	    try (Connection conn = Conexao.conectar();
 	         PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
@@ -93,5 +96,18 @@ public class AuditoriaDAO {
             e.printStackTrace();
         }
         return audit;
+    }
+    
+ // Método para excluir um registro de auditoria por ID
+    public boolean excluir(Long id) {
+        String sql = "DELETE FROM auditoria WHERE id = ?";
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, id);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 }

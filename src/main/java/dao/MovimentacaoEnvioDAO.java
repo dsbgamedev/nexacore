@@ -202,6 +202,172 @@ public class MovimentacaoEnvioDAO {
 	    }
 	    return lista;
 	}
+	//Metodo utilizado para o MenuServlet movimentacao envio no Dashboard
+	public List<MovimentacaoEnvio> listarRecentesPendentes(int limite) throws SQLException {
+        List<MovimentacaoEnvio> lista = new java.util.ArrayList<>();
+        String sql = "SELECT e.*, " +
+                     "orig.nome_empresa AS nome_origem, " +
+                     "dest.nome_empresa AS nome_destino, " +
+                     "ms.nome AS status_nome, ms.cor AS status_cor " +
+                     "FROM movimentacao_envio e " +
+                     "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
+                     "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
+                     "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
+                     "WHERE ms.nome IN ('Aguardando Envio', 'Em Trânsito') " +
+                     "ORDER BY e.data_envio DESC, e.id_envio DESC " +
+                     "LIMIT ?";
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, limite);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    MovimentacaoEnvio env = new MovimentacaoEnvio();
+                    env.setIdEnvio(rs.getLong("id_envio"));
+                    if (rs.getDate("data_envio") != null) {
+                        env.setDataEnvio(rs.getDate("data_envio").toLocalDate());
+                    }
+                    env.setNomeOrigem(rs.getString("nome_origem") != null ? rs.getString("nome_origem") : "-");
+                    env.setNomeDestino(rs.getString("nome_destino") != null ? rs.getString("nome_destino") : "-");
+                    env.setStatusNome(rs.getString("status_nome") != null ? rs.getString("status_nome") : "Desconhecido");
+                    env.setStatusCor(rs.getString("status_cor") != null ? rs.getString("status_cor") : "#0d6efd");
+                    lista.add(env);
+                }
+            }
+        }
+        return lista;
+    }
+	
+	public List<MovimentacaoEnvio> listarComFiltros(String statusFiltro, String dataInicioStr, String dataFimStr) throws SQLException {
+        StringBuilder sql = new StringBuilder(
+            "SELECT e.*, " +
+            "orig.nome_empresa AS nome_origem, " +
+            "dest.nome_empresa AS nome_destino, " +
+            "ms.nome AS status_nome, ms.cor AS status_cor " +
+            "FROM movimentacao_envio e " +
+            "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
+            "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
+            "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
+            "WHERE 1=1 "
+        );
+
+        java.util.List<Object> parametros = new java.util.ArrayList<>();
+
+        // 1. Aplica o filtro de status
+        if ("ativos_padrao".equals(statusFiltro)) {
+            sql.append("AND ms.nome IN ('Aguardando Envio', 'Em Trânsito', 'Enviado') ");
+        } else if (statusFiltro != null && !statusFiltro.isEmpty() && !statusFiltro.equalsIgnoreCase("todos")) {
+            sql.append("AND LOWER(ms.nome) = LOWER(?) ");
+            parametros.add(statusFiltro);
+        }
+        // Se for "todos" ou vazio, nenhuma restrição de status é adicionada, trazendo todos do banco!
+
+        // 2. Aplica filtro de Data Início
+        if (dataInicioStr != null && !dataInicioStr.isEmpty()) {
+            sql.append("AND e.data_envio >= ? ");
+            parametros.add(java.sql.Date.valueOf(dataInicioStr));
+        }
+
+        // 3. Aplica filtro de Data Fim
+        if (dataFimStr != null && !dataFimStr.isEmpty()) {
+            sql.append("AND e.data_envio <= ? ");
+            parametros.add(java.sql.Date.valueOf(dataFimStr));
+        }
+
+        sql.append("ORDER BY e.data_envio DESC, e.id_envio DESC");
+
+        String sqlItens = "SELECT iei.id_equipamento, eq.id_sistema, eq.patrimonio, eq.numero_serie, " +
+                          "p.modelo AS nome_produto, m.nome_marca AS marca " +
+                          "FROM movimentacao_envio_itens iei " +
+                          "INNER JOIN equipamentos eq ON iei.id_equipamento = eq.id_equipamento " +
+                          "INNER JOIN produtos p ON eq.id_produto = p.id " +
+                          "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+                          "WHERE iei.id_envio = ?";
+
+        String sqlHistoricoEnvio = "SELECT h.*, ms.nome AS status_nome, ms.cor AS status_cor " +
+                                   "FROM movimentacao_historico h " +
+                                   "LEFT JOIN movimentacao_status ms ON h.status_id = ms.id " +
+                                   "WHERE h.id_envio = ? ORDER BY h.data_hora ASC";
+
+        List<MovimentacaoEnvio> lista = new java.util.ArrayList<>();
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+
+            // Preenche os parâmetros dinâmicos do SQL
+            for (int i = 0; i < parametros.size(); i++) {
+                stmt.setObject(i + 1, parametros.get(i));
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    MovimentacaoEnvio env = new MovimentacaoEnvio();
+                    env.setIdEnvio(rs.getLong("id_envio"));
+                    env.setDataEnvio(rs.getDate("data_envio").toLocalDate());
+                    env.setOrigemId(rs.getLong("origem_id"));
+                    env.setDestinoId(rs.getLong("destino_id"));
+                    env.setNomeOrigem(rs.getString("nome_origem"));
+                    env.setNomeDestino(rs.getString("nome_destino"));
+                    env.setResponsavel(rs.getString("responsavel"));
+                    env.setTransportadora(rs.getString("transportadora"));
+                    env.setCodigoRastreio(rs.getString("codigo_rastreio"));
+                    env.setNumeroNota(rs.getString("numero_nota"));
+                    
+                    if (rs.getDate("data_previsa_entrega") != null) {
+                        env.setDataPrevisaoEntrega(rs.getDate("data_previsa_entrega").toLocalDate());
+                    }
+                    env.setObservacoes(rs.getString("observacoes"));
+                    env.setStatusId(rs.getLong("status_id"));
+                    env.setStatusNome(rs.getString("status_nome") != null ? rs.getString("status_nome") : "Desconhecido");
+                    env.setStatusCor(rs.getString("status_cor") != null ? rs.getString("status_cor") : "#6c757d");
+                    
+                    // Busca os produtos/itens vinculados
+                    List<Map<String, Object>> produtosEnvio = new java.util.ArrayList<>();
+                    try (PreparedStatement stmtItens = conn.prepareStatement(sqlItens)) {
+                        stmtItens.setLong(1, env.getIdEnvio());
+                        try (ResultSet rsItens = stmtItens.executeQuery()) {
+                            while (rsItens.next()) {
+                                Map<String, Object> prod = new HashMap<>();
+                                prod.put("idSistema", rsItens.getString("id_sistema"));
+                                prod.put("patrimonio", rsItens.getString("patrimonio"));
+                                prod.put("produtoNome", (rsItens.getString("marca") != null ? rsItens.getString("marca") + " - " : "") + rsItens.getString("nome_produto"));
+                                prod.put("numeroSerie", rsItens.getString("numero_serie"));
+                                produtosEnvio.add(prod);
+                            }
+                        }
+                    }
+                    env.setProdutos(produtosEnvio);
+
+                    // Busca o histórico do envio
+                    List<model.MovimentacaoHistorico> listaHistorico = new java.util.ArrayList<>();
+                    try (PreparedStatement stmtHist = conn.prepareStatement(sqlHistoricoEnvio)) {
+                        stmtHist.setLong(1, env.getIdEnvio());
+                        try (ResultSet rsHist = stmtHist.executeQuery()) {
+                            while (rsHist.next()) {
+                                model.MovimentacaoHistorico hist = new model.MovimentacaoHistorico();
+                                hist.setIdHistorico(rsHist.getLong("id_historico"));
+                                hist.setIdEnvio(rsHist.getLong("id_envio"));
+                                hist.setStatusId(rsHist.getLong("status_id"));
+                                hist.setStatusNome(rsHist.getString("status_nome"));
+                                
+                                if (rsHist.getTimestamp("data_hora") != null) {
+                                    hist.setDataHora(rsHist.getTimestamp("data_hora").toLocalDateTime());
+                                }
+                                
+                                hist.setObservacao(rsHist.getString("observacao"));
+                                listaHistorico.add(hist);
+                            }
+                        }
+                    }
+                    env.setHistorico(listaHistorico);
+                    lista.add(env);
+                }
+            }
+        }
+        return lista;
+    }
 	
 	public void confirmarRecebimento(Long idEnvio, Long destinoId) throws SQLException {
 	    // 1. Verifica o status atual no banco para blindar contra cache / dupla aba

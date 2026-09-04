@@ -133,9 +133,15 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 return;
             }
 
-            // Comportamento padrão: lista todos em formato JSON
-            List<MovimentacaoEnvio> lista = dao.listarTodos();
-            out.print(gson.toJson(lista));
+            // Captura os filtros enviados pela interface
+            String statusFiltro = req.getParameter("status");
+            String dataInicioStr = req.getParameter("dataInicio");
+            String dataFimStr = req.getParameter("dataFim");
+
+            // Executa a busca filtrada diretamente no Banco de Dados via DAO
+            List<MovimentacaoEnvio> listaFiltrada = dao.listarComFiltros(statusFiltro, dataInicioStr, dataFimStr);
+
+            out.print(gson.toJson(listaFiltrada));
             
         } catch (Exception e) {
             e.printStackTrace();
@@ -159,14 +165,12 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             BufferedReader reader = req.getReader();
             EnvioPayload payload = gson.fromJson(reader, EnvioPayload.class);
             
-            // 1. Valida se o payload ou a lista de equipamentos está vazia primeiro
             if (payload == null || payload.equipamentosIds == null || payload.equipamentosIds.isEmpty()) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 out.print("{\"sucesso\": false, \"mensagem\": \"Dados do envio não informados ou nenhum equipamento selecionado.\"}");
                 return;
             }
             
-            // 2. --- REGRA DE SEGURANÇA: VALIDA SE JÁ EXISTE ENVIO PENDENTE PARA OS EQUIPAMENTOS ---
             for (Long idEquipamento : payload.equipamentosIds) {
                 boolean jaPossuiEnvioPendente = dao.existeEnvioPendenteParaEquipamento(idEquipamento);
                 
@@ -177,7 +181,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 }
             }
 
-            // Verifica se a requisição veio indicando devolução via parâmetro na URL
             String tipoParam = req.getParameter("tipo");
             boolean ehDevolucao = "devolucao".equals(tipoParam);
 
@@ -188,7 +191,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             envio.setResponsavel(payload.responsavel);
             envio.setTransportadora(payload.transportadora);
             
-            // --- REGRA DE OURO PARA DEVOLUÇÃO: FORÇA O PREFIXO DEV- ---
             String codigoRastreioFinal = payload.codigoRastreio;
             if (ehDevolucao) {
                 if (codigoRastreioFinal == null || codigoRastreioFinal.trim().isEmpty()) {
@@ -198,7 +200,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 }
             }
             envio.setCodigoRastreio(codigoRastreioFinal);
-            // ----------------------------------------------------------
 
             envio.setNumeroNota(payload.numeroNota); 
             
@@ -207,15 +208,36 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             }
             envio.setObservacoes(payload.observacoes);
             
-            // --- REGRA DE OURO PARA STATUS: SE FOR DEVOLUÇÃO, TRAVA OBRIGATORIAMENTE EM 1L (Aguardando Envio) ---
             if (ehDevolucao) {
-                envio.setStatusId(1L); // Força Aguardando Envio para devoluções
+                envio.setStatusId(1L); 
             } else {
                 envio.setStatusId(payload.statusId != null ? payload.statusId : 1L);
             }
-            // --------------------------------------------------------------------------------------------------
 
             Long idGerado = dao.inserir(envio, payload.equipamentosIds);
+
+            // --- REGISTRO DE AUDITORIA (CRIAR ENVIO/DEVOLUÇÃO) ---
+            HttpSession session = req.getSession(false);
+            Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+            String ipCliente = req.getHeader("X-Forwarded-For");
+            if (ipCliente == null || ipCliente.isEmpty()) ipCliente = req.getRemoteAddr();
+
+            if (usuario != null) {
+                String acaoDesc = ehDevolucao ? "Cadastro de nova devolução de equipamentos" : "Cadastro de novo envio de equipamentos";
+                util.AuditoriaService.registrar(
+                    Long.valueOf(usuario.getId()),
+                    usuario.getUsername(),
+                    "Movimentação de Envio",
+                    "CRIAR",
+                    "movimentacao_envio",
+                    idGerado,
+                    acaoDesc,
+                    "{}",
+                    gson.toJson(envio),
+                    ipCliente
+                );
+            }
+            // ------------------------------------------------------
 
             resp.setStatus(HttpServletResponse.SC_OK);
             out.print("{\"sucesso\": true, \"idEnvio\": " + idGerado + ", \"mensagem\": \"Envio efetuado com sucesso!\"}");
@@ -231,7 +253,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         }
     }
 
- // 3. PUT: Realiza a efetivação do envio (em trânsito) ou baixa/confirmação de recebimento
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     	if (!validarPermissao(req, resp)) {
@@ -252,16 +273,36 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
 
             Long idEnvio = Long.parseLong(idEnvioStr);
 
-            // Cenário 1: Efetivar Envio (Coloca em trânsito e muda status dos equipamentos)
+            HttpSession session = req.getSession(false);
+            Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+            String ipCliente = req.getHeader("X-Forwarded-For");
+            if (ipCliente == null || ipCliente.isEmpty()) ipCliente = req.getRemoteAddr();
+
             if ("efetivar".equals(acao)) {
                 dao.efetivarEnvio(idEnvio);
+
+                // --- REGISTRO DE AUDITORIA (EFETIVAR ENVIO) ---
+                if (usuario != null) {
+                    util.AuditoriaService.registrar(
+                        Long.valueOf(usuario.getId()),
+                        usuario.getUsername(),
+                        "Movimentação de Envio",
+                        "EDITAR",
+                        "movimentacao_envio",
+                        idEnvio,
+                        "Efetivação de envio (Equipamentos em trânsito)",
+                        "{\"statusId\": 1}",
+                        "{\"statusId\": 2, \"status\": \"Em Trânsito\"}",
+                        ipCliente
+                    );
+                }
+                // ----------------------------------------------
 
                 resp.setStatus(HttpServletResponse.SC_OK);
                 out.print("{\"sucesso\": true, \"mensagem\": \"Envio efetivado com sucesso! Os equipamentos estão em trânsito.\"}");
                 return;
             }
 
-            // Cenário 2: Confirmar Recebimento / Baixa final na filial de destino
             String destinoIdStr = req.getParameter("destinoId");
             if (destinoIdStr == null || destinoIdStr.isEmpty()) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -271,6 +312,23 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
 
             Long destinoId = Long.parseLong(destinoIdStr);
             dao.confirmarRecebimento(idEnvio, destinoId);
+
+            // --- REGISTRO DE AUDITORIA (CONFIRMAR RECEBIMENTO) ---
+            if (usuario != null) {
+                util.AuditoriaService.registrar(
+                    Long.valueOf(usuario.getId()),
+                    usuario.getUsername(),
+                    "Movimentação de Envio",
+                    "EDITAR",
+                    "movimentacao_envio",
+                    idEnvio,
+                    "Confirmação de recebimento / baixa final na filial destino",
+                    "{\"statusId\": 2}",
+                    "{\"statusId\": 3, \"status\": \"Entregue / Concluído\", \"destinoId\": " + destinoId + "}",
+                    ipCliente
+                );
+            }
+            // ----------------------------------------------------
 
             resp.setStatus(HttpServletResponse.SC_OK);
             out.print("{\"sucesso\": true, \"mensagem\": \"Recebimento confirmado com sucesso! Equipamentos atualizados para a nova filial.\"}");
@@ -283,7 +341,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         }
     }
 
-    // 4. DELETE: Cancela/Exclui o envio e retorna os equipamentos para a filial de origem
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     	if (!validarPermissao(req, resp)) {
@@ -303,6 +360,28 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
 
             Long idEnvio = Long.parseLong(idEnvioStr);
             dao.cancelarEnvio(idEnvio);
+
+            // --- REGISTRO DE AUDITORIA (CANCELAR ENVIO) ---
+            HttpSession session = req.getSession(false);
+            Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+            String ipCliente = req.getHeader("X-Forwarded-For");
+            if (ipCliente == null || ipCliente.isEmpty()) ipCliente = req.getRemoteAddr();
+
+            if (usuario != null) {
+                util.AuditoriaService.registrar(
+                    Long.valueOf(usuario.getId()),
+                    usuario.getUsername(),
+                    "Movimentação de Envio",
+                    "EXCLUIR",
+                    "movimentacao_envio",
+                    idEnvio,
+                    "Cancelamento de envio de equipamentos",
+                    "{\"idEnvio\": " + idEnvio + "}",
+                    "{\"status\": \"Cancelado / Retornado à origem\"}",
+                    ipCliente
+                );
+            }
+            // ----------------------------------------------
 
             resp.setStatus(HttpServletResponse.SC_OK);
             out.print("{\"sucesso\": true, \"mensagem\": \"Envio cancelado com sucesso! Os equipamentos retornaram à filial de origem.\"}");

@@ -147,8 +147,11 @@
                             <td class="small font-monospace">${audit.ipOrigem}</td>
                             <td><span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fa-solid fa-check me-1"></i> Sim</span></td>
                             <td class="text-center">
-                                <button class="btn btn-sm btn-light text-primary border" onclick="verDetalhes(${audit.id})" title="Ver Detalhes">
+                                <button class="btn btn-sm btn-light text-primary border me-1" onclick="verDetalhes(${audit.id})" title="Ver Detalhes">
                                     <i class="fa-regular fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-light text-danger border" onclick="excluirLog(${audit.id})" title="Excluir Registro">
+                                    <i class="fa-solid fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
@@ -188,7 +191,35 @@
         </div>
     </div>
 </div>
+<!-- ==========================================================
+     MODAIS DO MODAL SERVICE (Alerta e Confirmação)
+========================================================== -->
+<div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content-custom" id="alertBox">
+            <h3 id="alertTitle"></h3>
+            <p id="alertMessage"></p>
+            <div class="modal-buttons">
+                <button type="button" class="btn-confirmar" id="alertOkBtn">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
 
+<div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: transparent; border: none; box-shadow: none;">
+            <div class="modal-content-custom" id="confirmBox">
+                <h3 id="confirmTitle"></h3>
+                <p id="confirmMessage"></p>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancelar" id="confirmCancelBtn">Cancelar</button>
+                    <button type="button" class="btn-confirmar" id="confirmOkBtn">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Configura o ContextPath global para uso nos arquivos JS externos -->

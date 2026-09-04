@@ -3,23 +3,47 @@ let paginaAtual = 1;
 const itensPorPagina = 20;
 
 document.addEventListener("DOMContentLoaded", function () {
+// Define a data atual (YYYY-MM-DD)
+    const hoje = new Date().toISOString().split('T')[0];
+    
+    const filtroDataInicio = document.getElementById("filtroDataInicio");
+    const filtroDataFim = document.getElementById("filtroDataFim");
+
+    // Preenche Data Início com hoje se estiver vazia
+    if (filtroDataInicio && !filtroDataInicio.value) {
+        filtroDataInicio.value = hoje;
+    }
+
+    // Preenche Data Fim com hoje se estiver vazia
+    if (filtroDataFim && !filtroDataFim.value) {
+        filtroDataFim.value = hoje;
+    }
+
+    // Carrega os envios respeitando os filtros iniciais da tela
     carregarEnvios();
 
     const inputPesquisa = document.getElementById("inputPesquisaGlobal");
     if (inputPesquisa) {
         inputPesquisa.addEventListener("input", function () {
-            paginaAtual = 1; // Reseta para a primeira página ao pesquisar
+            paginaAtual = 1; 
             filtrarEnvios(this.value);
         });
     }
+
+    // Adiciona ouvintes para atualizar a listagem automaticamente quando mudar os filtros
+    const filtroStatus = document.getElementById("filtroStatus");
+
+    if (filtroStatus) filtroStatus.addEventListener("change", () => { paginaAtual = 1; carregarEnvios(); });
+    if (filtroDataInicio) filtroDataInicio.addEventListener("change", () => { paginaAtual = 1; carregarEnvios(); });
+    if (filtroDataFim) filtroDataFim.addEventListener("change", () => { paginaAtual = 1; carregarEnvios(); });
 });
 
-// Botão de Atualizar Tela (Listener duplicado removido)
+// Botão de Atualizar Tela
 document.getElementById('btnAtualizarTela').addEventListener('click', function() {
     const icone = this.querySelector('i');
     if (icone) icone.classList.add('fa-spin');
     
-    // Limpa a busca
+    // Limpa a busca global
     const inputPesquisa = document.getElementById("inputPesquisaGlobal");
     if (inputPesquisa) {
         inputPesquisa.value = '';
@@ -34,8 +58,40 @@ document.getElementById('btnAtualizarTela').addEventListener('click', function()
     }, 1000);
 });
 
+// Listener para o botão de limpar filtros
+    const btnLimpar = document.getElementById("btnLimparFiltros");
+    if (btnLimpar) {
+        btnLimpar.addEventListener("click", function () {
+            const hoje = new Date().toISOString().split('T')[0];
+
+            const inputPesquisa = document.getElementById("inputPesquisaGlobal");
+            const filtroStatus = document.getElementById("filtroStatus");
+            const filtroDataInicio = document.getElementById("filtroDataInicio");
+            const filtroDataFim = document.getElementById("filtroDataFim");
+
+            if (inputPesquisa) inputPesquisa.value = '';
+            if (filtroStatus) filtroStatus.value = 'ativos_padrao';
+            if (filtroDataInicio) filtroDataInicio.value = hoje;
+            if (filtroDataFim) filtroDataFim.value = hoje;
+
+            paginaAtual = 1;
+            carregarEnvios();
+        });
+    }
+
 function carregarEnvios() {
-    const url = contextPath + '/api/envios';
+    // Coleta os valores dos filtros da interface para enviar ao backend
+    const statusEl = document.getElementById("filtroStatus");
+    const dataInicioEl = document.getElementById("filtroDataInicio");
+    const dataFimEl = document.getElementById("filtroDataFim");
+
+    let statusVal = statusEl ? statusEl.value : 'ativos_padrao';
+    let dataInicioVal = dataInicioEl ? dataInicioEl.value : '';
+    let dataFimVal = dataFimEl ? dataFimEl.value : '';
+
+    // Monta a query string corretamente para o Servlet mapeado receber os filtros
+    let url = contextPath + `/api/envios?status=${encodeURIComponent(statusVal)}&dataInicio=${encodeURIComponent(dataInicioVal)}&dataFim=${encodeURIComponent(dataFimVal)}`;
+    
     console.log("Tentando carregar envios de:", url);
 
     fetch(url, {

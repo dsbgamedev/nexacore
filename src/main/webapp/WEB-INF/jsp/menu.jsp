@@ -399,50 +399,51 @@
             <!-- TABELAS RECENTES -->
             <div class="row g-4">
                 <!-- Movimentações Recentes -->
-                <div class="col-lg-6">
-                    <div class="card-section p-4 h-100">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold mb-0">Movimentações Recentes</h5>
-                            <a href="<%=ctx%>/HistoricoMovimentacoesServlet" class="small text-decoration-none">Ver todos</a>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 small">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>ID Movimento</th>
-                                        <th>Tipo</th>
-                                        <th>Origem</th>
-                                        <th>Destino</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td><strong>ENV-000124</strong></td>
-                                        <td>Envio</td>
-                                        <td>CBA Diesel SP</td>
-                                        <td>CBA Diesel GO</td>
-                                        <td><span class="badge bg-primary-subtle text-primary">Em Trânsito</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>DEV-000045</strong></td>
-                                        <td>Devolução</td>
-                                        <td>CBA Diesel GO</td>
-                                        <td>CBA Diesel SP</td>
-                                        <td><span class="badge bg-primary-subtle text-primary">Em Trânsito</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>REC-000078</strong></td>
-                                        <td>Recebimento</td>
-                                        <td>CBA Diesel GO</td>
-                                        <td>CBA Diesel SP</td>
-                                        <td><span class="badge bg-success-subtle text-success">Recebido</span></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+				<div class="col-lg-6">
+				    <div class="card-section p-4 h-100">
+				        <div class="d-flex justify-content-between align-items-center mb-3">
+				            <h5 class="fw-bold mb-0">Movimentações Recentes</h5>
+				            <a href="<%=ctx%>/ConsultaEnvioServlet" class="small text-decoration-none">Ver todos</a>
+				        </div>
+				        <div class="table-responsive">
+				            <table class="table table-hover align-middle mb-0 small">
+				                <thead class="table-light">
+				                    <tr>
+				                        <th>ID</th>
+				                        <th>Data</th>
+				                        <th>Origem</th>
+				                        <th>Destino</th>
+				                        <th>Status</th>
+				                    </tr>
+				                </thead>
+				                <tbody>
+				                    <c:choose>
+				                        <c:when test="${not empty listaMovimentacoesRecentes}">
+				                            <c:forEach var="mov" items="${listaMovimentacoesRecentes}">
+				                                <tr>
+				                                    <td><strong>ENV-${mov.idEnvio}</strong></td>
+				                                    <td>${mov.dataEnvio}</td>
+				                                    <td>${mov.nomeOrigem}</td>
+				                                    <td>${mov.nomeDestino}</td>
+				                                    <td>
+				                                        <span class="badge" style="background-color: ${mov.statusCor}; color: #fff;">
+				                                            ${mov.statusNome}
+				                                        </span>
+				                                    </td>
+				                                </tr>
+				                            </c:forEach>
+				                        </c:when>
+				                        <c:otherwise>
+				                            <tr>
+				                                <td colspan="5" class="text-center text-muted py-3">Nenhuma movimentação em trânsito ou aguardando.</td>
+				                            </tr>
+				                        </c:otherwise>
+				                    </c:choose>
+				                </tbody>
+				            </table>
+				        </div>
+				    </div>
+				</div>
 
                 <!-- Chamados Abertos -->
                 <div class="col-lg-6">

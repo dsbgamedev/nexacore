@@ -200,11 +200,19 @@ public class EquipamentoServlet extends HttpServlet {
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
         
+        // Recupera o usuário logado para uso na auditoria
+        HttpSession session = request.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+        // Captura o IP de origem do cliente
+        String ipCliente = request.getHeader("X-Forwarded-For");
+        if (ipCliente == null || ipCliente.isEmpty()) {
+            ipCliente = request.getRemoteAddr();
+        }
      
         String pathInfo = request.getPathInfo(); 
 
         try {
-            // TRATAMENTO DA ROTA DE DEVOLUÇÃO
         	// TRATAMENTO DA ROTA DE DEVOLUÇÃO
         	if ("/devolver".equals(pathInfo)) {
         	    BufferedReader reader = request.getReader();
@@ -292,12 +300,31 @@ public class EquipamentoServlet extends HttpServlet {
         	        // Insere a movimentação de envio/devolução
         	        envioDao.inserir(devolucao, idsEquipamentos);
 
-        	        // 4. Atualiza a situação do equipamento na tabela equipamentos para 8 (Em Devolução)
+        	        // 4. Guarda o estado anterior para a auditoria
+        	        String dadosAnterioresJson = gson.toJson(eq);
+
+        	        // 5. Atualiza a situação do equipamento na tabela equipamentos para 8 (Em Devolução)
         	        String sqlAtualizaSituacao = "UPDATE equipamentos SET situacao_id = 8 WHERE id_equipamento = ?";
         	        try (java.sql.Connection conn = Conexao.conectar();
         	             java.sql.PreparedStatement stmt = conn.prepareStatement(sqlAtualizaSituacao)) {
         	            stmt.setInt(1, idEquipamento);
         	            stmt.executeUpdate();
+        	        }
+
+        	        // REGISTRO DE AUDITORIA DE DEVOLUÇÃO
+        	        if (usuario != null) {
+        	            util.AuditoriaService.registrar(
+        	                Long.valueOf(usuario.getId()),
+        	                usuario.getUsername(),
+        	                "Equipamentos",
+        	                "EDITAR",
+        	                "equipamentos",
+        	                (long) idEquipamento,
+        	                "Iniciação automática de devolução do equipamento",
+        	                dadosAnterioresJson,
+        	                "{\"situacaoId\": 8, \"status\": \"Em Devolução\"}",
+        	                ipCliente
+        	            );
         	        }
 
         	        Map<String, Object> resp = new HashMap<>();
@@ -323,11 +350,51 @@ public class EquipamentoServlet extends HttpServlet {
             String mensagem;
 
             if (eq.getIdEquipamento() > 0) {
+                // Busca o original antes de atualizar para guardar na auditoria
+                Equipamento equipamentoOriginal = dao.buscarPorId(eq.getIdEquipamento());
+
                 sucesso = dao.atualizar(eq);
                 mensagem = "Equipamento atualizado com sucesso!";
+
+                if (sucesso && usuario != null) {
+                    // RECARREGA O EQUIPAMENTO DO BANCO PARA TRAZER TODOS OS CAMPOS ENRIQUECIDOS/TEXTUAIS (MARCA, MODELO, TIPO, SITUAÇÃO, ETC.)
+                    Equipamento equipamentoAtualizado = dao.buscarPorId(eq.getIdEquipamento());
+
+                    util.AuditoriaService.registrar(
+                        Long.valueOf(usuario.getId()),
+                        usuario.getUsername(),
+                        "Equipamentos",
+                        "EDITAR",
+                        "equipamentos",
+                        (long) eq.getIdEquipamento(),
+                        "Atualização de dados do equipamento",
+                        gson.toJson(equipamentoOriginal),
+                        gson.toJson(equipamentoAtualizado), // Usa o objeto completo vindo do banco com todas as descrições
+                        ipCliente
+                    );
+                }
             } else {
                 sucesso = dao.inserir(eq);
                 mensagem = "Equipamento cadastrado com sucesso!";
+                long idGerado = eq.getIdEquipamento(); 
+
+                if (sucesso && usuario != null) {
+                    // RECARREGA TAMBÉM NO CADASTRO PARA GARANTIR OS TEXTOS DO NOVO REGISTRO
+                    Equipamento equipamentoCadastrado = idGerado > 0 ? dao.buscarPorId((int) idGerado) : eq;
+
+                    util.AuditoriaService.registrar(
+                        Long.valueOf(usuario.getId()),
+                        usuario.getUsername(),
+                        "Equipamentos",
+                        "CRIAR",
+                        "equipamentos",
+                        idGerado,
+                        "Cadastro de novo equipamento",
+                        "{}",
+                        gson.toJson(equipamentoCadastrado),
+                        ipCliente
+                    );
+                }
             }
 
             Map<String, Object> resp = new HashMap<>();
@@ -354,25 +421,21 @@ public class EquipamentoServlet extends HttpServlet {
 
     @Override
     protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-    	// Validação de segurança de acesso ao módulo
+        // Validação de segurança de acesso ao módulo (mantida apenas uma vez)
         if (!validarPermissao(request, response)) {
             return;
         }
 
-    	String idStr = request.getParameter("id");
+        String idStr = request.getParameter("id");
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
-        
-     // Validação de segurança de acesso ao módulo
-        if (!validarPermissao(request, response)) {
-            return;
-        }
 
         if (idStr != null && !idStr.trim().isEmpty()) {
             try {
                 int id = Integer.parseInt(idStr);
                 
+                // 1. Busca o equipamento antes de inativar para guardar no histórico anterior
                 Equipamento eq = dao.buscarPorId(id);
                 if (eq != null && eq.getSituacaoId() != null && eq.getSituacaoId() == 2) {
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -380,7 +443,33 @@ public class EquipamentoServlet extends HttpServlet {
                     return;
                 }
 
+                // 2. Executa a inativação no banco
                 dao.excluirEquipamento(id); 
+
+                // 3. Captura o usuário logado e o IP para a auditoria
+                HttpSession session = request.getSession(false);
+                Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+                String ipCliente = request.getHeader("X-Forwarded-For");
+                if (ipCliente == null || ipCliente.isEmpty()) {
+                    ipCliente = request.getRemoteAddr();
+                }
+
+                // 4. Registra a auditoria da exclusão/inativação
+                if (usuario != null && eq != null) {
+                    util.AuditoriaService.registrar(
+                        Long.valueOf(usuario.getId()),
+                        usuario.getUsername(),
+                        "Equipamentos",
+                        "EXCLUIR",
+                        "equipamentos",
+                        (long) id,
+                        "Inativação / Exclusão de equipamento",
+                        gson.toJson(eq),
+                        "{\"status\": \"Inativo\"}",
+                        ipCliente
+                    );
+                }
                 
                 response.setStatus(HttpServletResponse.SC_OK);
                 out.write("{\"sucesso\": true, \"mensagem\": \"Equipamento inativado com sucesso!\"}");

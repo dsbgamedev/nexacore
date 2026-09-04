@@ -50,7 +50,7 @@ public class AuditoriaServlet extends HttpServlet {
             return;
         }
     
-        // 1. Rota para retornar detalhes em JSON para o modal da tela
+     // 1. Rota para retornar detalhes em JSON para o modal da tela
         if ("detalhes".equals(acao)) {
             String idParam = request.getParameter("id");
             response.setContentType("application/json");
@@ -72,12 +72,38 @@ public class AuditoriaServlet extends HttpServlet {
         String modulo = request.getParameter("modulo");
         String tipoAcao = request.getParameter("tipoAcao");
         String entidade = request.getParameter("entidade");
+        
+        // Define a data de hoje por padrão se os campos estiverem vazios na carga inicial
+        String hoje = java.time.LocalDate.now().toString();
         String dataInicio = request.getParameter("dataInicio");
+        if (dataInicio == null || dataInicio.isEmpty()) {
+            dataInicio = hoje;
+        }
+        
         String dataFim = request.getParameter("dataFim");
+        if (dataFim == null || dataFim.isEmpty()) {
+            dataFim = hoje;
+        }
+        
         String ipOrigem = request.getParameter("ipOrigem");
 
+        // Configuração de Paginação (15 registros por página)
+        int limite = 15;
+        int offset = 0;
+        try {
+            if (request.getParameter("limite") != null) {
+                limite = Integer.parseInt(request.getParameter("limite"));
+            }
+            if (request.getParameter("offset") != null) {
+                offset = Integer.parseInt(request.getParameter("offset"));
+            }
+        } catch (NumberFormatException e) {
+            limite = 15;
+        }
+
         AuditoriaDAO dao = new AuditoriaDAO();
-        List<Auditoria> logs = dao.listarComFiltros(usuario, modulo, tipoAcao, entidade, dataInicio, dataFim);
+        // Certifique-se de que o DAO aceita os parâmetros de limite e offset
+        List<Auditoria> logs = dao.listarComFiltros(usuario, modulo, tipoAcao, entidade, dataInicio, dataFim, limite, offset);
         int totalRegistros = logs.size();
 
         request.setAttribute("listaAuditoria", logs);
@@ -85,4 +111,42 @@ public class AuditoriaServlet extends HttpServlet {
         
         request.getRequestDispatcher("/WEB-INF/jsp/auditoria.jsp").forward(request, response);
     }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        doGet(request, response);
+    }
+    
+    @Override
+    protected void doDelete(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        if (!validarPermissao(request, response)) {
+            return;
+        }
+
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        String idParam = request.getParameter("id");
+        if (idParam != null && !idParam.isEmpty()) {
+            try {
+                Long id = Long.parseLong(idParam);
+                AuditoriaDAO dao = new AuditoriaDAO();
+                boolean removido = dao.excluir(id);
+                
+                if (removido) {
+                    response.setStatus(HttpServletResponse.SC_OK);
+                    response.getWriter().write("{\"sucesso\": true}");
+                } else {
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Registro não encontrado para exclusão.");
+                }
+            } catch (NumberFormatException e) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID inválido.");
+            }
+        } else {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "ID não informado.");
+        }
+    }
+    
 }
+

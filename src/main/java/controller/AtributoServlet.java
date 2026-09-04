@@ -66,9 +66,7 @@ public class AtributoServlet extends HttpServlet {
         }
         
         String path = request.getPathInfo();
-        
-        
-        
+           
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         // Roteamento baseado no PATH
