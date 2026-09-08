@@ -342,61 +342,61 @@ public class EquipamentoServlet extends HttpServlet {
         	    return;
         	}
 
-            // FLUXO NORMAL DE CADASTRO / EDIÇÃO
-            BufferedReader reader = request.getReader();
-            Equipamento eq = gson.fromJson(reader, Equipamento.class);
+        	// FLUXO NORMAL DE CADASTRO / EDIÇÃO
+        	BufferedReader reader = request.getReader();
+        	Equipamento eq = gson.fromJson(reader, Equipamento.class);
 
-            boolean sucesso;
-            String mensagem;
+        	boolean sucesso = false;
+        	String mensagem = "";
 
-            if (eq.getIdEquipamento() > 0) {
-                // Busca o original antes de atualizar para guardar na auditoria
-                Equipamento equipamentoOriginal = dao.buscarPorId(eq.getIdEquipamento());
+        	if (eq.getIdEquipamento() > 0) {
+        	    // Busca o original antes de atualizar para guardar na auditoria
+        	    Equipamento equipamentoOriginal = dao.buscarPorId(eq.getIdEquipamento());
 
-                sucesso = dao.atualizar(eq);
-                mensagem = "Equipamento atualizado com sucesso!";
+        	    sucesso = dao.atualizar(eq);
+        	    mensagem = "Equipamento atualizado com sucesso!";
 
-                if (sucesso && usuario != null) {
-                    // RECARREGA O EQUIPAMENTO DO BANCO PARA TRAZER TODOS OS CAMPOS ENRIQUECIDOS/TEXTUAIS (MARCA, MODELO, TIPO, SITUAÇÃO, ETC.)
-                    Equipamento equipamentoAtualizado = dao.buscarPorId(eq.getIdEquipamento());
+        	    if (sucesso && usuario != null) {
+        	        Equipamento equipamentoAtualizado = dao.buscarPorId(eq.getIdEquipamento());
 
-                    util.AuditoriaService.registrar(
-                        Long.valueOf(usuario.getId()),
-                        usuario.getUsername(),
-                        "Equipamentos",
-                        "EDITAR",
-                        "equipamentos",
-                        (long) eq.getIdEquipamento(),
-                        "Atualização de dados do equipamento",
-                        gson.toJson(equipamentoOriginal),
-                        gson.toJson(equipamentoAtualizado), // Usa o objeto completo vindo do banco com todas as descrições
-                        ipCliente
-                    );
-                }
-            } else {
-                sucesso = dao.inserir(eq);
-                mensagem = "Equipamento cadastrado com sucesso!";
-                long idGerado = eq.getIdEquipamento(); 
+        	        util.AuditoriaService.registrar(
+        	            Long.valueOf(usuario.getId()),
+        	            usuario.getUsername(),
+        	            "Equipamentos",
+        	            "EDITAR",
+        	            "equipamentos",
+        	            (long) eq.getIdEquipamento(),
+        	            "Atualização de dados do equipamento",
+        	            gson.toJson(equipamentoOriginal),
+        	            gson.toJson(equipamentoAtualizado),
+        	            ipCliente
+        	        );
+        	    }
+        	} else {
+        	    // Caso dao.inserir retorne int:
+        	    int idGerado = dao.inserir(eq);
+        	    sucesso = (idGerado > 0);
+        	    mensagem = "Equipamento cadastrado com sucesso!";
 
-                if (sucesso && usuario != null) {
-                    // RECARREGA TAMBÉM NO CADASTRO PARA GARANTIR OS TEXTOS DO NOVO REGISTRO
-                    Equipamento equipamentoCadastrado = idGerado > 0 ? dao.buscarPorId((int) idGerado) : eq;
+        	    if (sucesso && usuario != null) {
+        	        // Se idGerado for válido usa ele, caso contrário tenta pelo id do objeto eq
+        	        int idNovo = (idGerado > 0) ? idGerado : eq.getIdEquipamento();
+        	        Equipamento equipamentoCadastrado = dao.buscarPorId(idNovo);
 
-                    util.AuditoriaService.registrar(
-                        Long.valueOf(usuario.getId()),
-                        usuario.getUsername(),
-                        "Equipamentos",
-                        "CRIAR",
-                        "equipamentos",
-                        idGerado,
-                        "Cadastro de novo equipamento",
-                        "{}",
-                        gson.toJson(equipamentoCadastrado),
-                        ipCliente
-                    );
-                }
-            }
-
+        	        util.AuditoriaService.registrar(
+        	            Long.valueOf(usuario.getId()),
+        	            usuario.getUsername(),
+        	            "Equipamentos",
+        	            "CRIAR",
+        	            "equipamentos",
+        	            (long) idNovo,
+        	            "Cadastro de novo equipamento",
+        	            "{}",
+        	            gson.toJson(equipamentoCadastrado),
+        	            ipCliente
+        	        );
+        	    }
+        	}
             Map<String, Object> resp = new HashMap<>();
             if (sucesso) {
                 resp.put("sucesso", true);

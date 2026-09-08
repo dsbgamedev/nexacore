@@ -1,5 +1,7 @@
 package model;
 
+import java.util.List;
+
 public class Equipamento {
     private int idEquipamento;
     private int idProduto;
@@ -40,7 +42,7 @@ public class Equipamento {
     private String nomeOrigem;
     private String nomeDepartamento;
     
- // Novos campos adicionados para preencher o Dossiê do Equipamento
+   // Novos campos adicionados para preencher o Dossiê do Equipamento
     private String nomeMarca;
     private String nomeTipo;
     private String modelo;
@@ -48,6 +50,9 @@ public class Equipamento {
     private String imagemUrl;
    // ID do status do chamado de manutenção ativo (se houver)
     private Integer statusChamadoId;
+    
+    // Lista para receber as especificações dinâmicas preenchidas no front-end
+    private List<EspecificacaoEquipamento> especificacoes;
     
     
     /**
@@ -382,6 +387,20 @@ public class Equipamento {
      */
     public void setStatusChamadoId(Integer statusChamadoId) {
         this.statusChamadoId = statusChamadoId;
+    }
+    
+    /**
+     * @return the especificacoes
+     */
+    public List<EspecificacaoEquipamento> getEspecificacoes() {
+        return especificacoes;
+    }
+
+    /**
+     * @param especificacoes the especificacoes to set
+     */
+    public void setEspecificacoes(List<EspecificacaoEquipamento> especificacoes) {
+        this.especificacoes = especificacoes;
     }
 	
     

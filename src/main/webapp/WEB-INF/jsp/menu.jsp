@@ -208,14 +208,15 @@
                 <div class="topbar-branch-selector d-flex align-items-center">
                     <i class="bi bi-building-check me-1"></i>
                     <span class="me-2">Filial Atual:</span>
-                    <select id="selectUnidadeAtiva" class="form-select form-select-sm w-auto d-inline-block">
-					    <c:forEach var="unidade" items="${sessionScope.usuarioLogado.unidadesPermitidasObjetos != null ? sessionScope.usuarioLogado.unidadesPermitidasObjetos : sessionScope.usuarioLogado.unidadesPermitidas}">
-					        <option value="${unidade.id}" ${unidade.id == sessionScope.usuarioLogado.unidadeAtivaId ? 'selected' : ''}>
-					            ${unidade.id} - ${unidade.nome}
-					        </option>
-					    </c:forEach>
-					</select>
-                </div>
+				                   <select id="selectUnidadeAtiva" class="form-select form-select-sm w-auto d-inline-block">
+				   <c:forEach var="unidade" items="${sessionScope.usuarioLogado.unidadesPermitidasObjetos}">
+				       <%-- Alterado de unidade.codigo para unidade.id --%>
+				       <option value="${unidade.id}" ${unidade.id == sessionScope.usuarioLogado.unidadeAtivaId ? 'selected' : ''}>
+				           ${unidade.nome}
+				       </option>
+				   </c:forEach>
+				</select>
+				                </div>
             </div>
         </header>
 

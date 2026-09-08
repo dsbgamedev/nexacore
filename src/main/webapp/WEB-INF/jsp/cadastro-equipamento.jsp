@@ -149,6 +149,20 @@
                                 <!-- Preenchido dinamicamente via JavaScript -->
                             </select>
                         </div>
+                        
+                        <!-- ==========================================================
+                             SEÇÃO DINÂMICA: ESPECIFICAÇÕES TÉCNICAS DO EQUIPAMENTO
+                        ========================================================== -->
+                        <div class="col-md-12 mt-4">
+                            <div class="card border-0 bg-light p-3 rounded">
+                                <h6 class="fw-bold text-secondary mb-3"><i class="fa fa-cogs me-1"></i> Especificações do Equipamento (Dinâmicas)</h6>
+                                <div id="container-especificacoes-dinamicas" class="row g-3">
+                                    <div class="col-12 text-muted small fst-italic" id="msg-sem-especificacoes">
+                                        Selecione um produto no catálogo para carregar os campos de especificação...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="col-md-12">
                             <label class="form-label">Observações</label>

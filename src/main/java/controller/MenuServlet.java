@@ -58,7 +58,7 @@ public class MenuServlet extends HttpServlet {
             // Pega o ID da unidade ativa diretamente do objeto usuário logado na sessão
             Integer filialAtualId = 161; // Valor padrão de segurança (Matriz)
             
-            if (usuario != null && usuario.getUnidadeAtivaId() > 0) {
+            if (usuario != null && usuario.getUnidadeAtivaId() != null && usuario.getUnidadeAtivaId() > 0) {
                 filialAtualId = usuario.getUnidadeAtivaId();
             }
             
@@ -71,7 +71,6 @@ public class MenuServlet extends HttpServlet {
             request.setAttribute("totalEquipamentos", 0);
             request.setAttribute("totalAtivos", 0);
         }
-        
         // Encaminha de forma segura para o menu.jsp protegendo o layout
         request.getRequestDispatcher("WEB-INF/jsp/menu.jsp").forward(request, response);
     }

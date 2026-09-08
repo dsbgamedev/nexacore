@@ -2,6 +2,7 @@ package dao;
 
 import conexao.Conexao;
 import model.Equipamento;
+import model.EspecificacaoEquipamento;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -11,7 +12,7 @@ import java.util.Map;
 
 public class EquipamentoDAO {
 
-	public boolean inserir(Equipamento eq) throws SQLException {
+	public int inserir(Equipamento eq) throws SQLException {
 	    if (eq.getIdSistema() == null || eq.getIdSistema().trim().isEmpty()) {
 	        eq.setIdSistema(gerarProximoIdSistema());
 	    }
@@ -20,57 +21,90 @@ public class EquipamentoDAO {
 	        eq.setSituacaoId(1);
 	    }
 
-	    String sql = "INSERT INTO equipamentos (id_produto, id_sistema, patrimonio, numero_serie, nome_identificador, origem_codigo, ip_atual, status_id, situacao_id, usuario_atual, departamento_id, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	    String sqlEquipamento = "INSERT INTO equipamentos (id_produto, id_sistema, patrimonio, numero_serie, nome_identificador, origem_codigo, ip_atual, status_id, situacao_id, usuario_atual, departamento_id, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_equipamento";
 	    
+	    String sqlEspecificacao = "INSERT INTO equipamento_especificacoes (id_equipamento, campo_id, valor) VALUES (?, ?, ?) " +
+	                              "ON CONFLICT (id_equipamento, campo_id) DO UPDATE SET valor = EXCLUDED.valor";
+
 	    Connection conn = null;
-	    PreparedStatement stmt = null;
+	    PreparedStatement stmtEq = null;
+	    PreparedStatement stmtEsp = null;
+	    ResultSet rs = null;
 	    
 	    int tentativas = 3;
 	    for (int i = 0; i < tentativas; i++) {
 	        try {
 	            conn = Conexao.conectar();
-	            stmt = conn.prepareStatement(sql);
+	            conn.setAutoCommit(false); // Inicia a transação
 	            
-	            stmt.setInt(1, eq.getIdProduto());
-	            stmt.setString(2, eq.getIdSistema());
-	            stmt.setString(3, eq.getPatrimonio());
-	            stmt.setString(4, eq.getNumeroSerie());
-	            stmt.setString(5, eq.getNomeIdentificador());
+	            stmtEq = conn.prepareStatement(sqlEquipamento);
+	            
+	            stmtEq.setInt(1, eq.getIdProduto());
+	            stmtEq.setString(2, eq.getIdSistema());
+	            stmtEq.setString(3, eq.getPatrimonio());
+	            stmtEq.setString(4, eq.getNumeroSerie());
+	            stmtEq.setString(5, eq.getNomeIdentificador());
 	            
 	            if (eq.getOrigemCodigo() != null && eq.getOrigemCodigo() > 0) {
 	                Integer codigoReal = buscarOrigemCodigoPorIdFilial(conn, eq.getOrigemCodigo());
-	                stmt.setInt(6, codigoReal);
+	                stmtEq.setInt(6, codigoReal);
 	            } else {
-	                stmt.setNull(6, Types.INTEGER);
+	                stmtEq.setNull(6, Types.INTEGER);
 	            }
 	            
-	            stmt.setString(7, eq.getIpAtual());
-	            stmt.setInt(8, eq.getStatusId() > 0 ? eq.getStatusId() : 1);
-	            stmt.setInt(9, eq.getSituacaoId());
-	            stmt.setString(10, eq.getUsuarioAtual());
+	            stmtEq.setString(7, eq.getIpAtual());
+	            stmtEq.setInt(8, eq.getStatusId() > 0 ? eq.getStatusId() : 1);
+	            stmtEq.setInt(9, eq.getSituacaoId());
+	            stmtEq.setString(10, eq.getUsuarioAtual());
 	            
 	            if (eq.getDepartamentoId() != null) {
-	                stmt.setInt(11, eq.getDepartamentoId());
+	                stmtEq.setInt(11, eq.getDepartamentoId());
 	            } else {
-	                stmt.setNull(11, Types.INTEGER);
+	                stmtEq.setNull(11, Types.INTEGER);
 	            }
 	            
-	            stmt.setString(12, eq.getObservacoes());
+	            stmtEq.setString(12, eq.getObservacoes());
 	            
-	            return stmt.executeUpdate() > 0;
+	            rs = stmtEq.executeQuery();
+	            int idGerado = 0;
+	            if (rs.next()) {
+	                idGerado = rs.getInt(1);
+	                eq.setIdEquipamento(idGerado); // Atualiza o ID no objeto
+	            }
+	            
+	            // Grava as especificações dinâmicas se houverem
+	            if (eq.getEspecificacoes() != null && !eq.getEspecificacoes().isEmpty() && idGerado > 0) {
+	                stmtEsp = conn.prepareStatement(sqlEspecificacao);
+	                for (model.EspecificacaoEquipamento esp : eq.getEspecificacoes()) {
+	                    stmtEsp.setInt(1, idGerado);
+	                    stmtEsp.setInt(2, esp.getCampoId());
+	                    stmtEsp.setString(3, esp.getValor());
+	                    stmtEsp.addBatch();
+	                }
+	                stmtEsp.executeBatch();
+	            }
+	            
+	            conn.commit(); // Confirma todas as operações
+	            return idGerado; // Retorna o ID gerado para o Servlet
 	            
 	        } catch (SQLException e) {
+	            if (conn != null) {
+	                try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+	            }
 	            if ("23505".equals(e.getSQLState()) && i < tentativas - 1) {
 	                eq.setIdSistema(gerarProximoIdSistema());
-	                Conexao.fechar(null, stmt, conn);
 	            } else {
 	                throw e;
 	            }
 	        } finally {
-	            Conexao.fechar(null, stmt, conn);
+	            if (conn != null) {
+	                try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
+	            }
+	            Conexao.fechar(rs, stmtEq, null);
+	            Conexao.fechar(null, stmtEsp, conn);
 	        }
 	    }
-	    return false;
+	    return 0;
 	}
 
 	public List<Equipamento> listar() throws SQLException {
@@ -395,109 +429,237 @@ public class EquipamentoDAO {
         }
         return lista;
     }
-    
-	public Equipamento buscarPorId(int idEquipamento) throws SQLException {
-        String sql = "SELECT e.*, p.codigo_catalogo, p.modelo, p.descricao_catalogo, " +
-                     "m.nome_marca, t.nome as nome_tipo, d.nome_departamento, " +
-                     "se.nome AS status_nome, se.cor AS status_cor, sit.nome AS situacao_nome " +
-                     "FROM equipamentos e " +
-                     "INNER JOIN produtos p ON e.id_produto = p.id " +
-                     "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
-                     "LEFT JOIN tipos_produto t ON p.tipo_id = t.id " +
-                     "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
-                     "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
-                     "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
-                     "WHERE e.id_equipamento = ?";
+	
+	public List<Map<String, Object>> listarCamposEspecificacaoPorProduto(int produtoId) throws SQLException {
+        List<Map<String, Object>> lista = new ArrayList<>();
+        // Retorna o ID da tabela campos_tipo_produto (ctp.id) para satisfazer a chave estrangeira do equipamento
+        String sql = "SELECT ctp.id as campo_id, a.nome as nome_campo " +
+                     "FROM campos_tipo_produto ctp " +
+                     "INNER JOIN atributos a ON ctp.atributo_id = a.id " +
+                     "INNER JOIN produtos p ON p.tipo_id = ctp.tipo_id " +
+                     "WHERE p.id = ? ORDER BY ctp.ordem, ctp.id";
         
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-        Equipamento eq = null;
-        
-        try {
-            conn = Conexao.conectar();
-            stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, idEquipamento);
-            rs = stmt.executeQuery();
-            
-            if (rs.next()) {
-                eq = new Equipamento();
-                eq.setIdEquipamento(rs.getInt("id_equipamento"));
-                eq.setIdProduto(rs.getInt("id_produto"));
-                eq.setCodigoCatalogo(rs.getString("codigo_catalogo"));
-                eq.setNomeProduto(rs.getString("modelo"));
-                
-                eq.setModelo(rs.getString("modelo"));
-                eq.setNomeMarca(rs.getString("nome_marca"));
-                eq.setNomeTipo(rs.getString("nome_tipo"));
-                eq.setDescricaoDetalhada(rs.getString("descricao_catalogo")); 
-
-                eq.setIdSistema(rs.getString("id_sistema"));
-                eq.setPatrimonio(rs.getString("patrimonio"));
-                eq.setNumeroSerie(rs.getString("numero_serie"));
-                eq.setNomeIdentificador(rs.getString("nome_identificador"));
-                
-                int origemCod = rs.getInt("origem_codigo");
-                eq.setOrigemCodigo(rs.wasNull() ? null : origemCod);
-                
-                eq.setIpAtual(rs.getString("ip_atual"));
-                eq.setStatusId(rs.getInt("status_id"));
-                eq.setSituacaoId(rs.getInt("situacao_id"));
-                eq.setStatusNome(rs.getString("status_nome"));
-                eq.setStatusCor(rs.getString("status_cor"));
-                eq.setSituacaoNome(rs.getString("situacao_nome"));
-                eq.setUsuarioAtual(rs.getString("usuario_atual"));
-                
-                int depId = rs.getInt("departamento_id");
-                eq.setDepartamentoId(rs.wasNull() ? null : depId);
-                
-                eq.setNomeDepartamento(rs.getString("nome_departamento"));
-                eq.setObservacoes(rs.getString("observacoes"));
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, produtoId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> campo = new HashMap<>();
+                    campo.put("id", rs.getInt("campo_id"));
+                    campo.put("nomeCampo", rs.getString("nome_campo"));
+                    lista.add(campo);
+                }
             }
-        } finally {
-            Conexao.fechar(rs, stmt, conn);
         }
-        return eq;
+        return lista;
     }
 
-    public boolean atualizar(Equipamento eq) throws SQLException {
-        String sql = "UPDATE equipamentos SET id_produto = ?, patrimonio = ?, numero_serie = ?, nome_identificador = ?, origem_codigo = ?, ip_atual = ?, status_id = ?, situacao_id = ?, usuario_atual = ?, departamento_id = ?, observacoes = ? WHERE id_equipamento = ?";
+    public List<Map<String, Object>> listarCamposComValoresPorEquipamento(int produtoId, int equipamentoId) throws SQLException {
+        List<Map<String, Object>> lista = new ArrayList<>();
+        String sql = "SELECT ctp.id as campo_id, a.nome as nome_campo, ee.valor as valor_preenchido " +
+                     "FROM campos_tipo_produto ctp " +
+                     "INNER JOIN atributos a ON ctp.atributo_id = a.id " +
+                     "INNER JOIN produtos p ON p.tipo_id = ctp.tipo_id " +
+                     "LEFT JOIN equipamento_especificacoes ee ON ee.campo_id = ctp.id AND ee.id_equipamento = ? " +
+                     "WHERE p.id = ? ORDER BY ctp.ordem, ctp.id";
         
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, equipamentoId);
+            stmt.setInt(2, produtoId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> campo = new HashMap<>();
+                    campo.put("id", rs.getInt("campo_id"));
+                    campo.put("nomeCampo", rs.getString("nome_campo"));
+                    campo.put("valorPreenchido", rs.getString("valor_preenchido"));
+                    lista.add(campo);
+                }
+            }
+        }
+        return lista;
+    }
+    
+	public Equipamento buscarPorId(int idEquipamento) throws SQLException {
+	    String sqlEquipamento = "SELECT e.*, p.codigo_catalogo, p.modelo, p.descricao_catalogo, " +
+	                 "m.nome_marca, t.nome as nome_tipo, d.nome_departamento, " +
+	                 "se.nome AS status_nome, se.cor AS status_cor, sit.nome AS situacao_nome " +
+	                 "FROM equipamentos e " +
+	                 "INNER JOIN produtos p ON e.id_produto = p.id " +
+	                 "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+	                 "LEFT JOIN tipos_produto t ON p.tipo_id = t.id " +
+	                 "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
+	                 "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
+	                 "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
+	                 "WHERE e.id_equipamento = ?";
+	    
+	    String sqlEspecificacoes = "SELECT ee.campo_id, ee.valor, a.nome as nome_campo " +
+	                               "FROM equipamento_especificacoes ee " +
+	                               "LEFT JOIN atributos a ON ee.campo_id = a.id " +
+	                               "WHERE ee.id_equipamento = ?";
+	    
+	    Connection conn = null;
+	    PreparedStatement stmt = null;
+	    ResultSet rs = null;
+	    Equipamento eq = null;
+	    
+	    try {
+	        conn = Conexao.conectar();
+	        
+	        // 1. Busca os dados principais
+	        stmt = conn.prepareStatement(sqlEquipamento);
+	        stmt.setInt(1, idEquipamento);
+	        rs = stmt.executeQuery();
+	        
+	        if (rs.next()) {
+	            eq = new Equipamento();
+	            eq.setIdEquipamento(rs.getInt("id_equipamento"));
+	            eq.setIdProduto(rs.getInt("id_produto"));
+	            eq.setCodigoCatalogo(rs.getString("codigo_catalogo"));
+	            eq.setNomeProduto(rs.getString("modelo"));
+	            
+	            eq.setModelo(rs.getString("modelo"));
+	            eq.setNomeMarca(rs.getString("nome_marca"));
+	            eq.setNomeTipo(rs.getString("nome_tipo"));
+	            eq.setDescricaoDetalhada(rs.getString("descricao_catalogo")); 
+
+	            eq.setIdSistema(rs.getString("id_sistema"));
+	            eq.setPatrimonio(rs.getString("patrimonio"));
+	            eq.setNumeroSerie(rs.getString("numero_serie"));
+	            eq.setNomeIdentificador(rs.getString("nome_identificador"));
+	            
+	            int origemCod = rs.getInt("origem_codigo");
+	            eq.setOrigemCodigo(rs.wasNull() ? null : origemCod);
+	            
+	            eq.setIpAtual(rs.getString("ip_atual"));
+	            eq.setStatusId(rs.getInt("status_id"));
+	            eq.setSituacaoId(rs.getInt("situacao_id"));
+	            eq.setStatusNome(rs.getString("status_nome"));
+	            eq.setStatusCor(rs.getString("status_cor"));
+	            eq.setSituacaoNome(rs.getString("situacao_nome"));
+	            eq.setUsuarioAtual(rs.getString("usuario_atual"));
+	            
+	            int depId = rs.getInt("departamento_id");
+	            eq.setDepartamentoId(rs.wasNull() ? null : depId);
+	            
+	            eq.setNomeDepartamento(rs.getString("nome_departamento"));
+	            eq.setObservacoes(rs.getString("observacoes"));
+	        }
+	        
+	        rs.close();
+	        stmt.close();
+
+	        // 2. Busca as especificações dinâmicas vinculadas
+	        if (eq != null) {
+	            stmt = conn.prepareStatement(sqlEspecificacoes);
+	            stmt.setInt(1, idEquipamento);
+	            rs = stmt.executeQuery();
+	            
+	            List<EspecificacaoEquipamento> listaEsp = new ArrayList<>();
+	            while (rs.next()) {
+	                EspecificacaoEquipamento esp = new EspecificacaoEquipamento();
+	                esp.setCampoId(rs.getInt("campo_id"));
+	                esp.setValor(rs.getString("valor"));
+	                esp.setNomeCampo(rs.getString("nome_campo"));
+	                listaEsp.add(esp);
+	            }
+	            eq.setEspecificacoes(listaEsp);
+	        }
+	        
+	    } finally {
+	        Conexao.fechar(rs, stmt, conn);
+	    }
+	    return eq;
+	}
+
+	public boolean atualizar(Equipamento eq) throws SQLException {
+        String sqlEquipamento = "UPDATE equipamentos SET id_produto = ?, patrimonio = ?, numero_serie = ?, nome_identificador = ?, origem_codigo = ?, ip_atual = ?, status_id = ?, situacao_id = ?, usuario_atual = ?, departamento_id = ?, observacoes = ? WHERE id_equipamento = ?";
+        
+        // Upsert: Se já existe o campo para este equipamento, atualiza o valor; se não existe, insere.
+        String sqlUpsertEspecificacao = "INSERT INTO equipamento_especificacoes (id_equipamento, campo_id, valor) VALUES (?, ?, ?) " +
+                                        "ON CONFLICT (id_equipamento, campo_id) DO UPDATE SET valor = EXCLUDED.valor";
+        
+        // Caso o usuário queira explicitamente limpar/apagar o valor de um campo específico que antes estava preenchido
+        String sqlDeletarEspecificacaoIndividual = "DELETE FROM equipamento_especificacoes WHERE id_equipamento = ? AND campo_id = ?";
+
         Connection conn = null;
-        PreparedStatement stmt = null;
+        PreparedStatement stmtEq = null;
+        PreparedStatement stmtEsp = null;
+        PreparedStatement stmtDel = null;
         
         try {
             conn = Conexao.conectar();
-            stmt = conn.prepareStatement(sql);
+            conn.setAutoCommit(false); // Inicia transação
             
-            stmt.setInt(1, eq.getIdProduto());
-            stmt.setString(2, eq.getPatrimonio());
-            stmt.setString(3, eq.getNumeroSerie());
-            stmt.setString(4, eq.getNomeIdentificador());
+            // 1. Atualiza dados principais do equipamento
+            stmtEq = conn.prepareStatement(sqlEquipamento);
+            stmtEq.setInt(1, eq.getIdProduto());
+            stmtEq.setString(2, eq.getPatrimonio());
+            stmtEq.setString(3, eq.getNumeroSerie());
+            stmtEq.setString(4, eq.getNomeIdentificador());
             
             if (eq.getOrigemCodigo() != null && eq.getOrigemCodigo() > 0) {
-                stmt.setInt(5, eq.getOrigemCodigo());
+                Integer codigoReal = buscarOrigemCodigoPorIdFilial(conn, eq.getOrigemCodigo());
+                stmtEq.setInt(5, codigoReal);
             } else {
-                stmt.setNull(5, Types.INTEGER);
+                stmtEq.setNull(5, Types.INTEGER);
             }
             
-            stmt.setString(6, eq.getIpAtual());
-            stmt.setInt(7, eq.getStatusId() > 0 ? eq.getStatusId() : 1);
-            stmt.setInt(8, eq.getSituacaoId() > 0 ? eq.getSituacaoId() : 1);
-            stmt.setString(9, eq.getUsuarioAtual());
+            stmtEq.setString(6, eq.getIpAtual());
+            stmtEq.setInt(7, eq.getStatusId() > 0 ? eq.getStatusId() : 1);
+            stmtEq.setInt(8, eq.getSituacaoId() > 0 ? eq.getSituacaoId() : 1);
+            stmtEq.setString(9, eq.getUsuarioAtual());
             
             if (eq.getDepartamentoId() != null) {
-                stmt.setInt(10, eq.getDepartamentoId());
+                stmtEq.setInt(10, eq.getDepartamentoId());
             } else {
-                stmt.setNull(10, Types.INTEGER);
+                stmtEq.setNull(10, Types.INTEGER);
             }
             
-            stmt.setString(11, eq.getObservacoes());
-            stmt.setInt(12, eq.getIdEquipamento());
+            stmtEq.setString(11, eq.getObservacoes());
+            stmtEq.setInt(12, eq.getIdEquipamento());
+            stmtEq.executeUpdate();
             
-            return stmt.executeUpdate() > 0;
+            // 2. Tratamento inteligente das especificações dinâmicas opcionais
+            if (eq.getEspecificacoes() != null && !eq.getEspecificacoes().isEmpty()) {
+                stmtEsp = conn.prepareStatement(sqlUpsertEspecificacao);
+                stmtDel = conn.prepareStatement(sqlDeletarEspecificacaoIndividual);
+                
+                for (model.EspecificacaoEquipamento esp : eq.getEspecificacoes()) {
+                    String valor = esp.getValor();
+                    
+                    if (valor != null && !valor.trim().isEmpty()) {
+                        // Se o usuário digitou algo, faz o Upsert (insere ou atualiza)
+                        stmtEsp.setInt(1, eq.getIdEquipamento());
+                        stmtEsp.setInt(2, esp.getCampoId());
+                        stmtEsp.setString(3, valor.trim());
+                        stmtEsp.addBatch();
+                    } else {
+                        // Se o usuário limpou o campo na tela de edição, removemos aquele registro específico do banco
+                        stmtDel.setInt(1, eq.getIdEquipamento());
+                        stmtDel.setInt(2, esp.getCampoId());
+                        stmtDel.addBatch();
+                    }
+                }
+                stmtEsp.executeBatch();
+                stmtDel.executeBatch();
+            }
+            
+            conn.commit(); // Confirma alterações
+            return true;
+            
+        } catch (SQLException e) {
+            if (conn != null) {
+                try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+            }
+            throw e;
         } finally {
-            Conexao.fechar(null, stmt, conn);
+            if (conn != null) {
+                try { conn.setAutoCommit(true); } catch (SQLException ignored) {}
+            }
+            Conexao.fechar(null, stmtEq, null);
+            Conexao.fechar(null, stmtDel, null);
+            Conexao.fechar(null, stmtEsp, conn);
         }
     }
     
@@ -540,8 +702,8 @@ public class EquipamentoDAO {
         return idFilialOuCodigo;
     }
     
-    //Contador especial na tela de Dashboard Menu
- // Conta o total geral (Se for a Matriz 161, mostra tudo. Senão, filtra pela filial)
+  //Contador especial na tela de Dashboard Menu
+    // Conta o total geral (Se for a Matriz 161, mostra tudo. Senão, filtra pela filial)
     public int contarTotalEquipamentos(int origemCodigo) throws SQLException {
         String sql;
         boolean isMatriz = (origemCodigo == 161);

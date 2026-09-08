@@ -562,7 +562,7 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    function selecionarProduto(prod) {
+	function selecionarProduto(prod) {
         inputIdProduto.value = prod.id;
         inputBusca.value = prod.sku || prod.codigoCatalogo || `Produto #${prod.id}`;
         listaAutocomplete.style.display = "none";
@@ -676,8 +676,12 @@ document.addEventListener("DOMContentLoaded", function() {
         };
 
         atualizarExibicaoImagem();
-    }
 
+        // CHAMA O CARREGAMENTO DAS ESPECIFICAÇÕES DINÂMICAS DO PRODUTO
+        const idEquip = document.getElementById("input-id").value;
+        carregarEspecificacoesDinamicasPorProduto(prod.id, idEquip ? parseInt(idEquip) : null);
+    }
+		
     if (btnVoltar) {
         btnVoltar.addEventListener("click", (e) => {
             e.preventDefault();
@@ -709,8 +713,27 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    if (btnSalvar) {
-        btnSalvar.addEventListener("click", async function() {
+	if (btnSalvar) {
+			btnSalvar.addEventListener("click", async function() {
+			            
+            // =========================================================================
+            // COLETA APENAS DAS ESPECIFICAÇÕES ATIVADAS E PREENCHIDAS NA TELA
+            // =========================================================================
+            let especificacoesPreenchidas = [];
+            document.querySelectorAll('.input-especificacao').forEach(input => {
+                // Só inclui no payload se o input NÃO estiver desativado (ou seja, se o checkbox estiver marcado)
+                if (!input.disabled) {
+                    const campoId = input.getAttribute('data-campo-id');
+                    const valor = input.value.trim();
+                    if (campoId) {
+                        especificacoesPreenchidas.push({
+                            campoId: parseInt(campoId),
+                            valor: valor
+                        });
+                    }
+                }
+            });
+
             const payload = {
                 idEquipamento: document.getElementById("input-id").value ? parseInt(document.getElementById("input-id").value) : 0,
                 idProduto: parseInt(inputIdProduto.value),
@@ -730,7 +753,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 usuarioAtual: document.getElementById("input-usuario").value.trim(),
                 departamentoId: selectDepartamento && selectDepartamento.value ? parseInt(selectDepartamento.value) : null,
-                observacoes: document.getElementById("input-observacoes").value.trim()
+                observacoes: document.getElementById("input-observacoes").value.trim(),
+                
+                // Envia somente as ativadas e tratadas
+                especificacoes: especificacoesPreenchidas
             };
 
             if (!payload.idProduto || !payload.idSistema || !payload.patrimonio || !payload.nomeIdentificador || !payload.origemCodigo || !payload.statusId || !payload.situacaoId) {
@@ -741,19 +767,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
                 return;
             }
-			
-			// NOVA REGRA: Trava para itens já baixados
-            /*const statusOriginalId = window.statusOriginalEquipamentoId || null;
-            const STATUS_BAIXADO_ID = 4; // Ajuste o número 4 caso o ID do status "Baixado" no seu banco seja diferente
-            
-            if (statusOriginalId && Number(statusOriginalId) === STATUS_BAIXADO_ID && payload.statusId !== STATUS_BAIXADO_ID) {
-                if (typeof ModalService !== 'undefined') {
-                    await ModalService.warning("Atenção", "Selecione outro status, pois o item já foi baixado.");
-                } else {
-                    alert("Selecione outro status, pois o item já foi baixado.");
-                }
-                return;
-            }*/
 
             try {
                 const response = await fetch('/nexacore/api/equipamentos', {
@@ -789,3 +802,79 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 });
+
+async function carregarEspecificacoesDinamicasPorProduto(produtoId, equipamentoId = null) {
+    // Certifique-se de que o elemento contêiner existe no seu HTML de cadastro
+    const container = document.getElementById("container-especificacoes-dinamicas") || 
+                      document.querySelector(".card-body .text-muted")?.parentElement;
+    if (!container) return;
+
+    try {
+        let url = `/nexacore/api/campos-especificacao?produtoId=${produtoId}`;
+        if (equipamentoId) {
+            url += `&equipamentoId=${equipamentoId}`;
+        }
+
+        const response = await fetch(url);
+        if (response.ok) {
+            const campos = await response.json();
+            container.innerHTML = ""; // Limpa a mensagem padrão
+
+            if (!campos || campos.length === 0) {
+                container.innerHTML = '<p class="text-muted small">Nenhuma especificação adicional configurada para este produto.</p>';
+                return;
+            }
+
+            const row = document.createElement("div");
+            row.className = "row g-3";
+
+            campos.forEach(campo => {
+                const campoId = campo.id || campo.campoId;
+                const nomeCampo = campo.nomeCampo || campo.nome;
+                const valorPreenchido = campo.valorPreenchido || campo.valor || '';
+                
+                // Se já vier preenchido do banco (modo edição), o checkbox começa marcado e o input habilitado
+                const temValor = valorPreenchido.trim() !== "";
+
+                const div = document.createElement("div");
+                div.className = "col-md-6";
+                div.innerHTML = `
+                    <div class="card p-2 border bg-white shadow-sm">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input check-habilitar-espec" type="checkbox" id="chk-esp-${campoId}" ${temValor ? 'checked' : ''}>
+                            <label class="form-check-label small fw-bold text-secondary" for="chk-esp-${campoId}">
+                                ${nomeCampo}
+                            </label>
+                        </div>
+                        <input type="text" class="form-control form-control-sm input-especificacao" 
+                               data-campo-id="${campoId}" 
+                               value="${valorPreenchido}" 
+                               placeholder="Informe ${nomeCampo.toLowerCase()}..."
+                               ${temValor ? '' : 'disabled style="background-color: #e9ecef;"'}>
+                    </div>
+                `;
+                row.appendChild(div);
+            });
+            container.appendChild(row);
+
+            // Adiciona o comportamento de habilitar/desabilitar ao marcar/desmarcar o checkbox
+            container.querySelectorAll('.check-habilitar-espec').forEach(chk => {
+                chk.addEventListener('change', function() {
+                    const card = this.closest('.card');
+                    const input = card.querySelector('.input-especificacao');
+                    if (this.checked) {
+                        input.disabled = false;
+                        input.style.backgroundColor = '';
+                        input.focus();
+                    } else {
+                        input.disabled = true;
+                        input.value = ""; // Limpa o valor se desmarcar
+                        input.style.backgroundColor = '#e9ecef';
+                    }
+                });
+            });
+        }
+    } catch (error) {
+        console.error("Erro ao carregar especificações dinâmicas:", error);
+    }
+}
