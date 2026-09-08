@@ -539,4 +539,60 @@ public class EquipamentoDAO {
         }
         return idFilialOuCodigo;
     }
+    
+    //Contador especial na tela de Dashboard Menu
+ // Conta o total geral (Se for a Matriz 161, mostra tudo. Senão, filtra pela filial)
+    public int contarTotalEquipamentos(int origemCodigo) throws SQLException {
+        String sql;
+        boolean isMatriz = (origemCodigo == 161);
+
+        if (isMatriz) {
+            sql = "SELECT COUNT(*) FROM equipamentos WHERE status_id != 3";
+        } else {
+            sql = "SELECT COUNT(*) FROM equipamentos WHERE status_id != 3 AND origem_codigo = ?";
+        }
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            if (!isMatriz) {
+                stmt.setInt(1, origemCodigo);
+            }
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    //Contador especial na tela de Dashboard Menu
+    // Conta os ativos (Se for a Matriz 161, mostra todos. Senão, filtra pela filial)
+    public int contarEquipamentosAtivos(int origemCodigo) throws SQLException {
+        String sql;
+        boolean isMatriz = (origemCodigo == 161);
+
+        if (isMatriz) {
+            sql = "SELECT COUNT(*) FROM equipamentos WHERE status_id = 1";
+        } else {
+            sql = "SELECT COUNT(*) FROM equipamentos WHERE status_id = 1 AND origem_codigo = ?";
+        }
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            if (!isMatriz) {
+                stmt.setInt(1, origemCodigo);
+            }
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
 }

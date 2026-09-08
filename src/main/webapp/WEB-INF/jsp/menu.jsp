@@ -209,12 +209,12 @@
                     <i class="bi bi-building-check me-1"></i>
                     <span class="me-2">Filial Atual:</span>
                     <select id="selectUnidadeAtiva" class="form-select form-select-sm w-auto d-inline-block">
-                        <c:forEach var="unidade" items="${sessionScope.usuarioLogado.unidadesPermitidasObjetos}">
-                            <option value="${unidade.id}" ${unidade.id == sessionScope.usuarioLogado.unidadeAtivaId ? 'selected' : ''}>
-                                ${unidade.nome}
-                            </option>
-                        </c:forEach>
-                    </select>
+					    <c:forEach var="unidade" items="${sessionScope.usuarioLogado.unidadesPermitidasObjetos != null ? sessionScope.usuarioLogado.unidadesPermitidasObjetos : sessionScope.usuarioLogado.unidadesPermitidas}">
+					        <option value="${unidade.id}" ${unidade.id == sessionScope.usuarioLogado.unidadeAtivaId ? 'selected' : ''}>
+					            ${unidade.id} - ${unidade.nome}
+					        </option>
+					    </c:forEach>
+					</select>
                 </div>
             </div>
         </header>
@@ -235,27 +235,27 @@
             </div>
 
             <!-- CARDS DE ESTATÍSTICAS -->
-            <div class="row g-3 mb-4">
-                <div class="col-md">
-                    <div class="stat-card">
-                        <div class="stat-icon bg-blue-light text-primary"><i class="bi bi-display"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Total de Equipamentos</span>
-                            <h3 class="stat-value">1.248</h3>
-                            <a href="#" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md">
-                    <div class="stat-card">
-                        <div class="stat-icon bg-green-light text-success"><i class="bi bi-check-circle"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Equipamentos Ativos</span>
-                            <h3 class="stat-value">1.062</h3>
-                            <a href="#" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
-                        </div>
-                    </div>
-                </div>
+			<div class="row g-3 mb-4">
+			    <div class="col-md">
+			        <div class="stat-card">
+			            <div class="stat-icon bg-blue-light text-primary"><i class="bi bi-display"></i></div>
+			            <div class="stat-info">
+			                <span class="stat-label">Total de Equipamentos</span>
+			                <h3 class="stat-value">${totalEquipamentos}</h3>
+			                <a href="<%=ctx%>/ConsultaEquipamentosServlet" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
+			            </div>
+			        </div>
+			    </div>
+			    <div class="col-md">
+			        <div class="stat-card">
+			            <div class="stat-icon bg-green-light text-success"><i class="bi bi-check-circle"></i></div>
+			            <div class="stat-info">
+			                <span class="stat-label">Equipamentos Ativos</span>
+			                <h3 class="stat-value">${totalAtivos}</h3>
+			                <a href="<%=ctx%>/ConsultaEquipamentosServlet" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
+			            </div>
+			        </div>
+			    </div>
                 <div class="col-md">
                     <div class="stat-card">
                         <div class="stat-icon bg-yellow-light text-warning"><i class="bi bi-tools"></i></div>
@@ -446,6 +446,7 @@
 				</div>
 
                 <!-- Chamados Abertos -->
+                <!-- Chamados Abertos -->
                 <div class="col-lg-6">
                     <div class="card-section p-4 h-100">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -464,27 +465,42 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td><strong>MAN-000056</strong></td>
-                                        <td>EQ00000003</td>
-                                        <td>Falha na impressão</td>
-                                        <td>19/08/2026</td>
-                                        <td><span class="badge bg-warning-subtle text-warning">Em Atendimento</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>MAN-000055</strong></td>
-                                        <td>EQ00000007</td>
-                                        <td>Não liga</td>
-                                        <td>18/08/2026</td>
-                                        <td><span class="badge bg-info-subtle text-info">Aguardando Peça</span></td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>MAN-000054</strong></td>
-                                        <td>EQ00000012</td>
-                                        <td>Ruído excessivo</td>
-                                        <td>18/08/2026</td>
-                                        <td><span class="badge bg-warning-subtle text-warning">Em Atendimento</span></td>
-                                    </tr>
+                                    <c:choose>
+                                        <c:when test="${not empty listaChamadosRecentes}">
+                                            <c:forEach var="chamado" items="${listaChamadosRecentes}">
+                                                <tr>
+                                                    <td><strong>MAN-${chamado.idChamado}</strong></td>
+                                                    <td>${chamado.nomeEquipamento}</td>
+                                                    <td>${chamado.tipoProblema}</td>
+                                                    <td>${chamado.dataAbertura}</td>
+                                                    <td>
+                                                        <c:choose>
+                                                            <c:when test="${fn:contains(fn:toLowerCase(chamado.nomeStatus), 'análise') or fn:contains(fn:toLowerCase(chamado.nomeStatus), 'aberto')}">
+                                                                <span class="badge bg-warning-subtle text-warning">${chamado.nomeStatus}</span>
+                                                            </c:when>
+                                                            <c:when test="${fn:contains(fn:toLowerCase(chamado.nomeStatus), 'atendimento') or fn:contains(fn:toLowerCase(chamado.nomeStatus), 'andamento')}">
+                                                                <span class="badge bg-primary-subtle text-primary">${chamado.nomeStatus}</span>
+                                                            </c:when>
+                                                            <c:when test="${fn:contains(fn:toLowerCase(chamado.nomeStatus), 'aguardando')}">
+                                                                <span class="badge bg-info-subtle text-info">${chamado.nomeStatus}</span>
+                                                            </c:when>
+                                                            <c:when test="${fn:contains(fn:toLowerCase(chamado.nomeStatus), 'concluído') or fn:contains(fn:toLowerCase(chamado.nomeStatus), 'finalizado')}">
+                                                                <span class="badge bg-success-subtle text-success">${chamado.nomeStatus}</span>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <span class="badge bg-secondary-subtle text-secondary">${chamado.nomeStatus}</span>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted py-3">Nenhum chamado aberto no momento.</td>
+                                            </tr>
+                                        </c:otherwise>
+                                    </c:choose>
                                 </tbody>
                             </table>
                         </div>

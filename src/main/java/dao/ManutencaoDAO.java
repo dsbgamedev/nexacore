@@ -271,6 +271,53 @@ public class ManutencaoDAO {
 
         return lista;
     }
+    
+    //Metodo dedicado ao Dashboard atalho chamados em aberto
+    public List<ManutencaoChamado> listarRecentesAbertos(int limite) throws SQLException {
+        List<ManutencaoChamado> lista = new ArrayList<>();
+        String sql = "SELECT c.*, s.nome_status, e.nome_identificador, e.patrimonio " +
+                     "FROM manutencao_chamados c " +
+                     "LEFT JOIN status_chamado s ON c.id_status_chamado = s.id_status_chamado " +
+                     "LEFT JOIN equipamentos e ON c.id_equipamento = e.id_equipamento " +
+                     "WHERE LOWER(s.nome_status) NOT IN ('finalizado', 'cancelado', 'concluído') " +
+                     "ORDER BY c.data_abertura DESC, c.id_chamado DESC " +
+                     "LIMIT ?";
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, limite);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    ManutencaoChamado m = new ManutencaoChamado();
+                    m.setIdChamado(rs.getLong("id_chamado"));
+                    m.setIdEquipamento(rs.getLong("id_equipamento"));
+                    
+                    String nomeEquip = rs.getString("nome_identificador");
+                    String patrimonio = rs.getString("patrimonio");
+                    m.setNomeEquipamento(nomeEquip != null ? nomeEquip + " (Pat: " + patrimonio + ")" : "EQ-" + m.getIdEquipamento());
+
+                    if (rs.getDate("data_abertura") != null) {
+                        m.setDataAbertura(rs.getDate("data_abertura").toLocalDate());
+                    }
+                    m.setSolicitante(rs.getString("solicitante"));
+                    m.setTipoProblema(rs.getString("tipo_problema"));
+                    m.setPrioridade(rs.getString("prioridade"));
+                    m.setDescricaoProblema(rs.getString("descricao_problema"));
+                    m.setResponsavelTecnico(rs.getString("responsavel_tecnico"));
+                    
+                    String nomeStatus = rs.getString("nome_status");
+                    m.setNomeStatus(nomeStatus != null ? nomeStatus : "Aberto");
+                    m.setIdStatusChamado(rs.getLong("id_status_chamado"));
+                    
+                    lista.add(m);
+                }
+            }
+        }
+        return lista;
+    }
+    
+    
     /*Consulta o banco por meio desse buscarPorId(idChamado), recuperando o responsavel_tecnico (ou solicitante) 
      * gravado na base de dados para validar se ele realmente tem o direito de alterar ou excluir 
      * aquele registro específico.*/
