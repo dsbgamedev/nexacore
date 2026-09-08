@@ -381,6 +381,9 @@ async function visualizarDetalhesEquipamento(idEquipamento) {
         setText('det-prod-marca', eq.nomeMarca);
         setText('det-prod-modelo', eq.modelo);
         setText('det-prod-detalhes', eq.descricaoDetalhada);
+		
+		// Chamada para carregar as especificações dinâmicas integradas na Unidade Física
+		carregarEspecificacoesDossie(eq.idProduto || eq.produtoId, eq.idEquipamento);
 
         const containerImg = document.getElementById('det-container-img');
         const imgProduto = document.getElementById('det-img-produto');
@@ -875,6 +878,46 @@ async function confirmarExclusaoEquipamento(idEquipamento) {
                 alert(error.message);
             }
         }
+    }
+}
+
+async function carregarEspecificacoesDossie(idProduto, idEquipamento) {
+    const spanEsp = document.getElementById("det-eq-especificacoes");
+    if (!spanEsp) return;
+
+    spanEsp.textContent = "Carregando...";
+
+    try {
+        // A URL precisa incluir o equipamentoId para buscar o que foi preenchido especificamente nela
+        let url = `${contextPath}/api/campos-especificacao?produtoId=${idProduto}`;
+        if (idEquipamento) {
+            url += `&equipamentoId=${idEquipamento}`;
+        }
+
+        const response = await fetch(url);
+        if (response.ok) {
+            const campos = await response.json();
+            
+            // Filtra apenas os campos que possuem valor preenchido
+            const preenchidos = campos.filter(c => (c.valorPreenchido || c.valor) && (c.valorPreenchido || c.valor).trim() !== "");
+
+            if (preenchidos.length > 0) {
+                const listaFormatada = preenchidos.map(c => {
+                    const nome = c.nomeCampo || c.nome;
+                    const valor = c.valorPreenchido || c.valor;
+                    return `<strong>${nome}:</strong> ${valor}`;
+                }).join(" | ");
+
+                spanEsp.innerHTML = listaFormatada;
+            } else {
+                spanEsp.textContent = "Nenhuma especificação preenchida.";
+            }
+        } else {
+            spanEsp.textContent = "Erro ao carregar.";
+        }
+    } catch (e) {
+        console.error("Erro ao buscar especificações:", e);
+        spanEsp.textContent = "Erro de comunicação.";
     }
 }
 

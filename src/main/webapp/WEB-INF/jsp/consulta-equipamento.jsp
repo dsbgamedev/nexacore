@@ -225,6 +225,9 @@
                             <p class="mb-1"><strong>Usuário Atual:</strong> <span id="det-eq-usuario">-</span></p>
                             <p class="mb-1"><strong>Status:</strong> <span id="det-eq-status">-</span></p>
                             <p class="mb-1"><strong>Situação:</strong> <span id="det-eq-situacao">-</span></p>
+                            <!-- NOVO: Linha integrada de Especificações Dinâmicas -->
+					       <p class="mb-1"> <strong>Especificações:</strong> <span id="det-eq-especificacoes" class="text-muted">Nenhuma</span>
+					       </p>
                         </div>
                     </div>
 
