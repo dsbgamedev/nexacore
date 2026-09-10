@@ -57,15 +57,15 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
 
-        // 1. Status: Em Manutenção
-        if (statusId === 2 || textoStatus.includes("manuten")) {
-            garantirOpcao("6", "Na Assistência");
-            Array.from(selectSituacao.options).forEach(opt => {
-                if (!opt.value) return;
-                opt.style.display = (opt.value == "6") ? "block" : "none";
-            });
-            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "6";
-        } 
+		// 1. Status: Encaminhado p/ Chamado (ID 5) ou Em Manutenção (ID 2) -> Força "Na Assistência" (ID 6)
+		if (statusId === 5 || statusId === 2 || textoStatus.includes("encaminhado") || textoStatus.includes("manuten")) {
+	            garantirOpcao("6", "Na Assistência");
+	            Array.from(selectSituacao.options).forEach(opt => {
+	                if (!opt.value) return;
+	                opt.style.display = (opt.value == "6") ? "block" : "none";
+	            });
+	            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "6";
+	        }
         // 2. Status: Baixado
         else if (textoStatus.includes("baixado")) {
             garantirOpcao("7", "Baixado");
@@ -360,8 +360,14 @@ document.addEventListener("DOMContentLoaded", function() {
                                 const nomeStatus = s.nome.toLowerCase();
                                 
                                 // REGRA DO STATUS: Se NÃO for a matriz (161) e o status for "Inativo", oculta/pula. 
-                                // Se for 161, ele passa e aparece normalmente.
                                 if (!eMatriz161 && nomeStatus.includes('inativo')) {
+                                    return;
+                                }
+                                
+                                // OCULTA "EM MANUTENÇÃO" (ID 2) E "BAIXADO" (ID 4) DO SELETOR MANUAL,
+                                // MAS PERMITE SE O EQUIPAMENTO JÁ ESTIVER SALVO COM ELES NA EDIÇÃO
+                                const ehManutencaoOuBaixado = (s.id === 2 || s.id === 4 || nomeStatus.includes('manuten') || nomeStatus.includes('baixado'));
+                                if (ehManutencaoOuBaixado && valorAtual != s.id) {
                                     return;
                                 }
 
@@ -381,7 +387,7 @@ document.addEventListener("DOMContentLoaded", function() {
             console.error("Erro ao carregar status do equipamento:", error);
         }
     }
-	
+
 	// Atualiza o select de status caso a origem seja alterada na tela
 	    const selectOrigemEl = document.getElementById("input-origem");
 	    if (selectOrigemEl) {

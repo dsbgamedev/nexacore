@@ -76,7 +76,7 @@ public class ManutencaoChamado {
     public String getObservacoes() { return observacoes; }
     public void setObservacoes(String observacoes) { this.observacoes = observacoes; }
 
-    public String getperfilSolicitante() { return perfilSolicitante; }
+    public String getPerfilSolicitante() { return perfilSolicitante; }
     public void setPerfilSolicitante(String perfilSolicitante) { this.perfilSolicitante = perfilSolicitante; }
       
     public Long getIdStatusChamado() { return idStatusChamado; }

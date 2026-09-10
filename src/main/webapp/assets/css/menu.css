@@ -427,3 +427,10 @@ header.nexacore-topbar {
     font-size: 0.75rem;
     color: #64748b;
 }
+/* Truncar textos longos em tabelas com suporte a tooltip via hover */
+.table td.text-truncate-cell {
+    max-width: 140px; /* Ajuste este limite conforme o espaço do seu dashboard */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

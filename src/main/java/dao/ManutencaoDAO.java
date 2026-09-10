@@ -397,7 +397,6 @@ public class ManutencaoDAO {
                      "solucao_realizada = ? " +
                      "WHERE id_chamado = ?";
 
-        // SQL para devolver o equipamento para Disponível (Situação ID = 1 por exemplo, ajuste conforme seu banco) e Status Ativo (ID = 1)
         String sqlEquipamento = "UPDATE equipamentos SET situacao_id = 1, status_id = 1 WHERE id_equipamento = ?";
 
         Connection conn = null;
@@ -422,9 +421,11 @@ public class ManutencaoDAO {
             stmtChamado.setLong(5, chamado.getIdChamado());
             stmtChamado.executeUpdate();
 
-            // 2. Se o chamado foi finalizado (6) E o equipamento foi reparado, libera o equipamento
-            if (chamado.getIdStatusChamado() != null && chamado.getIdStatusChamado() == 6 && reparado) {
-                // Precisamos descobrir o ID do equipamento deste chamado
+         // 2. Libera o equipamento se for Finalizado (6 E reparado) OU se for Cancelado (7 direto)
+            boolean isFinalizadoComReparo = (chamado.getIdStatusChamado() != null && chamado.getIdStatusChamado() == 6 && reparado);
+            boolean isCancelado = (chamado.getIdStatusChamado() != null && chamado.getIdStatusChamado() == 7);
+
+            if (isFinalizadoComReparo || isCancelado) {
                 String sqlBuscaEquip = "SELECT id_equipamento FROM manutencao_chamados WHERE id_chamado = ?";
                 try (PreparedStatement stmtBusca = conn.prepareStatement(sqlBuscaEquip)) {
                     stmtBusca.setLong(1, chamado.getIdChamado());

@@ -33,6 +33,19 @@ public class EnvioEquipamentoServlet extends HttpServlet {
         if (!validarPermissao(req, resp)) {
             return;
         }
+        
+     // Captura o usuário logado na sessão atual
+        HttpSession session = req.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+        if (usuario != null) {
+            // Utiliza o getNomeCompleto() da sua model Usuario.java
+            String nomeResponsavel = (usuario.getNomeCompleto() != null && !usuario.getNomeCompleto().isEmpty()) 
+                                     ? usuario.getNomeCompleto() 
+                                     : usuario.getUsername(); // Fallback para o username caso o nome completo esteja vazio
+            req.setAttribute("nomeUsuarioLogado", nomeResponsavel);
+        }
+        
         // Abre o JSP protegido com segurança
         req.getRequestDispatcher("/WEB-INF/jsp/envio-equipamento.jsp").forward(req, resp);
     }

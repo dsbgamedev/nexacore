@@ -8,6 +8,21 @@ document.addEventListener("DOMContentLoaded", function() {
     if (inputDataEnvio) {
         inputDataEnvio.value = hoje;
     }
+	
+	// --- GARANTIR O CAMPO RESPONSÁVEL BLOQUEADO E PREENCHIDO ---
+	    const inputResponsavel = document.getElementById("responsavel");
+	    if (inputResponsavel) {
+	        // Se o valor já veio preenchido pela tag ${nomeUsuarioLogado} do JSP, apenas o travamos
+	        inputResponsavel.readOnly = true;
+	        inputResponsavel.style.backgroundColor = "#e9ecef";
+	        inputResponsavel.style.cursor = "not-allowed";
+	        
+	        // Caso esteja vazio por algum motivo de carregamento dinâmico, podemos opcionalmente buscar de uma variável global da sessão
+	        if (!inputResponsavel.value && window.usuarioLogadoNome) {
+	            inputResponsavel.value = window.usuarioLogadoNome;
+	        }
+	    }
+	    // -------------------------------------------------------------
 
 	// 2. Carregar o select de Filiais
     carregarFiliais().then(() => {

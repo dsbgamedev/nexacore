@@ -399,6 +399,122 @@
 
             <!-- TABELAS RECENTES -->
             <div class="row g-4">
+                 <!-- Chamados Abertos -->
+                <!-- Equipamentos em Manutenção (Card da Esquerda) -->
+                <div class="col-lg-6">
+                    <div class="card-section p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Equipamentos em Manutenção</h5>
+                            <a href="<%=ctx%>/ManutencaoServlet" class="small text-decoration-none">Ver todos</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID Equip.</th>
+                                        <th>Patrimônio</th>
+                                        <th>Equipamento / Modelo</th>
+                                        <th>Situação</th>
+                                        <th class="text-center">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <c:choose>
+                                        <c:when test="${not empty listaEquipamentosEmManutencao}">
+                                            <c:forEach var="equip" items="${listaEquipamentosEmManutencao}">
+                                                <tr>
+                                                    <td><strong class="text-danger">EQ-${equip.idEquipamento}</strong></td>
+                                                    <td><span class="text-truncate-custom" title="${equip.patrimonio }"> ${empty equip.patrimonio ? '-' : equip.patrimonio}</span></td>
+                                                    <td><span class="text-truncate-custom" title="${equip.nomeProduto}">${equip.nomeProduto}</span></td>
+                                                    <td>
+                                                       <span class="badge bg-danger-subtle text-danger px-2 py-1">Pendente Chamado</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <a href="<%=ctx%>/ManutencaoServlet" class="btn btn-sm btn-outline-danger" title="Abrir Chamado Agora">
+                                                            <i class="bi bi-tools"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted py-3">Nenhum equipamento pendente de abertura de chamado.</td>
+                                            </tr>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <!-- Chamados Abertos -->
+                <div class="col-lg-6">
+                    <div class="card-section p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0">Chamados Abertos</h5>
+                            <a href="<%=ctx%>/ConsultaChamadosServlet" class="small text-decoration-none">Ver todos</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 small">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID Chamado</th>
+                                        <th>Status</th>
+                                        <th class="text-center">Vizualizar</th>
+                                        <th>Equipamento</th>
+                                        <th>Problema</th>
+                                        <th>Abertura</th>                 
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <c:choose>
+                                        <c:when test="${not empty listaChamadosRecentes}">
+                                            <c:forEach var="chamado" items="${listaChamadosRecentes}">
+                                                <tr>
+                                                    <td><strong>MAN-${chamado.idChamado}</strong></td>
+                                                    <td>
+                                                       <c:choose>
+                                                            <c:when test="${fn:contains(fn:toLowerCase(chamado.nomeStatus), 'análise') or fn:contains(fn:toLowerCase(chamado.nomeStatus), 'aberto')}">
+                                                                <span class="badge bg-warning-subtle text-warning">${chamado.nomeStatus}</span>
+                                                            </c:when>
+                                                            <c:when test="${fn:contains(fn:toLowerCase(chamado.nomeStatus), 'atendimento') or fn:contains(fn:toLowerCase(chamado.nomeStatus), 'andamento')}">
+                                                                <span class="badge bg-primary-subtle text-primary">${chamado.nomeStatus}</span>
+                                                            </c:when>
+                                                            <c:when test="${fn:contains(fn:toLowerCase(chamado.nomeStatus), 'aguardando')}">
+                                                                <span class="badge bg-info-subtle text-info">${chamado.nomeStatus}</span>
+                                                            </c:when>
+                                                            <c:when test="${fn:contains(fn:toLowerCase(chamado.nomeStatus), 'concluído') or fn:contains(fn:toLowerCase(chamado.nomeStatus), 'finalizado')}">
+                                                                <span class="badge bg-success-subtle text-success">${chamado.nomeStatus}</span>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <span class="badge bg-secondary-subtle text-secondary">${chamado.nomeStatus}</span>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="abrirModalDetalhesChamado(${chamado.idChamado})" title="Ver Detalhes">
+                                                            <i class="bi bi-eye"></i>
+                                                        </button>
+                                                    </td>
+                                                    <td> <span class="text-truncate-custom" title="${chamado.nomeEquipamento}"> ${chamado.nomeEquipamento}</span> </td>                                         			     
+                                                    <td><span class="text-truncate-custom" title="${chamado.tipoProblema}">${chamado.tipoProblema}</span> </td>                                            
+                                                    <td class="data-formatavel">${chamado.dataAbertura}</td>                      
+                                                </tr>
+                                            </c:forEach>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted py-3">Nenhum chamado aberto no momento.</td>
+                                            </tr>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+               
                 <!-- Movimentações Recentes -->
 				<div class="col-lg-6">
 				    <div class="card-section p-4 h-100">
@@ -444,71 +560,63 @@
 				            </table>
 				        </div>
 				    </div>
-				</div>
-
-                <!-- Chamados Abertos -->
-                <!-- Chamados Abertos -->
-                <div class="col-lg-6">
-                    <div class="card-section p-4 h-100">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold mb-0">Chamados Abertos</h5>
-                            <a href="<%=ctx%>/ConsultaChamadosServlet" class="small text-decoration-none">Ver todos</a>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 small">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>ID Chamado</th>
-                                        <th>Equipamento</th>
-                                        <th>Problema</th>
-                                        <th>Abertura</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <c:choose>
-                                        <c:when test="${not empty listaChamadosRecentes}">
-                                            <c:forEach var="chamado" items="${listaChamadosRecentes}">
-                                                <tr>
-                                                    <td><strong>MAN-${chamado.idChamado}</strong></td>
-                                                    <td>${chamado.nomeEquipamento}</td>
-                                                    <td>${chamado.tipoProblema}</td>
-                                                    <td>${chamado.dataAbertura}</td>
-                                                    <td>
-                                                        <c:choose>
-                                                            <c:when test="${fn:contains(fn:toLowerCase(chamado.nomeStatus), 'análise') or fn:contains(fn:toLowerCase(chamado.nomeStatus), 'aberto')}">
-                                                                <span class="badge bg-warning-subtle text-warning">${chamado.nomeStatus}</span>
-                                                            </c:when>
-                                                            <c:when test="${fn:contains(fn:toLowerCase(chamado.nomeStatus), 'atendimento') or fn:contains(fn:toLowerCase(chamado.nomeStatus), 'andamento')}">
-                                                                <span class="badge bg-primary-subtle text-primary">${chamado.nomeStatus}</span>
-                                                            </c:when>
-                                                            <c:when test="${fn:contains(fn:toLowerCase(chamado.nomeStatus), 'aguardando')}">
-                                                                <span class="badge bg-info-subtle text-info">${chamado.nomeStatus}</span>
-                                                            </c:when>
-                                                            <c:when test="${fn:contains(fn:toLowerCase(chamado.nomeStatus), 'concluído') or fn:contains(fn:toLowerCase(chamado.nomeStatus), 'finalizado')}">
-                                                                <span class="badge bg-success-subtle text-success">${chamado.nomeStatus}</span>
-                                                            </c:when>
-                                                            <c:otherwise>
-                                                                <span class="badge bg-secondary-subtle text-secondary">${chamado.nomeStatus}</span>
-                                                            </c:otherwise>
-                                                        </c:choose>
-                                                    </td>
-                                                </tr>
-                                            </c:forEach>
-                                        </c:when>
-                                        <c:otherwise>
-                                            <tr>
-                                                <td colspan="5" class="text-center text-muted py-3">Nenhum chamado aberto no momento.</td>
-                                            </tr>
-                                        </c:otherwise>
-                                    </c:choose>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+				</div>            
             </div>
-            
+              
+             <!-- MODAL DE GERENCIAR/VISUALIZAR CHAMADO -->
+           <div class="modal fade" id="modalGerenciarChamado" tabindex="-1" aria-hidden="true">
+               <div class="modal-dialog modal-lg modal-dialog-centered">
+                   <div class="modal-content">
+                       <div class="modal-header bg-primary text-white">
+                           <h5 class="modal-title"><i class="bi bi-tools me-2"></i> Gerenciar Chamado de Manutenção</h5>
+                           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                       </div>
+                       <div class="modal-body">
+                           <div class="row mb-3">
+                               <div class="col-md-4">
+                                   <strong>Equipamento:</strong>
+                                   <p id="modalEquipamento" class="text-muted mb-0">-</p>
+                               </div>
+                               <div class="col-md-4">
+                                   <strong>Solicitante:</strong>
+                                   <p id="modalSolicitante" class="text-muted mb-0">-</p>
+                               </div>
+                               <div class="col-md-4">
+                                   <strong>Data Abertura:</strong>
+                                   <p id="modalDataAbertura" class="text-muted mb-0">-</p>
+                               </div>
+                           </div>
+                           <div class="mb-3">
+                               <strong>Descrição do Problema Relatado:</strong>
+                               <textarea id="modalDescricao" class="form-control bg-light" rows="2" readonly></textarea>
+                           </div>
+                           <div class="row mb-3">
+                               <div class="col-md-6">
+                                   <label class="form-label"><strong>Status Atual do Chamado *</strong></label>
+                                   <input type="text" id="modalStatus" class="form-control" readonly />
+                               </div>
+                               <div class="col-md-6">
+                                   <label class="form-label"><strong>Técnico Responsável</strong></label>
+                                   <input type="text" id="modalTecnico" class="form-control" readonly />
+                               </div>
+                           </div>
+                           <div class="row mb-3">
+                               <div class="col-md-6">
+                                   <label class="form-label"><strong>Diagnóstico Técnico</strong></label>
+                                   <textarea id="modalDiagnostico" class="form-control" rows="3" readonly></textarea>
+                               </div>
+                               <div class="col-md-6">
+                                   <label class="form-label"><strong>Solução Realizada</strong></label>
+                                   <textarea id="modalSolucao" class="form-control" rows="3" readonly></textarea>
+                               </div>
+                           </div>
+                       </div>
+                       <div class="modal-footer">
+                           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                       </div>
+                   </div>
+               </div>
+           </div>       
             <!-- ==========================================================
          	NEXACORE - MODAL SERVICE (Modais Globais)
 		   ========================================================== -->

@@ -170,6 +170,12 @@ private ManutencaoDAO dao = new ManutencaoDAO();
                 req.setAttribute("filiais", usuario.getUnidadesPermitidasObjetos());
                 req.setAttribute("unidades", usuario.getUnidadesPermitidasObjetos());
             }
+            
+         // CAPTURA DO ID DO EQUIPAMENTO: Se veio da URL (ex: pelo dashboard), repassa para a JSP preencher o form
+            String idEquipParam = req.getParameter("idEquipamento");
+            if (idEquipParam != null && !idEquipParam.trim().isEmpty()) {
+                req.setAttribute("idEquipamentoPreSelecionado", idEquipParam.trim());
+            }
 
             boolean podeEditar = isAdmin || (usuario.temPermissao("manutencao_chamados", "EDITAR") || usuario.getModulosPermitidos().contains("manutencao_chamados"));
             req.setAttribute("podeEditar", podeEditar);

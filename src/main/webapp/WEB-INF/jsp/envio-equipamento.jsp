@@ -49,7 +49,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-bold small">Responsável pelo Envio *</label>
-                    <input type="text" class="form-control form-control-sm" id="responsavel" placeholder="Nome do colaborador" required>
+                    <input type="text" class="form-control form-control-sm" id="responsavel" name="responsavel" value="${nomeUsuarioLogado}" readonly style="background-color: #e9ecef; cursor: not-allowed;" required>
                 </div>
             </div>
 

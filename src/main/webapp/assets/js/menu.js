@@ -125,3 +125,92 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     }
 });
+function abrirModalDetalhesChamado(idChamado) {
+    const APP_CONTEXT_PATH = document.body.dataset.appContextPath || '';
+
+    // Se a lista global de chamados já estiver carregada no menu, busca nela
+    if (typeof listaChamadosGlobal !== 'undefined' && listaChamadosGlobal.length > 0) {
+        const chamado = listaChamadosGlobal.find(c => c.idChamado === idChamado);
+        if (chamado) {
+            abrirModalGerenciarNoDashboard(chamado);
+            return;
+        }
+    }
+
+    // Caso contrário, busca via API da mesma forma que a tela de consulta faz
+    fetch(APP_CONTEXT_PATH + '/api/manutencoes/listar')
+        .then(res => res.json())
+        .then(lista => {
+            if (Array.isArray(lista)) {
+                const chamado = lista.find(c => c.idChamado === idChamado);
+                if (chamado) {
+                    abrirModalGerenciarNoDashboard(chamado);
+                } else {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire('Atenção', 'Chamado não encontrado.', 'warning');
+                    } else {
+                        alert('Chamado não encontrado.');
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Erro', 'Não foi possível carregar os detalhes do chamado.', 'error');
+            } else {
+                alert('Não foi possível carregar os detalhes do chamado.');
+            }
+        });
+}
+
+function abrirModalGerenciarNoDashboard(chamado) {
+    // Preenche os campos do modal com os IDs corretos do menu.jsp
+    const modalId = document.getElementById('modalIdChamado');
+    if (modalId) modalId.value = chamado.idChamado;
+
+    const lblEquip = document.getElementById('modalEquipamento');
+    if (lblEquip) lblEquip.innerText = chamado.nomeEquipamento || `Equipamento ID: ${chamado.idEquipamento}`;
+
+    const lblSolicitante = document.getElementById('modalSolicitante');
+    if (lblSolicitante) lblSolicitante.innerText = chamado.solicitante || '---';
+
+    const lblData = document.getElementById('modalDataAbertura');
+    if (lblData) lblData.innerText = chamado.dataAbertura || '---';
+
+    const txtDesc = document.getElementById('modalDescricao');
+    if (txtDesc) txtDesc.value = chamado.descricaoProblema || '';
+
+    const statusInput = document.getElementById('modalStatus');
+    if (statusInput) statusInput.value = chamado.nomeStatus || 'Aberto';
+
+    const tecnicoInput = document.getElementById('modalTecnico');
+    if (tecnicoInput) tecnicoInput.value = chamado.responsavelTecnico || 'Não atribuído';
+
+    const diagInput = document.getElementById('modalDiagnostico');
+    if (diagInput) diagInput.value = chamado.diagnostico || '';
+
+    const solInput = document.getElementById('modalSolucao');
+    if (solInput) solInput.value = chamado.solucaoRealizada || '';
+
+    // Abre o modal do Bootstrap
+    const modalElement = document.getElementById('modalGerenciarChamado');
+    if (modalElement) {
+        const meuModal = new bootstrap.Modal(modalElement);
+        meuModal.show();
+    }
+}
+// Formatar datas no padrão yyyy-mm-dd para dd/mm/aaaa em elementos com a classe .data-formatavel
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.data-formatavel').forEach(td => {
+        const textoOriginal = td.textContent.trim();
+        if (textoOriginal && textoOriginal.length >= 10) {
+            const partes = textoOriginal.substring(0, 10).split('-');
+            if (partes.length === 3) {
+                // Mantém o restante do texto caso venha hora junto (ex: yyyy-mm-dd hh:mm:ss)
+                const hora = textoOriginal.length > 10 ? textoOriginal.substring(10) : '';
+                td.textContent = `${partes[2]}/${partes[1]}/${partes[0]}${hora}`;
+            }
+        }
+    });
+});

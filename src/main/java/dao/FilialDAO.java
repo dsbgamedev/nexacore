@@ -143,4 +143,19 @@ public class FilialDAO {
             }
         }
     }
+    
+ // --- NOVO: Traduz o id_filial da sessão para o origem_codigo correspondente ---
+    public Integer buscarOrigemCodigoPorId(int idFilial) throws SQLException {
+        String sql = "SELECT origem_codigo FROM filiais WHERE id_filial = ?";
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, idFilial);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("origem_codigo");
+                }
+            }
+        }
+        return null;
+    }
 }

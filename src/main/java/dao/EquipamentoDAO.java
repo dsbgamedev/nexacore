@@ -757,4 +757,81 @@ public class EquipamentoDAO {
         }
         return 0;
     }
+    
+    //Tela que faz parte do dashboard
+  //Tela que faz parte do dashboard
+    public List<Equipamento> listarPorStatusEUnidade(int origemCodigo, String nomeStatus) throws SQLException {
+        List<Equipamento> lista = new ArrayList<>();
+        boolean isMatriz = (origemCodigo == 161);
+
+        StringBuilder sql = new StringBuilder(
+            "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, " +
+            "se.nome AS status_nome, se.cor AS status_cor, " +
+            "sit.nome AS situacao_nome, " +
+            "CASE WHEN m.nome_marca IS NOT NULL AND m.nome_marca <> '' THEN m.nome_marca || ' - ' || p.modelo ELSE p.modelo END AS produto_completo " +
+            "FROM equipamentos e " +
+            "INNER JOIN produtos p ON e.id_produto = p.id " +
+            "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+            "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
+            "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
+            "WHERE se.nome = ? AND e.status_id != 3"
+        );
+
+        if (!isMatriz) {
+            sql.append(" AND e.origem_codigo = ?");
+        }
+
+        sql.append(" ORDER BY e.id_equipamento DESC");
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+            
+            // Passamos o novo status direto: "Encaminhado p/ Chamado"
+            stmt.setString(1, nomeStatus);
+            if (!isMatriz) {
+                stmt.setInt(2, origemCodigo);
+            }
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Equipamento eq = new Equipamento();
+                    eq.setIdEquipamento(rs.getInt("id_equipamento"));
+                    eq.setIdProduto(rs.getInt("id_produto"));
+                    eq.setCodigoCatalogo(rs.getString("codigo_catalogo"));
+                    eq.setNomeProduto(rs.getString("produto_completo"));
+                    eq.setIdSistema(rs.getString("id_sistema"));
+                    eq.setPatrimonio(rs.getString("patrimonio"));
+                    eq.setNumeroSerie(rs.getString("numero_serie"));
+                    eq.setNomeIdentificador(rs.getString("nome_identificador"));
+                    eq.setOrigemCodigo(rs.getInt("origem_codigo"));
+                    eq.setIpAtual(rs.getString("ip_atual"));
+                    eq.setStatusId(rs.getInt("status_id"));
+                    eq.setSituacaoId(rs.getInt("situacao_id"));
+                    eq.setStatusNome(rs.getString("status_nome"));
+                    eq.setStatusCor(rs.getString("status_cor"));
+                    eq.setSituacaoNome(rs.getString("situacao_nome"));
+                    eq.setUsuarioAtual(rs.getString("usuario_atual"));
+                    
+                    int depId = rs.getInt("departamento_id");
+                    eq.setDepartamentoId(rs.wasNull() ? null : depId);
+
+                    eq.setObservacoes(rs.getString("observacoes"));
+                    eq.setDataCadastro(rs.getString("data_cadastro"));
+                    
+                    lista.add(eq);
+                }
+            }
+        }
+        return lista;
+    }
+    
+ // Realiza a virada automática do status quando o chamado de manutenção é salvo
+    public void atualizarStatusParaEmManutencao(long idEquipamento) throws SQLException {
+        String sql = "UPDATE equipamentos SET status_id = 2, situacao_id = 2 WHERE id_equipamento = ?";
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idEquipamento);
+            stmt.executeUpdate();
+        }
+    }
 }

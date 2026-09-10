@@ -52,8 +52,9 @@ const formChamado = document.getElementById('formChamado');
 });
 
 function carregarSelectEquipamentos() {
-    // Alinhado com o banco de dados: busca equipamentos com situacaoId = 6 (Na Assistência)
-    fetch(contextPath + '/api/equipamentos?situacao=6')
+    // Alinhado com o banco de dados: busca equipamentos com status/situação correspondente a "Encaminhado p/ Chamado" (ID 5)
+    // Caso sua API utilize parâmetro diferente (ex: status=5 ou situacao=5), ajuste abaixo se necessário:
+    fetch(contextPath + '/api/equipamentos?status=5')
         .then(res => res.json())
         .then(data => {
             const select = document.getElementById('selectEquipamento');
@@ -63,9 +64,9 @@ function carregarSelectEquipamentos() {
             const lista = Array.isArray(data) ? data : [data];
             
             lista.forEach(eq => {
-                // Dupla checagem de segurança no front para garantir que apenas situação 6 seja exibida
-                let situacaoId = eq.situacaoId || eq.idSituacao;
-                if (situacaoId && Number(situacaoId) !== 6) return; 
+                // Dupla checagem de segurança no front para garantir que apenas o ID 5 seja exibido
+                let statusId = eq.statusId || eq.idStatus || eq.situacaoId || eq.idSituacao;
+                if (statusId && Number(statusId) !== 5) return; 
 
                 let nomeCpu = eq.nomeIdentificador || eq.nomeCpu || '';
                 let patrimonio = eq.patrimonio || 'S/P';
@@ -77,7 +78,6 @@ function carregarSelectEquipamentos() {
         })
         .catch(err => console.error("Erro ao carregar equipamentos:", err));
 }
-
 function carregarSelectFiliais() {
     fetch(contextPath + '/api/filiais')
         .then(res => res.json())
@@ -185,7 +185,7 @@ function buscarDetalhesEquipamento(idEquipamento) {
             }
 
             const badgeStatus = document.getElementById('lblStatus');
-            const statusNome = eq.statusNome || 'Em Manutenção';
+            const statusNome = eq.statusNome || 'Encaminhado p/ Chamado';
             if (badgeStatus) {
                 badgeStatus.innerText = statusNome;
                 badgeStatus.className = "badge bg-warning text-dark";

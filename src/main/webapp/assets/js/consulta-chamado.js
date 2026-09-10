@@ -322,6 +322,7 @@ function abrirModalGerenciar(chamado, modoVisualizacao = false) {
     const modal = new bootstrap.Modal(document.getElementById('modalGerenciarChamado'));
     modal.show();
 }
+
 function salvarAtualizacaoChamado() {
     const statusId = document.getElementById('modalStatusChamado').value;
     const solucao = document.getElementById('modalSolucao').value.trim();
@@ -337,7 +338,8 @@ function salvarAtualizacaoChamado() {
         responsavelTecnico: document.getElementById('modalResponsavelTecnico').value,
         diagnostico: document.getElementById('modalDiagnostico').value,
         solucaoRealizada: solucao,
-        reparado: document.getElementById('modalFoiReparado').checked
+		// Garante que só envia true se o status for 6 E o checkbox estiver marcado
+		reparado: statusId === '6' ? document.getElementById('modalFoiReparado').checked : false
     };
 
     fetch(contextPath + '/api/manutencoes/atualizar', {
