@@ -203,21 +203,26 @@ function renderizarTabela(dados) {
             ? `<a href="#" class="text-decoration-none text-primary fw-semibold">${envio.codigoRastreio} <i class="fa fa-arrow-up-right-from-square small"></i></a>` 
             : '-';
 
-        let tr = document.createElement("tr");
-        tr.innerHTML = `
+			let tr = document.createElement("tr");
+			tr.innerHTML = `
             <td class="ps-3 fw-bold text-dark">#${idEnvio}</td>
-            <td>${formatarDataBR(envio.dataEnvio || envio.data)}</td>
-            <td class="text-truncate" style="max-width: 180px;" title="${origemTexto}">${origemTexto}</td>
-            <td class="text-truncate" style="max-width: 180px;" title="${destinoTexto}">${destinoTexto}</td>
+            <td class="text-nowrap">${formatarDataBR(envio.dataEnvio || envio.data)}</td>
+            <td class="text-nowrap" title="${origemTexto}">${origemTexto}</td>
+            <td class="text-nowrap" title="${destinoTexto}">${destinoTexto}</td>
             <td><span class="badge bg-light text-dark border">${textoProdutos}</span></td>
-            <td class="font-monospace">${envio.numeroNota || envio.notaFiscal || '-'}</td>
-            <td>${envio.transportadora || '-'}</td>
-            <td>${rastreioHtml}</td>
-            <td>${badgeHtml}</td>
-            <td>${envio.responsavel || '-'}</td>
-            <td class="text-center pe-3">${acoesHtml}</td>
-        `;
-        tbody.appendChild(tr);
+            <td class="font-monospace text-nowrap">${envio.numeroNota || envio.notaFiscal || '-'}</td>
+            <td class="text-nowrap">${envio.transportadora || '-'}</td>
+            <td class="text-nowrap">${rastreioHtml}</td>
+            <td class="text-nowrap">${badgeHtml}</td>
+            <td class="text-nowrap">${envio.responsavel || '-'}</td>
+            <td class="text-nowrap">
+                ${envio.responsavelEnvio 
+                    ? `<span class="fw-semibold text-success">${envio.responsavelEnvio}</span>` 
+                    : '<span class="text-muted small fst-italic">Aguardando efetivação</span>'}
+            </td>
+            <td class="text-center pe-3 acoes-col">${acoesHtml}</td>
+      		  `;
+	        tbody.appendChild(tr);
     });
 
     // Atualiza os botões e texto da paginação no rodapé
@@ -305,6 +310,10 @@ function visualizarEnvio(idEnvio) {
     document.getElementById("detalheDestino").innerText = envio ? (envio.nomeDestino || envio.destino || '-') : '-';
     document.getElementById("detalheTransportadora").innerText = envio ? (envio.transportadora || '-') : '-';
     document.getElementById("detalheNota").innerText = envio ? (envio.numeroNota || envio.notaFiscal || '-') : '-';
+	
+	// Preenchimento dos responsáveis no modal
+	document.getElementById("detalheResponsavelCriacao").innerText = envio && envio.responsavel ? envio.responsavel : '-';
+	document.getElementById("detalheResponsavelEnvio").innerText = envio && envio.responsavelEnvio ? envio.responsavelEnvio : 'Aguardando efetivação';
     
     let rastreio = envio && envio.codigoRastreio && envio.codigoRastreio !== '-' ? envio.codigoRastreio : '-';
     document.getElementById("detalheRastreio").innerHTML = rastreio !== '-' ? `<a href="#" class="text-decoration-none text-primary fw-semibold">${rastreio} <i class="fa fa-arrow-up-right-from-square small"></i></a>` : '-';
@@ -451,6 +460,7 @@ async function efetivarEnvio(idEnvio) {
     .then(resposta => {
         if (resposta.sucesso) {
             ModalService.success("Sucesso", resposta.mensagem).then(() => {
+                // Atualiza a listagem completa diretamente do banco para garantir sincronia do responsavelEnvio
                 carregarEnvios();
             });
         } else {

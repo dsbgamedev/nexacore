@@ -8,14 +8,16 @@
     <!-- Adicionado Bootstrap Icons para combinar com a nova UI moderna -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="${pageContext.request.contextPath}/assets/css/consulta-envio.css" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
+  
 </head>
 <body class="bg-light">
 
 <div class="container-fluid px-4 py-4">
  	<div>
-      <h4 class="page-title fw-bold text-primary-dark">CONSULTA DE EQUIPAMENTOS (UNIDADE FÍSICA)</h4>
+      <h4 class="page-title fw-bold text-primary-dark">CONSULTA DE ENVIOS(TRANSPORTE)</h4>
       <nav aria-label="breadcrumb">
           <ol class="breadcrumb mb-0">
               <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
@@ -92,24 +94,25 @@
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0" id="tabelaEnvios">
                     <thead class="table-light text-secondary small text-uppercase">
-                        <tr>
-                            <th class="ps-3"><i class="bi bi-hash me-1"></i> ID</th>
-                            <th><i class="bi bi-calendar-event me-1"></i> Data</th>
-                            <th><i class="bi bi-box-arrow-up-right me-1"></i> Origem</th>
-                            <th><i class="bi bi-box-arrow-in-down me-1"></i> Destino</th>
-                            <th><i class="bi bi-box-seam me-1"></i> Produtos</th>
-                            <th><i class="bi bi-receipt me-1"></i> Nota Fiscal</th>
-                            <th><i class="bi bi-truck me-1"></i> Transportadora</th>
-                            <th><i class="bi bi-link-45deg me-1"></i> Rastreio</th>
-                            <th><i class="bi bi-patch-check me-1"></i> Status</th>
-                            <th><i class="bi bi-person me-1"></i> Responsável</th>
-                            <th class="text-center pe-3"><i class="bi bi-gear me-1"></i> Ações</th>
-                        </tr>
-                    </thead>
+					    <tr>
+					        <th class="ps-3"><i class="bi bi-hash me-1"></i> ID</th>
+					        <th><i class="bi bi-calendar-event me-1"></i> Data</th>
+					        <th><i class="bi bi-box-arrow-up-right me-1"></i> Origem</th>
+					        <th><i class="bi bi-box-arrow-in-down me-1"></i> Destino</th>
+					        <th><i class="bi bi-box-seam me-1"></i> Produtos</th>
+					        <th class="text-nowrap"><i class="bi bi-receipt me-1"></i> Nota Fiscal</th>
+					        <th><i class="bi bi-truck me-1"></i> Transportadora</th>
+					        <th><i class="bi bi-link-45deg me-1"></i> Rastreio</th>
+					        <th><i class="bi bi-patch-check me-1"></i> Status</th>
+					        <th><i class="bi bi-person me-1"></i> Responsável</th>
+					        <th><i class="bi bi-person-check me-1"></i> Efetivado Por</th>
+					        <th class="text-center pe-3 acoes-col"><i class="bi bi-gear me-1"></i> Ações</th>
+					    </tr>
+					</thead>
                     <tbody>
                         <!-- Preenchido via JavaScript -->
                         <tr>
-                            <td colspan="11" class="text-center text-muted py-4">Nenhum envio encontrado.</td>
+                            <td colspan="12" class="text-center text-muted py-4">Nenhum envio encontrado.</td>
                         </tr>
                     </tbody>
                 </table>
@@ -188,6 +191,15 @@
                     <div class="col-md-4">
                         <span class="text-muted small d-block fw-semibold">CÓDIGO DE RASTREIO</span>
                         <span id="detalheRastreio" class="text-primary">-</span>
+                    </div>
+                    <!-- 👇 ADICIONE ESTES DOIS CAMPOS AQUI 👇 -->
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block fw-semibold">CRIADO POR (RASCUNHO/INÍCIO)</span>
+                        <span id="detalheResponsavelCriacao" class="text-dark">-</span>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block fw-semibold">EFETIVADO POR (ENVIO FÍSICO)</span>
+                        <span id="detalheResponsavelEnvio" class="text-dark fw-semibold text-success">-</span>
                     </div>
                 </div>
 

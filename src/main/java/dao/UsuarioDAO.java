@@ -783,6 +783,26 @@ public class UsuarioDAO {
             ps.executeBatch();
         }
     }
+    
+    /**
+     * Atualiza exclusivamente o status de ativação (ativo/inativo) de um usuário.
+     * @param idUsuario O ID do usuário.
+     * @param ativo O novo estado (true para ativo, false para inativo).
+     * @return true se a atualização afetou alguma linha, false caso contrário.
+     * @throws SQLException Se ocorrer erro no banco.
+     */
+    public boolean atualizarStatus(int idUsuario, boolean ativo) throws SQLException {
+        String sql = "UPDATE usuarios SET ativo = ? WHERE id = ?";
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setBoolean(1, ativo);
+            stmt.setInt(2, idUsuario);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Erro SQL ao atualizar status do usuário: " + e.getMessage());
+            throw e;
+        }
+    }
 
     /**
      * Salva a matriz granular de módulos enviada via JsonArray (Tela de Permissões Avançadas do Nexacore).

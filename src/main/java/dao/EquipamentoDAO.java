@@ -13,6 +13,11 @@ import java.util.Map;
 public class EquipamentoDAO {
 
 	public int inserir(Equipamento eq) throws SQLException {
+		// Se o status escolhido for Devolução (6), força a situação para Em Devolução (8)
+	    if (eq.getStatusId() == 6) {
+	        eq.setSituacaoId(8);
+	    }
+	    
 	    if (eq.getIdSistema() == null || eq.getIdSistema().trim().isEmpty()) {
 	        eq.setIdSistema(gerarProximoIdSistema());
 	    }
@@ -573,7 +578,12 @@ public class EquipamentoDAO {
 	}
 
 	public boolean atualizar(Equipamento eq) throws SQLException {
-        String sqlEquipamento = "UPDATE equipamentos SET id_produto = ?, patrimonio = ?, numero_serie = ?, nome_identificador = ?, origem_codigo = ?, ip_atual = ?, status_id = ?, situacao_id = ?, usuario_atual = ?, departamento_id = ?, observacoes = ? WHERE id_equipamento = ?";
+		// Se o status escolhido for Devolução (6), força a situação para Em Devolução (8)
+        if (eq.getStatusId() == 6) {
+            eq.setSituacaoId(8);
+        }
+		
+		String sqlEquipamento = "UPDATE equipamentos SET id_produto = ?, patrimonio = ?, numero_serie = ?, nome_identificador = ?, origem_codigo = ?, ip_atual = ?, status_id = ?, situacao_id = ?, usuario_atual = ?, departamento_id = ?, observacoes = ? WHERE id_equipamento = ?";
         
         // Upsert: Se já existe o campo para este equipamento, atualiza o valor; se não existe, insere.
         String sqlUpsertEspecificacao = "INSERT INTO equipamento_especificacoes (id_equipamento, campo_id, valor) VALUES (?, ?, ?) " +
@@ -828,6 +838,16 @@ public class EquipamentoDAO {
  // Realiza a virada automática do status quando o chamado de manutenção é salvo
     public void atualizarStatusParaEmManutencao(long idEquipamento) throws SQLException {
         String sql = "UPDATE equipamentos SET status_id = 2, situacao_id = 2 WHERE id_equipamento = ?";
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idEquipamento);
+            stmt.executeUpdate();
+        }
+    }
+    
+ // Realiza a virada automática do status e situação quando a devolução é iniciada
+    public void atualizarStatusParaDevolucao(long idEquipamento) throws SQLException {
+        String sql = "UPDATE equipamentos SET status_id = 6, situacao_id = 8 WHERE id_equipamento = ?";
         try (Connection conn = Conexao.conectar();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idEquipamento);

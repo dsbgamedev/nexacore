@@ -177,6 +177,46 @@ public class GerenciarUsuariosServlet extends HttpServlet {
                         responseMap.put("message", "Nenhum usuário válido selecionado para exclusão.");
                     }
                 }
+            } else if ("toggleStatus".equals(action)) {
+                if (!isUsuarioLogadoSuperAdmin && !isUsuarioLogadoAdmin) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    responseMap.put("success", false);
+                    responseMap.put("message", "Sem permissão para alterar o status do usuário.");
+                    out.print(gson.toJson(responseMap));
+                    return;
+                }
+
+                Usuario usuarioAlvo = usuarioDAO.buscarUsuarioPorId(id);
+                if (usuarioAlvo == null) {
+                    responseMap.put("success", false);
+                    responseMap.put("message", "Usuário não encontrado.");
+                    out.print(gson.toJson(responseMap));
+                    return;
+                }
+
+                if (id == usuarioLogado.getId()) {
+                    responseMap.put("success", false);
+                    responseMap.put("message", "Você não pode alterar o status da sua própria conta.");
+                    out.print(gson.toJson(responseMap));
+                    return;
+                }
+
+                boolean novoStatus = !usuarioAlvo.isAtivo(); 
+
+                if (usuarioDAO.atualizarStatus(id, novoStatus)) {
+                    try {
+                        String acaoLog = novoStatus ? "ATIVAÇÃO DE USUÁRIO" : "DESATIVAÇÃO DE USUÁRIO";
+                        LogDAO.registrar(usuarioLogado.getId(), usuarioLogado.getUsername(), acaoLog, "usuarios", 
+                            "Alterou o status do usuário: " + usuarioAlvo.getUsername() + " (ID: " + id + ") para " + (novoStatus ? "Ativo" : "Inativo"), 
+                            request.getRemoteAddr());
+                    } catch (Exception e) { System.err.println("Erro Log: " + e.getMessage()); }
+
+                    responseMap.put("success", true);
+                    responseMap.put("message", "Status do usuário alterado com sucesso!");
+                } else {
+                    responseMap.put("success", false);
+                    responseMap.put("message", "Não foi possível atualizar o status no banco de dados.");
+                }
             }
         } catch (Exception e) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -187,7 +227,6 @@ public class GerenciarUsuariosServlet extends HttpServlet {
             out.flush();
         }
     }
-
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         response.setCharacterEncoding("UTF-8");

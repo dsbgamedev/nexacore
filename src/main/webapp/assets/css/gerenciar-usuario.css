@@ -102,3 +102,47 @@
             font-weight: 600;
             margin-bottom: 6px;
         }
+        /* ==========================================================
+   AJUSTES ESPECÍFICOS PARA TABELA DE DADOS (NEXACORE)
+========================================================== */
+
+/* Trava a largura da coluna ID para ficar estreita e centralizada */
+.table th:first-child,
+.table td:first-child {
+    width: 65px !important;
+    min-width: 65px !important;
+    text-align: center;
+}
+
+/* Garante espaço suficiente e impede que os botões de ação quebrem linha */
+.table th:last-child,
+.table td:last-child {
+    width: 140px !important;
+    min-width: 140px !important;
+    text-align: center;
+    white-space: nowrap !important;
+}
+
+/* Padroniza o espaçamento dos botões de ação na tabela */
+.table td .btn, 
+.table td .btn-action {
+    padding: 4px 8px !important;
+    font-size: 0.85rem !important;
+}
+/* ==========================================================
+   ESTILOS PARA USUÁRIOS INATIVOS (NEXACORE)
+========================================================== */
+
+tr.usuario-inativo {
+    opacity: 0.55;
+    background-color: #f8f9fa !important;
+}
+
+tr.usuario-inativo td {
+    text-decoration: line-through;
+}
+
+/* Exceção: Mantém a última coluna (Ações) limpa e com os botões normais/clicáveis */
+tr.usuario-inativo td:last-child {
+    text-decoration: none !important;
+}

@@ -107,6 +107,113 @@ public class MovimentacaoEnvioDAO {
 	    return idEnvioGerado;
 	}
     
+	//Metodo voltado para inserir um envio de Devolução equipamento
+	//Metodo voltado para inserir um envio de Devolução equipamento como Rascunho (ID 5)
+	public Long inserirDevolucao(MovimentacaoEnvio envio, List<Long> idsEquipamentos) throws SQLException {
+		System.out.println(">>> EXECUTANDO INSERIR DEVOLUÇÃO PARA O EQUIPAMENTO ID: " + idsEquipamentos);
+		String sqlEnvio = "INSERT INTO movimentacao_envio (data_envio, origem_id, destino_id, responsavel, transportadora, codigo_rastreio, data_previsa_entrega, observacoes, status_id, numero_nota) " +
+	                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_envio";
+	    
+	    // Busca a descrição da situação atual do equipamento
+	    String sqlBuscaSituacao = "SELECT s.nome FROM equipamentos e JOIN situacao_equipamento s ON e.situacao_id = s.id WHERE e.id_equipamento = ?";
+	    
+	    // Inclui a coluna status_equipamento_momento no insert
+	    String sqlItem = "INSERT INTO movimentacao_envio_itens (id_envio, id_equipamento, status_equipamento_momento) VALUES (?, ?, ?)";
+	    
+	    // Atualiza a situação do equipamento para 8 (Em Devolução) ou mantendo sua lógica
+	    String sqlAtualizaEquip = "UPDATE equipamentos SET status_id = 6, situacao_id = 9 WHERE id_equipamento = ?";
+	    
+
+	    Connection conn = null;
+	    PreparedStatement stmtEnvio = null;
+	    PreparedStatement stmtBuscaSit = null;
+	    PreparedStatement stmtItem = null;
+	    PreparedStatement stmtAtualizaEquip = null;
+	    ResultSet rs = null;
+	    Long idEnvioGerado = null;
+
+	    // FORÇA O STATUS ID 5 (Rascunho) para que não apareça na tela de consulta de envio
+	    Long statusRascunho = 1L;
+
+	    try {
+	        conn = Conexao.conectar();
+	        conn.setAutoCommit(false);
+
+	        stmtEnvio = conn.prepareStatement(sqlEnvio);
+	        stmtEnvio.setDate(1, Date.valueOf(envio.getDataEnvio()));
+	        stmtEnvio.setLong(2, envio.getOrigemId());
+	        stmtEnvio.setLong(3, envio.getDestinoId());
+	        stmtEnvio.setString(4, envio.getResponsavel());
+	        stmtEnvio.setString(5, envio.getTransportadora());
+	        stmtEnvio.setString(6, envio.getCodigoRastreio());
+	        if (envio.getDataPrevisaoEntrega() != null) {
+	            stmtEnvio.setDate(7, Date.valueOf(envio.getDataPrevisaoEntrega()));
+	        } else {
+	            stmtEnvio.setNull(7, Types.DATE);
+	        }
+	        stmtEnvio.setString(8, envio.getObservacoes());
+	        stmtEnvio.setLong(9, statusRascunho); // Grava como ID 5 (Rascunho)
+	        stmtEnvio.setString(10, envio.getNumeroNota());
+
+	        rs = stmtEnvio.executeQuery();
+	        if (rs.next()) {
+	            idEnvioGerado = rs.getLong(1);
+	        }
+	        
+	        // Grava o histórico inicial como Rascunho
+	        String sqlHistInserir = "INSERT INTO movimentacao_historico (id_envio, status_id, observacao) VALUES (?, ?, ?)";
+	        try (PreparedStatement stmtHist = conn.prepareStatement(sqlHistInserir)) {
+	            stmtHist.setLong(1, idEnvioGerado);
+	            stmtHist.setLong(2, statusRascunho);
+	            stmtHist.setString(3, "Devolução ID #" + idEnvioGerado + " iniciada como rascunho.");
+	            stmtHist.executeUpdate();
+	        }
+
+	        stmtBuscaSit = conn.prepareStatement(sqlBuscaSituacao);
+	        stmtItem = conn.prepareStatement(sqlItem);
+	        stmtAtualizaEquip = conn.prepareStatement(sqlAtualizaEquip);
+
+	        for (Long idEquipamento : idsEquipamentos) {
+	            stmtBuscaSit.setLong(1, idEquipamento);
+	            String situacaoMomento = "Disponível";
+	            try (ResultSet rsSit = stmtBuscaSit.executeQuery()) {
+	                if (rsSit.next()) {
+	                    situacaoMomento = rsSit.getString("nome");
+	                }
+	            }
+
+	            stmtItem.setLong(1, idEnvioGerado);
+	            stmtItem.setLong(2, idEquipamento);
+	            stmtItem.setString(3, situacaoMomento);
+	            stmtItem.addBatch();
+
+	            stmtAtualizaEquip.setLong(1, idEquipamento);
+	            stmtAtualizaEquip.addBatch();
+	         // ADICIONE ESTE LOG PARA TESTAR:
+	            System.out.println(">>> Preparando UPDATE para o equipamento ID: " + idEquipamento + " definindo situacao_id = 9");
+	        }
+
+	        stmtItem.executeBatch();
+	        int[] resultadosUpdate = stmtAtualizaEquip.executeBatch(); // ADICIONE ISSO
+	        System.out.println(">>> Quantidade de equipamentos atualizados no UPDATE: " + resultadosUpdate.length);
+	        //stmtAtualizaEquip.executeBatch();
+	        
+	        conn.commit();
+	        System.out.println(">>> UPDATE EXECUTADO COM SUCESSO NO BANCO!");
+	    
+	    } catch (SQLException e) {
+	        if (conn != null) { try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); } }
+	        throw e;
+	    } finally {
+	        if (stmtBuscaSit != null) try { stmtBuscaSit.close(); } catch (Exception e) {}
+	        if (stmtItem != null) try { stmtItem.close(); } catch (Exception e) {}
+	        if (stmtAtualizaEquip != null) try { stmtAtualizaEquip.close(); } catch (Exception e) {}
+	        if (conn != null) { try { conn.setAutoCommit(true); conn.close(); } catch (SQLException e) { e.printStackTrace(); } }
+	    }
+
+	    return idEnvioGerado;
+	}
+
 	public List<MovimentacaoEnvio> listarTodos() throws SQLException {
 	    String sql = "SELECT e.*, " +
 	                 "orig.nome_empresa AS nome_origem, " +
@@ -149,6 +256,106 @@ public class MovimentacaoEnvioDAO {
 	            env.setTransportadora(rs.getString("transportadora"));
 	            env.setCodigoRastreio(rs.getString("codigo_rastreio"));
 	            env.setNumeroNota(rs.getString("numero_nota"));
+	            env.setResponsavelEnvio(rs.getString("responsavel_envio"));
+	            
+	            if (rs.getDate("data_previsa_entrega") != null) {
+	                env.setDataPrevisaoEntrega(rs.getDate("data_previsa_entrega").toLocalDate());
+	            }
+	            env.setObservacoes(rs.getString("observacoes"));
+	            env.setStatusId(rs.getLong("status_id")); 
+	            env.setStatusNome(rs.getString("status_nome") != null ? rs.getString("status_nome") : "Desconhecido");
+	            env.setStatusCor(rs.getString("status_cor") != null ? rs.getString("status_cor") : "#6c757d");
+	            
+	            // Busca os produtos/itens vinculados
+	            List<Map<String, Object>> produtosEnvio = new java.util.ArrayList<>();
+	            try (PreparedStatement stmtItens = conn.prepareStatement(sqlItens)) {
+	                stmtItens.setLong(1, env.getIdEnvio());
+	                try (ResultSet rsItens = stmtItens.executeQuery()) {
+	                    while (rsItens.next()) {
+	                        Map<String, Object> prod = new HashMap<>();
+	                        prod.put("idSistema", rsItens.getString("id_sistema"));
+	                        prod.put("patrimonio", rsItens.getString("patrimonio"));
+	                        prod.put("produtoNome", (rsItens.getString("marca") != null ? rsItens.getString("marca") + " - " : "") + rsItens.getString("nome_produto"));
+	                        prod.put("numeroSerie", rsItens.getString("numero_serie"));
+	                        produtosEnvio.add(prod);
+	                    }
+	                }
+	            }
+	            env.setProdutos(produtosEnvio);
+
+	            // Busca o histórico do envio
+	            List<model.MovimentacaoHistorico> listaHistorico = new java.util.ArrayList<>();
+	            try (PreparedStatement stmtHist = conn.prepareStatement(sqlHistoricoEnvio)) {
+	                stmtHist.setLong(1, env.getIdEnvio());
+	                try (ResultSet rsHist = stmtHist.executeQuery()) {
+	                    while (rsHist.next()) {
+	                        model.MovimentacaoHistorico hist = new model.MovimentacaoHistorico();
+	                        hist.setIdHistorico(rsHist.getLong("id_historico"));
+	                        hist.setIdEnvio(rsHist.getLong("id_envio"));
+	                        hist.setStatusId(rsHist.getLong("status_id"));
+	                        hist.setStatusNome(rsHist.getString("status_nome"));
+	                        
+	                        if (rsHist.getTimestamp("data_hora") != null) {
+	                            hist.setDataHora(rsHist.getTimestamp("data_hora").toLocalDateTime());
+	                        }
+	                        
+	                        hist.setObservacao(rsHist.getString("observacao"));
+	                        listaHistorico.add(hist);
+	                    }
+	                }
+	            }
+	            env.setHistorico(listaHistorico);
+                lista.add(env); // <--- Adicionado para preencher a lista corretamente!
+	        }
+	    }
+	    return lista;
+	}
+	
+	// Novo método exclusivo para telas que devem ocultar o Rascunho (ID 5)
+	public List<MovimentacaoEnvio> listarTodosExcetoRascunho() throws SQLException {
+	    String sql = "SELECT e.*, " +
+	                 "orig.nome_empresa AS nome_origem, " +
+	                 "dest.nome_empresa AS nome_destino, " +
+	                 "ms.nome AS status_nome, ms.cor AS status_cor " +
+	                 "FROM movimentacao_envio e " +
+	                 "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
+	                 "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
+	                 "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
+	                 "WHERE e.status_id != 5 " + // <--- Filtro adicionado para ocultar os rascunhos
+	                 "ORDER BY e.data_envio DESC, e.id_envio DESC";
+
+	    String sqlItens = "SELECT iei.id_equipamento, eq.id_sistema, eq.patrimonio, eq.numero_serie, " +
+	                      "p.modelo AS nome_produto, m.nome_marca AS marca " +
+	                      "FROM movimentacao_envio_itens iei " +
+	                      "INNER JOIN equipamentos eq ON iei.id_equipamento = eq.id_equipamento " +
+	                      "INNER JOIN produtos p ON eq.id_produto = p.id " +
+	                      "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+	                      "WHERE iei.id_envio = ?";
+
+        String sqlHistoricoEnvio = "SELECT h.*, ms.nome AS status_nome, ms.cor AS status_cor " +
+                                   "FROM movimentacao_historico h " +
+                                   "LEFT JOIN movimentacao_status ms ON h.status_id = ms.id " +
+                                   "WHERE h.id_envio = ? ORDER BY h.data_hora ASC";
+
+	    List<MovimentacaoEnvio> lista = new java.util.ArrayList<>();
+
+	    try (Connection conn = Conexao.conectar();
+	         PreparedStatement stmt = conn.prepareStatement(sql);
+	         ResultSet rs = stmt.executeQuery()) {
+
+	        while (rs.next()) {
+	            MovimentacaoEnvio env = new MovimentacaoEnvio();
+	            env.setIdEnvio(rs.getLong("id_envio"));
+	            env.setDataEnvio(rs.getDate("data_envio").toLocalDate());
+	            env.setOrigemId(rs.getLong("origem_id"));
+	            env.setDestinoId(rs.getLong("destino_id"));
+	            env.setNomeOrigem(rs.getString("nome_origem"));
+	            env.setNomeDestino(rs.getString("nome_destino"));
+	            env.setResponsavel(rs.getString("responsavel"));
+	            env.setTransportadora(rs.getString("transportadora"));
+	            env.setCodigoRastreio(rs.getString("codigo_rastreio"));
+	            env.setNumeroNota(rs.getString("numero_nota"));
+	            env.setResponsavelEnvio(rs.getString("responsavel_envio"));
 	            
 	            if (rs.getDate("data_previsa_entrega") != null) {
 	                env.setDataPrevisaoEntrega(rs.getDate("data_previsa_entrega").toLocalDate());
@@ -197,7 +404,7 @@ public class MovimentacaoEnvioDAO {
 	                }
 	            }
 	            env.setHistorico(listaHistorico);
-                lista.add(env); // <--- Adicionado para preencher a lista corretamente!
+                lista.add(env);
 	        }
 	    }
 	    return lista;
@@ -240,6 +447,22 @@ public class MovimentacaoEnvioDAO {
         return lista;
     }
 	
+	 /*Busca no banco de dados todas movimentações envio e devolução
+	 * Construção Dinâmica da Query: Monta uma consulta SQL base fazendo junções (LEFT JOIN) com as 
+	 * tabelas de filiais (origem e destino) e de status, permitindo adicionar filtros sob demanda com a cláusula 
+	 * WHERE 1=1
+	 * Filtro por Status: Aplica restrições inteligentes dependendo do parâmetro recebido, como o agrupamento padrão 
+	 * ('Aguardando Envio', 'Em Trânsito', 'Enviado') para a opção ativos_padrao, ou buscas exatas por status 
+	 * específicos ignorando letras maiúsculas/minúsculas.
+	 * Filtro por Período (Datas): Restringe os resultados com base em uma faixa de datas de envio 
+	 * (data_envio maior ou igual à data inicial e menor ou igual à data final, quando informadas).
+     * Hidratação do Objeto: Percorre o resultado do banco (ResultSet) mapeando cada coluna para os atributos
+     *  do modelo MovimentacaoEnvio (incluindo dados gerais, notas fiscais, o responsável pela efetivação e os
+     *   nomes legíveis de origem e destino).
+     * Busca de Itens e Histórico Relacionados: Para cada envio encontrado na listagem principal, 
+     * executa subconsultas para preencher a lista de produtos/equipamentos vinculados e o histórico de
+     *  movimentações/status, retornando a estrutura completa pronta para exibição ou conversão em JSON na API.
+	 */
 	public List<MovimentacaoEnvio> listarComFiltros(String statusFiltro, String dataInicioStr, String dataFimStr) throws SQLException {
         StringBuilder sql = new StringBuilder(
             "SELECT e.*, " +
@@ -314,6 +537,7 @@ public class MovimentacaoEnvioDAO {
                     env.setTransportadora(rs.getString("transportadora"));
                     env.setCodigoRastreio(rs.getString("codigo_rastreio"));
                     env.setNumeroNota(rs.getString("numero_nota"));
+                    env.setResponsavelEnvio(rs.getString("responsavel_envio"));
                     
                     if (rs.getDate("data_previsa_entrega") != null) {
                         env.setDataPrevisaoEntrega(rs.getDate("data_previsa_entrega").toLocalDate());
@@ -566,7 +790,99 @@ public class MovimentacaoEnvioDAO {
             if (conn != null) { try { conn.setAutoCommit(true); conn.close(); } catch (SQLException e) { e.printStackTrace(); } }
         }
     }
-	
+	//Cancela envio da Devolucao e volta para status ativo
+	public void cancelarDevolucao(Long idEnvio) throws SQLException {
+	    // 1. Busca o status atual real do envio no banco de dados
+	    String sqlBuscaEnvio = "SELECT status_id FROM movimentacao_envio WHERE id_envio = ?";
+	    String sqlBuscaItensEnvio = "SELECT iei.id_equipamento, iei.status_equipamento_momento " +
+	                                 "FROM movimentacao_envio_itens iei " +
+	                                 "WHERE iei.id_envio = ?";
+	    
+	    // 2. Busca a situação (id) na tabela situacao_equipamento com base no nome salvo no momento
+	    String sqlBuscaIdSituacaoPorNome = "SELECT id FROM situacao_equipamento WHERE LOWER(nome) = LOWER(?)";
+	    
+	    // 3. Atualiza o equipamento de volta para status_id = 1 (Ativo) e recupera a situação original do momento
+	    String sqlVoltaEquipDevolucao = "UPDATE equipamentos SET status_id = 1, situacao_id = ? WHERE id_equipamento = ?";
+	    
+	    // 4. Cancela o status do envio (ID 4)
+	    String sqlCancelaEnvioStatus = "UPDATE movimentacao_envio SET status_id = 4 WHERE id_envio = ?";
+	    
+	    // 5. Registra o histórico
+	    String sqlHistCancelamento = "INSERT INTO movimentacao_historico (id_envio, status_id, observacao) VALUES (?, ?, ?)";
+
+	    Connection conn = null;
+	    try {
+	        conn = Conexao.conectar();
+	        conn.setAutoCommit(false);
+
+	        Long statusAtual = null;
+	        try (PreparedStatement stmtOrigem = conn.prepareStatement(sqlBuscaEnvio)) {
+	            stmtOrigem.setLong(1, idEnvio);
+	            try (ResultSet rs = stmtOrigem.executeQuery()) {
+	                if (rs.next()) {
+	                    statusAtual = rs.getLong("status_id");
+	                } else {
+	                    throw new SQLException("Devolução não encontrada.");
+	                }
+	            }
+	        }
+
+	        // Trava de segurança contra cache ou dupla aba (Apenas status 1 ou 2 podem ser cancelados)
+	        if (statusAtual != null && statusAtual != 1L && statusAtual != 2L) {
+	            throw new SQLException("Ação negada: Esta devolução já foi finalizada ou cancelada e não pode ser cancelada.");
+	        }
+
+	        // Restaura cada equipamento para o status_id = 1 e a situação que ele tinha antes da devolução
+	        try (PreparedStatement stmtBuscaItens = conn.prepareStatement(sqlBuscaItensEnvio);
+	             PreparedStatement stmtBuscaSitId = conn.prepareStatement(sqlBuscaIdSituacaoPorNome);
+	             PreparedStatement stmtVolta = conn.prepareStatement(sqlVoltaEquipDevolucao)) {
+	            
+	            stmtBuscaItens.setLong(1, idEnvio);
+	            try (ResultSet rsItens = stmtBuscaItens.executeQuery()) {
+	                while (rsItens.next()) {
+	                    Long idEquipamento = rsItens.getLong("id_equipamento");
+	                    String statusMomento = rsItens.getString("status_equipamento_momento");
+	                    
+	                    Long situacaoIdOriginal = 1L; // Fallback padrão
+	                    if (statusMomento != null && !statusMomento.isEmpty()) {
+	                        stmtBuscaSitId.setString(1, statusMomento);
+	                        try (ResultSet rsSit = stmtBuscaSitId.executeQuery()) {
+	                            if (rsSit.next()) {
+	                                situacaoIdOriginal = rsSit.getLong("id");
+	                            }
+	                        }
+	                    }
+
+	                    stmtVolta.setLong(1, situacaoIdOriginal);
+	                    stmtVolta.setLong(2, idEquipamento);
+	                    stmtVolta.addBatch();
+	                }
+	                stmtVolta.executeBatch();
+	            }
+	        }
+
+	        // Altera o status do envio para Cancelado (ID 4)
+	        try (PreparedStatement stmtCancela = conn.prepareStatement(sqlCancelaEnvioStatus)) {
+	            stmtCancela.setLong(1, idEnvio);
+	            stmtCancela.executeUpdate();
+	        }
+
+	        // Registra no histórico do envio
+	        try (PreparedStatement stmtHist = conn.prepareStatement(sqlHistCancelamento)) {
+	            stmtHist.setLong(1, idEnvio);
+	            stmtHist.setLong(2, 4L); 
+	            stmtHist.setString(3, "Devolução ID #" + idEnvio + " foi cancelada e os equipamentos retornaram ao status ativo.");
+	            stmtHist.executeUpdate();
+	        }
+
+	        conn.commit();
+	    } catch (SQLException e) {
+	        if (conn != null) { try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); } }
+	        throw e;
+	    } finally {
+	        if (conn != null) { try { conn.setAutoCommit(true); conn.close(); } catch (SQLException e) { e.printStackTrace(); } }
+	    }
+	}
 	public boolean existeEnvioPendenteParaEquipamento(Long idEquipamento) throws SQLException {
         // Verifica se o equipamento está vinculado a algum envio ativo que ainda não foi recebido ou cancelado (status 1 = Aguardando, 2 = Em Trânsito)
         String sql = "SELECT COUNT(*) FROM movimentacao_envio_itens mei " +
@@ -585,36 +901,36 @@ public class MovimentacaoEnvioDAO {
         return false;
     }
 	
-    public void efetivarEnvio(Long idEnvio) throws SQLException {
-        String sqlUpdateEnvio = "UPDATE movimentacao_envio SET status_id = 2 WHERE id_envio = ?";
-        String sqlUpdateEquip = "UPDATE equipamentos SET situacao_id = 3 WHERE id_equipamento IN (SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?)";
-        String sqlHist = "INSERT INTO movimentacao_historico (id_envio, status_id, observacao) VALUES (?, 2, ?)";
+	public void efetivarEnvio(Long idEnvio, String nomeResponsavelEnvio) throws SQLException {
+	    String sqlUpdateEnvio = "UPDATE movimentacao_envio SET status_id = 2, responsavel_envio = ? WHERE id_envio = ?";
+	    String sqlUpdateEquip = "UPDATE equipamentos SET situacao_id = 3 WHERE id_equipamento IN (SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?)";
+	    String sqlHist = "INSERT INTO movimentacao_historico (id_envio, status_id, observacao) VALUES (?, 2, ?)";
 
-        try (Connection conn = Conexao.conectar()) {
-            conn.setAutoCommit(false);
-            try (PreparedStatement stmt1 = conn.prepareStatement(sqlUpdateEnvio);
-                 PreparedStatement stmt2 = conn.prepareStatement(sqlUpdateEquip);
-                 PreparedStatement stmt3 = conn.prepareStatement(sqlHist)) {
-                
-                // 1. Muda status do envio para 2 (Em Trânsito)
-                stmt1.setLong(1, idEnvio);
-                stmt1.executeUpdate();
-                
-                // 2. Muda situação dos equipamentos para 3 (Em Trânsito)
-                stmt2.setLong(1, idEnvio);
-                stmt2.executeUpdate();
-                
-                // 3. Registra no histórico
-                stmt3.setLong(1, idEnvio);
-                stmt3.setString(2, "Envio efetivado. Equipamentos em trânsito.");
-                stmt3.executeUpdate();
-                
-                conn.commit();
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            }
-        }
-    }
-    
+	    try (Connection conn = Conexao.conectar()) {
+	        conn.setAutoCommit(false);
+	        try (PreparedStatement stmt1 = conn.prepareStatement(sqlUpdateEnvio);
+	             PreparedStatement stmt2 = conn.prepareStatement(sqlUpdateEquip);
+	             PreparedStatement stmt3 = conn.prepareStatement(sqlHist)) {
+	            
+	            // 1. Muda status do envio para 2 (Em Trânsito) e grava o responsável pelo envio
+	            stmt1.setString(1, nomeResponsavelEnvio);
+	            stmt1.setLong(2, idEnvio);
+	            stmt1.executeUpdate();
+	            
+	            // 2. Muda situação dos equipamentos para 3 (Em Trânsito)
+	            stmt2.setLong(1, idEnvio);
+	            stmt2.executeUpdate();
+	            
+	            // 3. Registra no histórico detalhando quem realizou a ação
+	            stmt3.setLong(1, idEnvio);
+	            stmt3.setString(2, "Envio efetivado por " + nomeResponsavelEnvio + ". Equipamentos em trânsito.");
+	            stmt3.executeUpdate();
+	            
+	            conn.commit();
+	        } catch (SQLException e) {
+	            conn.rollback();
+	            throw e;
+	        }
+	    }
+	}
 }

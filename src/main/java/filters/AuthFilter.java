@@ -46,6 +46,7 @@ public class AuthFilter implements Filter {
             "/WEB-INF/jsp/consulta-equipamento.jsp",
             "/WEB-INF/jsp/consulta-produto.jsp",
             "/WEB-INF/jsp/envio-equipamento.jsp",
+            "/WEB-INF/jsp/devolucao-equipamento.jsp",
             "/WEB-INF/jsp/fabricantes.jsp",
             "/WEB-INF/jsp/gerarEtiquetaVisual.jsp",
             "/WEB-INF/jsp/gerenciar-atributos.jsp",
@@ -120,7 +121,9 @@ public class AuthFilter implements Filter {
         // 6. movimentacao_envio
         PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/consulta-envios.jsp", "movimentacao_envio");
         PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/envio-equipamento.jsp", "movimentacao_envio");
+        PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/devolucao-equipamento.jsp", "movimentacao_envio");
         PROTECTED_RESOURCES_MODULES.put("/EnvioEquipamentoServlet", "movimentacao_envio");
+        PROTECTED_RESOURCES_MODULES.put("/DevolucaoEquipamentoServlet", "movimentacao_envio");
         PROTECTED_RESOURCES_MODULES.put("/ConsultaEnvioServlet", "movimentacao_envio"); 
         PROTECTED_RESOURCES_MODULES.put("/api/envios", "movimentacao_envio");
         PROTECTED_RESOURCES_MODULES.put("/api/envios/", "movimentacao_envio");

@@ -9,32 +9,42 @@ document.addEventListener("DOMContentLoaded", function() {
         inputDataEnvio.value = hoje;
     }
 	
-	// --- GARANTIR O CAMPO RESPONSÁVEL BLOQUEADO E PREENCHIDO ---
-	    const inputResponsavel = document.getElementById("responsavel");
-	    if (inputResponsavel) {
-	        // Se o valor já veio preenchido pela tag ${nomeUsuarioLogado} do JSP, apenas o travamos
-	        inputResponsavel.readOnly = true;
-	        inputResponsavel.style.backgroundColor = "#e9ecef";
-	        inputResponsavel.style.cursor = "not-allowed";
-	        
-	        // Caso esteja vazio por algum motivo de carregamento dinâmico, podemos opcionalmente buscar de uma variável global da sessão
-	        if (!inputResponsavel.value && window.usuarioLogadoNome) {
-	            inputResponsavel.value = window.usuarioLogadoNome;
-	        }
-	    }
-	    // -------------------------------------------------------------
+    // Detecta se é o fluxo de devolução com segurança
+    const urlParams = new URLSearchParams(window.location.search);
+    const tipoParam = (window.isDevolucaoForcada) ? 'devolucao' : urlParams.get('tipo');
 
-	// 2. Carregar o select de Filiais
-    carregarFiliais().then(() => {
-        // Se for devolução pela URL, já carrega e adiciona o equipamento automaticamente para travar o destino certo
-        const urlParams = new URLSearchParams(window.location.search);
-        const tipo = urlParams.get('tipo');
-        const idEquipamentoDevolucao = urlParams.get('idEquipamento');
-
-        if (tipo === 'devolucao' && idEquipamentoDevolucao) {
-            carregarEquipamentoDevolucaoAutomatico(idEquipamentoDevolucao);
+    // APENAS SE FOR DEVOLUÇÃO: Força o destino fixo para a Matriz (161) e o desativa
+    if (tipoParam === 'devolucao') {
+        const selectDestino = document.getElementById("destinoId");
+        if (selectDestino) {
+            selectDestino.value = "161"; 
+            selectDestino.disabled = true;  
+            selectDestino.classList.add("bg-light");
         }
-    });
+    }
+	
+	// --- GARANTIR O CAMPO RESPONSÁVEL BLOQUEADO E PREENCHIDO ---
+    const inputResponsavel = document.getElementById("responsavel");
+    if (inputResponsavel) {
+        inputResponsavel.readOnly = true;
+        inputResponsavel.style.backgroundColor = "#e9ecef";
+        inputResponsavel.style.cursor = "not-allowed";
+        
+        if (!inputResponsavel.value && window.usuarioLogadoNome) {
+            inputResponsavel.value = window.usuarioLogadoNome;
+        }
+    }
+
+	// 2. Carregar o select de Filiais e só depois processar a devolução automática
+	carregarFiliais().then(() => {
+	    const idEquipamentoDevolucao = (window.isDevolucaoForcada) ? window.idEquipamentoDevolucaoForçado : urlParams.get('idEquipamento');
+
+	    if (tipoParam === 'devolucao' && idEquipamentoDevolucao) {
+	        setTimeout(() => {
+	            carregarEquipamentoDevolucaoAutomatico(idEquipamentoDevolucao);
+	        }, 150);
+	    }
+	});
 
     // 3. Evento do botão que abre o modal de seleção de equipamentos
     const btnAbrirModal = document.getElementById("btnAbrirModalEquipamentos");
@@ -140,11 +150,6 @@ document.addEventListener("DOMContentLoaded", function() {
             let origemIdValor = null;
             if (selectOrigem) {
                 origemIdValor = selectOrigem.value;
-                
-                if (!origemIdValor && equipamentosSelecionadosMap.size > 0) {
-                    const primeiroEq = Array.from(equipamentosSelecionadosMap.values())[0];
-                    origemIdValor = primeiroEq.origemCodigo || primeiroEq.filialId || primeiroEq.idFilial;
-                }
             }
 
             const selectDestino = document.getElementById("destinoId");
@@ -163,15 +168,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 equipamentosIds: Array.from(equipamentosSelecionadosMap.keys())
             };
 
-            const urlParams = new URLSearchParams(window.location.search);
-            const tipoParam = urlParams.get('tipo');
-            
+			// Recalcula o tipoParam de forma segura dentro do submit
+            const urlParamsCheck = new URLSearchParams(window.location.search);
+            const tipoAtual = (window.isDevolucaoForcada) ? 'devolucao' : urlParamsCheck.get('tipo');
+
             let urlEndpoint = contextPath + '/api/envios';
-            if (tipoParam === 'devolucao') {
+            if (tipoAtual === 'devolucao') {
                 urlEndpoint += '?tipo=devolucao';
             }
-
-            // Desativa o botão de envio para evitar cliques duplos (duplicidade)
             const btnSubmit = formEnvio.querySelector('button[type="submit"]');
             if (btnSubmit) btnSubmit.disabled = true;
 
@@ -183,18 +187,18 @@ document.addEventListener("DOMContentLoaded", function() {
             .then(res => res.json())
             .then(resposta => {
                 if (resposta.sucesso) {
-                    equipamentosSelecionadosMap.clear(); // Limpa a memória dos itens selecionados
+                    equipamentosSelecionadosMap.clear();
                     
                     if (typeof ModalService !== 'undefined') {
                         ModalService.success("Sucesso", resposta.mensagem).then(() => {
-                            window.location.href = contextPath + '/ConsultaEnvioServlet'; // Redireciona para a consulta
+                            window.location.href = contextPath + '/ConsultaEnvioServlet';
                         });
                     } else {
                         alert(resposta.mensagem);
-                        window.location.href = contextPath + '/ConsultaEnvioServlet'; // Redireciona para a consulta
+                        window.location.href = contextPath + '/ConsultaEnvioServlet';
                     }
                 } else {
-                    if (btnSubmit) btnSubmit.disabled = false; // Reativa o botão se houver erro
+                    if (btnSubmit) btnSubmit.disabled = false;
                     if (typeof ModalService !== 'undefined') {
                         ModalService.error("Erro", resposta.mensagem);
                     } else {
@@ -204,7 +208,7 @@ document.addEventListener("DOMContentLoaded", function() {
             })
             .catch(err => {
                 console.error("Erro:", err);
-                if (btnSubmit) btnSubmit.disabled = false; // Reativa o botão se houver erro de rede
+                if (btnSubmit) btnSubmit.disabled = false;
                 if (typeof ModalService !== 'undefined') {
                     ModalService.error("Erro", "Erro de comunicação ao efetuar o envio.");
                 } else {
@@ -215,6 +219,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 
+// Função para buscar filiais e popular os selects de origem e destino
 // Função para buscar filiais e popular os selects de origem e destino
 function carregarFiliais() {
     return fetch(contextPath + '/api/empresas')
@@ -230,57 +235,94 @@ function carregarFiliais() {
                 selectOrigem.add(new Option(texto, filial.idFilial));
                 selectDestino.add(new Option(texto, filial.idFilial));
             });
+
+            // GARANTE O TRAVAMENTO DO DESTINO NA MATRIZ (161) APENAS NA TELA DE DEVOLUÇÃO
+            const urlParams = new URLSearchParams(window.location.search);
+            const tipoParam = (window.isDevolucaoForcada) ? 'devolucao' : urlParams.get('tipo');
+
+            if (tipoParam === 'devolucao') {
+                for (let i = 0; i < selectDestino.options.length; i++) {
+                    let optVal = selectDestino.options[i].value;
+                    let optText = selectDestino.options[i].text.toUpperCase();
+                    
+                    if (optVal == "161" || optText.startsWith("161 -") || optText.includes("161") || optText.includes("SP MATRIZ") || optText.includes("CBA DIESEL SP")) {
+                        selectDestino.selectedIndex = i;
+                        break;
+                    }
+                }
+                selectDestino.disabled = true;
+                selectDestino.style.backgroundColor = "#e9ecef";
+                selectDestino.style.cursor = "not-allowed";
+                selectDestino.classList.add("bg-light");
+            }
         })
         .catch(err => console.error("Erro ao carregar filiais:", err));
 }
 
-// Carrega o equipamento de devolução automaticamente na tabela e define/trava o destino correto pela última movimentação
+// Carrega o equipamento de devolução definindo a Origem na filial atual e o Destino fixo na Matriz (ID 7 / Código 161)
+// Carrega o equipamento de devolução definindo a Origem na filial atual e o Destino fixo na Matriz (ID 7 / Código 161)
 async function carregarEquipamentoDevolucaoAutomatico(idEquipamento) {
     try {
-        // 1. Busca os dados do equipamento
         const resEq = await fetch(`${contextPath}/api/equipamentos?id=${idEquipamento}`);
         if (!resEq.ok) return;
         const eq = await resEq.json();
 
-        eq.filialIdPadrao = eq.origemCodigo || eq.idFilialOrigem || eq.filialId || eq.empresaId;
+        let filialAtualId = eq.idFilialOrigem || eq.filialId || eq.origemCodigo || (eq.origem && (eq.origem.id || eq.origem.codigo)) || eq.empresaId;
+        eq.filialIdPadrao = filialAtualId;
+        
         equipamentosSelecionadosMap.set(eq.idEquipamento, eq);
         atualizarTabelaPrincipalItens();
 
-        // 2. Define a origem atual na tela
+        // 1. Seta e trava a Origem com verificação de segurança caso as options demorem um instante
         const selectOrigem = document.getElementById("origemId");
-        if (selectOrigem && eq.filialIdPadrao) {
-            for (let i = 0; i < selectOrigem.options.length; i++) {
-                let optVal = selectOrigem.options[i].value;
-                let optText = selectOrigem.options[i].text;
-                if (optVal == eq.filialIdPadrao || optText.startsWith(eq.filialIdPadrao + " -") || optText.includes(eq.filialIdPadrao)) {
-                    selectOrigem.selectedIndex = i;
+        if (selectOrigem && filialAtualId) {
+            let tentativas = 0;
+            const tentarSelecionarOrigem = () => {
+                let encontrado = false;
+                for (let i = 0; i < selectOrigem.options.length; i++) {
+                    let optVal = selectOrigem.options[i].value;
+                    let optText = selectOrigem.options[i].text;
+                    if (optVal == filialAtualId || optText.startsWith(filialAtualId + " -") || optText.includes(filialAtualId)) {
+                        selectOrigem.selectedIndex = i;
+                        encontrado = true;
+                        break;
+                    }
+                }
+
+                if (!encontrado && tentativas < 5) {
+                    tentativas++;
+                    setTimeout(tentarSelecionarOrigem, 100); // Tenta novamente se o DOM das options ainda não populou
+                    return;
+                }
+
+                selectOrigem.disabled = true;
+                selectOrigem.style.backgroundColor = "#e9ecef";
+                selectOrigem.style.cursor = "not-allowed";
+                selectOrigem.classList.add("bg-light");
+            };
+            tentarSelecionarOrigem();
+        }
+
+        // 2. BUSCA E TRAVA O DESTINO FIXO OBRIGATORIAMENTE EM: 161 - CBA DIESEL SP MATRIZ
+        const selectDestino = document.getElementById("destinoId");
+        if (selectDestino) {
+            let encontrado = false;
+            for (let i = 0; i < selectDestino.options.length; i++) {
+                let optVal = selectDestino.options[i].value;
+                let optText = selectDestino.options[i].text.toUpperCase();
+                
+                if (optVal == "161" || optText.startsWith("161 -") || optText.includes("161") || optText.includes("SP MATRIZ") || optText.includes("CBA DIESEL SP")) {
+                    selectDestino.selectedIndex = i;
+                    encontrado = true;
                     break;
                 }
             }
-            selectOrigem.disabled = true;
-        }
 
-        // 3. Busca o último envio para descobrir a filial de origem original e colocá-la travada no Destino
-        const resEnvios = await fetch(`${contextPath}/api/envios?idEquipamento=${idEquipamento}`);
-        if (resEnvios.ok) {
-            const envios = await resEnvios.json();
-            if (Array.isArray(envios) && envios.length > 0) {
-                const ultimoEnvio = envios[envios.length - 1];
-                const filialOrigemOriginal = ultimoEnvio.origemId || ultimoEnvio.origemCodigo;
-
-                const selectDestino = document.getElementById("destinoId");
-                if (selectDestino && filialOrigemOriginal) {
-                    for (let i = 0; i < selectDestino.options.length; i++) {
-                        let optVal = selectDestino.options[i].value;
-                        let optText = selectDestino.options[i].text;
-                        if (optVal == filialOrigemOriginal || optText.startsWith(filialOrigemOriginal + " -") || optText.includes(filialOrigemOriginal)) {
-                            selectDestino.selectedIndex = i;
-                            break;
-                        }
-                    }
-                    // Trava o destino para ninguém conseguir alterar
-                    selectDestino.disabled = true;
-                }
+            if (encontrado) {
+                selectDestino.disabled = true;
+                selectDestino.style.backgroundColor = "#e9ecef";
+                selectDestino.style.cursor = "not-allowed";
+                selectDestino.classList.add("bg-light");
             }
         }
     } catch (e) {
@@ -288,12 +330,12 @@ async function carregarEquipamentoDevolucaoAutomatico(idEquipamento) {
     }
 }
 
-// Função para buscar equipamentos disponíveis para o modal
-// Função para buscar equipamentos disponíveis para o modal (Com Trava Rigorosa)
+// Função para buscar equipamentos disponíveis para o modal com regra exata de filtragem por tipo
+// Função para buscar equipamentos disponíveis para o modal com regra exata de filtragem por tipo
 function carregarEquipamentosDisponiveis() {
     const urlParams = new URLSearchParams(window.location.search);
-    const tipo = urlParams.get('tipo');
-    const idEquipamentoDevolucao = urlParams.get('idEquipamento');
+    const tipo = (window.isDevolucaoForcada) ? 'devolucao' : urlParams.get('tipo');
+    const idEquipamentoDevolucao = (window.isDevolucaoForcada) ? window.idEquipamentoDevolucaoForçado : urlParams.get('idEquipamento');
 
     let endpoint = contextPath + '/api/equipamentos';
     if (tipo === 'devolucao' && idEquipamentoDevolucao) {
@@ -315,13 +357,13 @@ function carregarEquipamentosDisponiveis() {
             }
 
             const equipamentosValidos = lista.filter(eq => {
+                // Se for devolução e tivermos o ID específico, restringe unicamente a ele
                 if (tipo === 'devolucao' && idEquipamentoDevolucao) {
                     return eq.idEquipamento == idEquipamentoDevolucao;
                 }
-				
-                // TRAVA DE SEGURANÇA RIGOROSA: Bloqueia se estiver aguardando envio, em trânsito, externo ou bloqueado
+
+                const situacaoTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && (eq.situacao.nome || eq.situacao.descricao)) || '').toLowerCase();
                 const statusMov = (eq.statusMovimentacao || eq.statusAtualMovimentacao || '').toUpperCase();
-                const situacaoTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && eq.situacao.nome) || '').toLowerCase();
                 const statusTexto = (eq.statusAtual || eq.status || '').toLowerCase();
 
                 if (
@@ -334,9 +376,17 @@ function carregarEquipamentosDisponiveis() {
                 ) {
                     return false;
                 }
-                
-                const situacaoId = eq.situacaoId !== undefined ? Number(eq.situacaoId) : (eq.situacao && eq.situacao.id ? Number(eq.situacao.id) : 0);
 
+                if (tipo === 'devolucao') {
+                    // CORRIGIDO: Removido o filtro "em uso" para não puxar itens incorretos
+                    return situacaoTexto.includes("devolução") || situacaoTexto.includes("devolucao");
+                }
+
+                if (situacaoTexto.includes("devolução") || situacaoTexto.includes("devolucao")) {
+                    return false;
+                }
+
+                const situacaoId = eq.situacaoId !== undefined ? Number(eq.situacaoId) : (eq.situacao && eq.situacao.id ? Number(eq.situacao.id) : 0);
                 return (situacaoId === 1) || (situacaoTexto.includes("disponível") && !situacaoTexto.includes("uso") && !situacaoTexto.includes("reservado"));
             });
 
@@ -352,8 +402,8 @@ function carregarEquipamentosDisponiveis() {
                                 || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
                                 || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
 
-                    let statusBadge = (tipo === 'devolucao') ? 'Em Devolução' : (eq.statusAtual || eq.status || 'Ativo');
-                    let badgeClass = (tipo === 'devolucao') ? 'bg-warning text-dark' : 'bg-success';
+                    let situacaoExibida = eq.situacaoAtual || eq.situacaoNome || (eq.situacao ? (eq.situacao.nome || eq.situacao.descricao) : 'Disponível');
+                    let badgeClass = (situacaoExibida.toLowerCase().includes('devolução') || situacaoExibida.toLowerCase().includes('devolucao')) ? 'bg-warning text-dark' : 'bg-success';
 
                     eq.filialIdPadrao = eq.origemCodigo || eq.idFilialOrigem || eq.filialId || eq.empresaId;
 
@@ -365,7 +415,7 @@ function carregarEquipamentosDisponiveis() {
                         <td>${nomeCpu}</td>
                         <td>${produto}</td>
                         <td>${eq.numeroSerie || '-'}</td>
-                        <td><span class="badge ${badgeClass}">${statusBadge}</span></td>
+                        <td><span class="badge ${badgeClass}">${situacaoExibida}</span></td>
                     `;
                     tbody.appendChild(tr);
                 }
@@ -409,8 +459,39 @@ function atualizarTabelaPrincipalItens() {
     });
 }
 
-// Remove item da lista de envio
-function removerItemEnvio(id) {
+// Remove item da lista de envio e restaura o status no banco para "Ativo" e situação para "Em Uso"
+async function removerItemEnvio(id) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tipoParam = (window.isDevolucaoForcada) ? 'devolucao' : urlParams.get('tipo');
+
+    if (tipoParam === 'devolucao') {
+        try {
+            const response = await fetch(`${contextPath}/api/equipamentos/cancelar-devolucao`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idEquipamento: id })
+            });
+
+            const resposta = await response.json();
+            if (!response.ok || !resposta.sucesso) {
+                if (typeof ModalService !== 'undefined') {
+                    ModalService.error("Erro", resposta.mensagem || "Erro ao reverter status do equipamento.");
+                } else {
+                    alert(resposta.mensagem || "Erro ao reverter status do equipamento.");
+                }
+                return;
+            }
+        } catch (error) {
+            console.error("Erro ao cancelar devolução:", error);
+            if (typeof ModalService !== 'undefined') {
+                ModalService.error("Erro", "Erro de comunicação ao reverter status do equipamento.");
+            } else {
+                alert("Erro de comunicação ao reverter status do equipamento.");
+            }
+            return;
+        }
+    }
+
     equipamentosSelecionadosMap.delete(id);
     atualizarTabelaPrincipalItens();
 
@@ -418,12 +499,20 @@ function removerItemEnvio(id) {
         const selectOrigem = document.getElementById("origemId");
         if (selectOrigem) {
             selectOrigem.disabled = false;
+            selectOrigem.style.backgroundColor = "";
+            selectOrigem.style.cursor = "";
             selectOrigem.value = "";
         }
-        const selectDestino = document.getElementById("destinoId");
-        if (selectDestino) {
-            selectDestino.disabled = false;
-            selectDestino.value = "";
+        
+        // Só limpa/destrava o destino se NÃO for tela de devolução
+        if (tipoParam !== 'devolucao') {
+            const selectDestino = document.getElementById("destinoId");
+            if (selectDestino) {
+                selectDestino.disabled = false;
+                selectDestino.style.backgroundColor = "";
+                selectDestino.style.cursor = "";
+                selectDestino.value = "";
+            }
         }
     }
 }

@@ -53,11 +53,13 @@ const ModalService = {
      * @returns {Promise<boolean>} - Retorna true se confirmado, false caso contrário.
      */
 	confirm: (title, message, type = '') => {
-	    // Busca pelo ID que está no seu HTML
 	    const modalElement = document.getElementById('confirmModal');
-	    const box = document.getElementById('confirmBox'); // Busca o ID direto da sua div customizada
+	    const box = document.getElementById('confirmBox'); 
 	    
-	    box.classList.remove('success', 'error');
+	    // CORREÇÃO: Remove todas as possíveis classes anteriores (incluindo warning)
+	    box.classList.remove('success', 'error', 'warning');
+	    
+	    // Aplica o novo tipo se fornecido
 	    if (type) box.classList.add(type);
 	    
 	    document.getElementById('confirmTitle').textContent = title;

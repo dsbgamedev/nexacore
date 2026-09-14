@@ -5,6 +5,8 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+
+import dao.EquipamentoDAO;
 import dao.MovimentacaoEnvioDAO;
 import model.MovimentacaoEnvio;
 import model.Usuario;
@@ -28,8 +30,8 @@ import java.util.Map;
 @WebServlet(name = "EnvioEquipamentoApiServlet", urlPatterns = {"/api/envios/*"})
 public class EnvioEquipamentoApiServlet extends HttpServlet {
 	
-	
     private MovimentacaoEnvioDAO dao = new MovimentacaoEnvioDAO();
+    private EquipamentoDAO equipamentoDAO = new EquipamentoDAO();
     
     // Gson blindado para o Java 17+ utilizando um TypeAdapter seguro para LocalDate
     private Gson gson = new GsonBuilder()
@@ -81,36 +83,43 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         public String responsavel;
         public String transportadora;
         public String codigoRastreio;
-        public String numeroNota; // Adicionado para receber a Nota Fiscal do Front-end
+        public String numeroNota; 
         public String dataPrevisaoEntrega;
         public String observacoes;
         public Long statusId; 
         public List<Long> equipamentosIds;
     }
     
-    // Método de validação igual ao que você usou no CadastrarUsuarioServlet
-    private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    /**
+     * Validação granular integrada com o método inteligente do objeto Usuario.
+     * Verifica se o usuário possui a permissão específica (CONSULTAR, INSERIR, EDITAR, EXCLUIR) no módulo "movimentacao_envio".
+     */
+    private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response, String acaoEspecifica) throws IOException {
         HttpSession session = request.getSession(false);
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
-        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
-        boolean temPermissaoModulo = usuario != null && usuario.getModulosPermitidos() != null && usuario.getModulosPermitidos().contains("movimentacao_envio"); 
-
-        if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
+        if (usuario == null) {
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json; charset=UTF-8");
-            response.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Acesso negado. Você não possui permissão para o módulo de atributos.\"}");
+            response.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Sessão expirada ou acesso negado.\"}");
+            return false;
+        }
+
+        boolean isAdmin = "SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil());
+        boolean temPermissao = isAdmin || usuario.temPermissao("movimentacao_envio", acaoEspecifica);
+
+        if (!temPermissao) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json; charset=UTF-8");
+            response.getWriter().write("{\"sucesso\": false, \"mensagem\": \"Acesso negado. Você não possui permissão de " + acaoEspecifica + " no módulo de envios.\"}");
             return false;
         }
         return true;
-        
     }
     
-    // 1. GET: Lista todos os envios para a tela de consulta
- // 1. GET: Retorna o JSON com a lista de envios ou um envio específico
-    @Override
+    // 1. GET: Retorna o JSON com a lista de envios ou um envio específico (Exige CONSULTAR)
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        if (!validarPermissao(req, resp)) {
+        if (!validarPermissao(req, resp, "CONSULTAR")) {
             return;
         }
         
@@ -119,11 +128,13 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
 
         try {
             String idEnvioParam = req.getParameter("idEnvio");
+            String tipoParam = req.getParameter("tipo");
+            boolean ehDevolucao = "devolucao".equals(tipoParam);
             
-            // Se vier o parâmetro idEnvio, retorna apenas os detalhes daquele envio específico
             if (idEnvioParam != null && !idEnvioParam.isEmpty()) {
                 Long idEnvio = Long.parseLong(idEnvioParam);
-                List<MovimentacaoEnvio> lista = dao.listarTodos();
+                List<MovimentacaoEnvio> lista = ehDevolucao ? dao.listarTodosExcetoRascunho() : dao.listarTodos();
+                
                 MovimentacaoEnvio envioEncontrado = lista.stream()
                     .filter(e -> e.getIdEnvio().equals(idEnvio))
                     .findFirst()
@@ -133,13 +144,18 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 return;
             }
 
-            // Captura os filtros enviados pela interface
             String statusFiltro = req.getParameter("status");
             String dataInicioStr = req.getParameter("dataInicio");
             String dataFimStr = req.getParameter("dataFim");
 
-            // Executa a busca filtrada diretamente no Banco de Dados via DAO
-            List<MovimentacaoEnvio> listaFiltrada = dao.listarComFiltros(statusFiltro, dataInicioStr, dataFimStr);
+            List<MovimentacaoEnvio> listaFiltrada;
+
+            if (ehDevolucao) {
+                listaFiltrada = dao.listarComFiltros(statusFiltro, dataInicioStr, dataFimStr);
+                listaFiltrada.removeIf(e -> e.getStatusId() != null && e.getStatusId().equals(5L));
+            } else {
+                listaFiltrada = dao.listarComFiltros(statusFiltro, dataInicioStr, dataFimStr);
+            }
 
             out.print(gson.toJson(listaFiltrada));
             
@@ -152,14 +168,40 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         }
     }
 
-    // 2. POST: Cadastra o novo envio
+    // 2. POST: Cadastra o novo envio ou inicia devolução (Exige INSERIR)
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-    	if (!validarPermissao(req, resp)) {
+        if (!validarPermissao(req, resp, "INSERIR")) {
             return;
         }
+        
         resp.setContentType("application/json;charset=UTF-8");
         PrintWriter out = resp.getWriter();
+        String acao = req.getParameter("acao");
+        
+        if ("iniciarDevolucao".equals(acao)) {
+            EnvioPayload payload = gson.fromJson(req.getReader(), EnvioPayload.class);
+            
+            if (payload == null || payload.equipamentosIds == null || payload.equipamentosIds.isEmpty()) {
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                out.print("{\"sucesso\": false, \"mensagem\": \"Nenhum equipamento selecionado.\"}");
+                return;
+            }
+
+            try {
+                for (Long idEqp : payload.equipamentosIds) {
+                    equipamentoDAO.atualizarStatusParaDevolucao(idEqp);
+                }
+                
+                resp.setStatus(HttpServletResponse.SC_OK);
+                out.print("{\"sucesso\": true, \"mensagem\": \"Equipamentos marcados para devolução com sucesso.\"}");
+            } catch (Exception e) {
+                e.printStackTrace();
+                resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                out.print("{\"sucesso\": false, \"mensagem\": \"Erro: " + e.getMessage() + "\"}");
+            }
+            return;
+        }
         
         try {
             BufferedReader reader = req.getReader();
@@ -200,7 +242,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 }
             }
             envio.setCodigoRastreio(codigoRastreioFinal);
-
             envio.setNumeroNota(payload.numeroNota); 
             
             if (payload.dataPrevisaoEntrega != null && !payload.dataPrevisaoEntrega.isEmpty()) {
@@ -214,9 +255,13 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 envio.setStatusId(payload.statusId != null ? payload.statusId : 1L);
             }
 
-            Long idGerado = dao.inserir(envio, payload.equipamentosIds);
+            Long idGerado;
+            if (ehDevolucao) {
+                idGerado = dao.inserirDevolucao(envio, payload.equipamentosIds);
+            } else {
+                idGerado = dao.inserir(envio, payload.equipamentosIds);
+            }
 
-            // --- REGISTRO DE AUDITORIA (CRIAR ENVIO/DEVOLUÇÃO) ---
             HttpSession session = req.getSession(false);
             Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
             String ipCliente = req.getHeader("X-Forwarded-For");
@@ -237,7 +282,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                     ipCliente
                 );
             }
-            // ------------------------------------------------------
 
             resp.setStatus(HttpServletResponse.SC_OK);
             out.print("{\"sucesso\": true, \"idEnvio\": " + idGerado + ", \"mensagem\": \"Envio efetuado com sucesso!\"}");
@@ -253,11 +297,13 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         }
     }
 
+    // 3. PUT: Efetiva envio ou confirma recebimento (Exige EDITAR)
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-    	if (!validarPermissao(req, resp)) {
+        if (!validarPermissao(req, resp, "EDITAR")) {
             return;
         }
+        
         resp.setContentType("application/json;charset=UTF-8");
         PrintWriter out = resp.getWriter();
 
@@ -279,9 +325,12 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             if (ipCliente == null || ipCliente.isEmpty()) ipCliente = req.getRemoteAddr();
 
             if ("efetivar".equals(acao)) {
-                dao.efetivarEnvio(idEnvio);
+                String nomeResponsavelEnvio = (usuario != null && usuario.getNomeCompleto() != null && !usuario.getNomeCompleto().isEmpty()) 
+                    ? usuario.getNomeCompleto() 
+                    : (usuario != null && usuario.getUsername() != null ? usuario.getUsername() : "Sistema");
 
-                // --- REGISTRO DE AUDITORIA (EFETIVAR ENVIO) ---
+                dao.efetivarEnvio(idEnvio, nomeResponsavelEnvio);
+
                 if (usuario != null) {
                     util.AuditoriaService.registrar(
                         Long.valueOf(usuario.getId()),
@@ -290,16 +339,15 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                         "EDITAR",
                         "movimentacao_envio",
                         idEnvio,
-                        "Efetivação de envio (Equipamentos em trânsito)",
+                        "Efetivação de envio por " + nomeResponsavelEnvio + " (Equipamentos em trânsito)",
                         "{\"statusId\": 1}",
-                        "{\"statusId\": 2, \"status\": \"Em Trânsito\"}",
+                        "{\"statusId\": 2, \"status\": \"Em Trânsito\", \"responsavelEnvio\": \"" + nomeResponsavelEnvio + "\"}",
                         ipCliente
                     );
                 }
-                // ----------------------------------------------
 
                 resp.setStatus(HttpServletResponse.SC_OK);
-                out.print("{\"sucesso\": true, \"mensagem\": \"Envio efetivado com sucesso! Os equipamentos estão em trânsito.\"}");
+                out.print("{\"sucesso\": true, \"mensagem\": \"Envio efetivado com sucesso por " + nomeResponsavelEnvio + "! Os equipamentos estão em trânsito.\"}");
                 return;
             }
 
@@ -313,7 +361,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             Long destinoId = Long.parseLong(destinoIdStr);
             dao.confirmarRecebimento(idEnvio, destinoId);
 
-            // --- REGISTRO DE AUDITORIA (CONFIRMAR RECEBIMENTO) ---
             if (usuario != null) {
                 util.AuditoriaService.registrar(
                     Long.valueOf(usuario.getId()),
@@ -328,7 +375,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                     ipCliente
                 );
             }
-            // ----------------------------------------------------
 
             resp.setStatus(HttpServletResponse.SC_OK);
             out.print("{\"sucesso\": true, \"mensagem\": \"Recebimento confirmado com sucesso! Equipamentos atualizados para a nova filial.\"}");
@@ -341,11 +387,13 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         }
     }
 
+    // 4. DELETE: Cancela envio ou devolução (Exige EXCLUIR)
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-    	if (!validarPermissao(req, resp)) {
+        if (!validarPermissao(req, resp, "EXCLUIR")) {
             return;
         }
+        
         resp.setContentType("application/json;charset=UTF-8");
         PrintWriter out = resp.getWriter();
 
@@ -359,15 +407,32 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             }
 
             Long idEnvio = Long.parseLong(idEnvioStr);
-            dao.cancelarEnvio(idEnvio);
 
-            // --- REGISTRO DE AUDITORIA (CANCELAR ENVIO) ---
+            List<MovimentacaoEnvio> lista = dao.listarTodos();
+            MovimentacaoEnvio envioEncontrado = lista.stream()
+                .filter(e -> e.getIdEnvio().equals(idEnvio))
+                .findFirst()
+                .orElse(null);
+
+            boolean ehDevolucao = envioEncontrado != null && 
+                                  envioEncontrado.getCodigoRastreio() != null && 
+                                  envioEncontrado.getCodigoRastreio().startsWith("DEV-");
+
+            if (ehDevolucao) {
+                dao.cancelarDevolucao(idEnvio);
+            } else {
+                dao.cancelarEnvio(idEnvio);
+            }
+
             HttpSession session = req.getSession(false);
             Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
             String ipCliente = req.getHeader("X-Forwarded-For");
             if (ipCliente == null || ipCliente.isEmpty()) ipCliente = req.getRemoteAddr();
 
             if (usuario != null) {
+                String descAcao = ehDevolucao ? "Cancelamento de devolução de equipamentos" : "Cancelamento de envio de equipamentos";
+                String msgRetorno = ehDevolucao ? "{\"status\": \"Cancelado / Retornado ao status ativo\"}" : "{\"status\": \"Cancelado / Retornado à origem\"}";
+                
                 util.AuditoriaService.registrar(
                     Long.valueOf(usuario.getId()),
                     usuario.getUsername(),
@@ -375,21 +440,21 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                     "EXCLUIR",
                     "movimentacao_envio",
                     idEnvio,
-                    "Cancelamento de envio de equipamentos",
+                    descAcao,
                     "{\"idEnvio\": " + idEnvio + "}",
-                    "{\"status\": \"Cancelado / Retornado à origem\"}",
+                    msgRetorno,
                     ipCliente
                 );
             }
-            // ----------------------------------------------
 
+            String mensagemSucesso = ehDevolucao ? "Devolução cancelada com sucesso! Os equipamentos retornaram ao status ativo." : "Envio cancelado com sucesso! Os equipamentos retornaram à filial de origem.";
             resp.setStatus(HttpServletResponse.SC_OK);
-            out.print("{\"sucesso\": true, \"mensagem\": \"Envio cancelado com sucesso! Os equipamentos retornaram à filial de origem.\"}");
+            out.print("{\"sucesso\": true, \"mensagem\": \"" + mensagemSucesso + "\"}");
 
         } catch (Exception e) {
             e.printStackTrace();
             resp.setStatus(HttpServletResponse.SC_OK);
-            String msg = e.getMessage() != null ? e.getMessage().replace("\"", "'") : "Erro ao cancelar envio";
+            String msg = e.getMessage() != null ? e.getMessage().replace("\"", "'") : "Erro ao cancelar movimentação";
             out.print("{\"sucesso\": false, \"mensagem\": \"" + msg + "\"}");
         }
     }

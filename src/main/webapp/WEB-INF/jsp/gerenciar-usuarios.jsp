@@ -107,10 +107,15 @@
     </div>
 </div>
 
+<%@ include file="/WEB-INF/jsp/modal-service.jsp" %>
+
 <!-- Configura o ContextPath global para uso nos arquivos JS externos -->
 <script>
     const contextPath = '${pageContext.request.contextPath}';
 </script>
+<!-- 3. OBRIGATÓRIO: Carregue o JavaScript do Bootstrap PRIMEIRO -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- (Ou o caminho local do seu bootstrap.bundle.js, ex: ${pageContext.request.contextPath}/assets/js/bootstrap.bundle.min.js) -->
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/gerenciar-usuarios.js"></script>
 </body>

@@ -743,17 +743,23 @@ function carregarEquipamentosDisponiveis() {
                 return;
             }
 
-            const listaApenasDisponiveis = lista.filter(eq => {
-                if (tipo === 'devolucao') return true; 
+			const listaApenasDisponiveis = lista.filter(eq => {
+            const sitTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && eq.situacao.nome) || '').toLowerCase();
 
-                const sitId = eq.situacaoId !== undefined ? eq.situacaoId : (eq.situacao ? eq.situacao.id : null);
-                const sitTexto = (eq.situacaoAtual || eq.situacaoNome || (eq.situacao && eq.situacao.nome) || '').toLowerCase();
+            if (tipo === 'devolucao') {
+                // Se veio o ID específico, aceita ele. Se não veio ID, exige que o status/situação seja de devolução
+                if (idEquipamentoDevolucao) {
+                    return eq.idEquipamento == idEquipamentoDevolucao;
+                }
+                return sitTexto.includes("devolução") || sitTexto.includes("devolucao");
+            } 
 
-                const ehDisponivel = (sitId == 1) || sitTexto.includes("disponível");
-                const naoEstaBloqueado = !eq.bloquearOrigem && !eq.origemBloqueada && eq.statusMovimentacao !== 'EM_DESTINO_EXTERNO';
+            const sitId = eq.situacaoId !== undefined ? eq.situacaoId : (eq.situacao ? eq.situacao.id : null);
+            const ehDisponivel = (sitId == 1) || sitTexto.includes("disponível");
+            const naoEstaBloqueado = !eq.bloquearOrigem && !eq.origemBloqueada && eq.statusMovimentacao !== 'EM_DESTINO_EXTERNO';
 
-                return ehDisponivel && naoEstaBloqueado;
-            });
+            return ehDisponivel && naoEstaBloqueado;
+        });
 
             if (listaApenasDisponiveis.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Nenhum equipamento com status Disponível encontrado.</td></tr>';
@@ -922,5 +928,18 @@ async function carregarEspecificacoesDossie(idProduto, idEquipamento) {
 }
 
 function iniciarDevolucao(idEquipamento) {
-    window.location.href = `${contextPath}/EnvioEquipamentoServlet?tipo=devolucao&idEquipamento=${idEquipamento}`;
+    fetch('api/envios?acao=iniciarDevolucao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ equipamentosIds: [idEquipamento] })
+    })
+    .then(res => res.json())
+    .then(resposta => {
+        if (resposta.sucesso) {
+            // Redireciona para o Servlet de devolução, passando o ID e a flag de tipo
+            window.location.href = `DevolucaoEquipamentoServlet?idEquipamento=${idEquipamento}&tipo=devolucao`;
+        } else {
+            alert(resposta.mensagem);
+        }
+    });
 }

@@ -1,0 +1,61 @@
+@charset "UTF-8";
+
+/* ==========================================================
+   ESTILOS ESPECÍFICOS - TELA DE CONSULTA DE ENVIOS
+   ========================================================== */
+/* ==========================================================
+   ESTILOS ESPECÍFICOS - TELA DE CONSULTA DE ENVIOS
+   ========================================================== */
+
+.table-responsive {
+    overflow-x: hidden !important;
+}
+
+.table-responsive .table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+/* Força absoluta para qualquer título e célula ficarem em linha única */
+.table th, .table td {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* Ajusta o tamanho da fonte e espaçamento interno do cabeçalho */
+.table thead th {
+    font-size: 0.68rem !important;
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
+}
+
+/* Colunas Origem (3) e Destino (4): Encolhidas e cortadas com '...' */
+.table th:nth-child(3), .table td:nth-child(3),
+.table th:nth-child(4), .table td:nth-child(4) {
+    width: 85px !important;
+    max-width: 85px !important;
+}
+
+/* Distribuição restrita e proporcional das demais colunas */
+.table th:nth-child(1),  .table td:nth-child(1)  { width: 40px;  /* ID */ }
+.table th:nth-child(2),  .table td:nth-child(2)  { width: 85px;  /* Data */ }
+.table th:nth-child(5),  .table td:nth-child(5)  { width: 75px;  /* Produtos */ }
+.table th:nth-child(6),  .table td:nth-child(6)  { width: 75px;  /* Nota Fiscal */ }
+.table th:nth-child(7),  .table td:nth-child(7)  { width: 90px;  /* Transportadora */ }
+.table th:nth-child(8),  .table td:nth-child(8)  { width: 70px;  /* Rastreio */ }
+.table th:nth-child(9),  .table td:nth-child(9)  { width: 85px;  /* Status */ }
+.table th:nth-child(10), .table td:nth-child(10) { width: 85px;  /* Responsável */ }
+.table th:nth-child(11), .table td:nth-child(11) { width: 90px;  /* Efetivado Por */ }
+
+/* Coluna 12: Ações compactada e centralizada */
+.table th:nth-child(12), .table td:nth-child(12) {
+    width: 75px !important;
+    overflow: visible !important;
+    text-align: center;
+}
+
+.table td:nth-child(12) .btn {
+    padding: 0.15rem 0.35rem !important;
+    font-size: 11px !important;
+}

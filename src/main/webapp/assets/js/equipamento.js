@@ -56,6 +56,17 @@ document.addEventListener("DOMContentLoaded", function() {
                 selectSituacao.appendChild(novaOpt);
             }
         }
+		
+		// 0. Status: Devolução (ID 6) -> Força "Em Devolução" (ID 8)
+        if (statusId === 6 || textoStatus.includes("devolu")) {
+            garantirOpcao("8", "Em Devolução");
+            Array.from(selectSituacao.options).forEach(opt => {
+                if (!opt.value) return;
+                opt.style.display = (opt.value == "8") ? "block" : "none";
+            });
+            selectSituacao.value = situacaoAlvoId ? situacaoAlvoId : "8";
+            return;
+        }
 
 		// 1. Status: Encaminhado p/ Chamado (ID 5) ou Em Manutenção (ID 2) -> Força "Na Assistência" (ID 6)
 		if (statusId === 5 || statusId === 2 || textoStatus.includes("encaminhado") || textoStatus.includes("manuten")) {
@@ -164,26 +175,40 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     
     // Carrega as filiais cadastradas para o select de origem
-    async function carregarFiliais() {
-        try {
-            const response = await fetch('/nexacore/api/empresas/');
-            if (response.ok) {
-                const filiais = await response.json();
-                const selectOrigem = document.getElementById("input-origem");
-                if (selectOrigem) {
-                    selectOrigem.innerHTML = '<option value="">Selecione a origem...</option>';
-                    filiais.forEach(f => {
-                        const option = document.createElement("option");
-                        option.value = f.origemCodigo;
-                        option.textContent = `${f.origemCodigo} - ${f.sufixo || f.nomeEmpresa || ''}`;
-                        selectOrigem.appendChild(option);
-                    });
-                }
-            }
-        } catch (error) {
-            console.error("Erro ao carregar filiais:", error);
-        }
-    }
+	async function carregarFiliais() {
+	        try {
+	            const response = await fetch('/nexacore/api/empresas/');
+	            if (response.ok) {
+	                const filiais = await response.json();
+	                const selectOrigem = document.getElementById("input-origem");
+	                if (selectOrigem) {
+	                    selectOrigem.innerHTML = '<option value="">Selecione a origem...</option>';
+	                    filiais.forEach(f => {
+	                        const option = document.createElement("option");
+	                        option.value = f.origemCodigo;
+	                        option.textContent = `${f.origemCodigo} - ${f.sufixo || f.nomeEmpresa || ''}`;
+	                        selectOrigem.appendChild(option);
+	                    });
+
+	                    const urlParams = new URLSearchParams(window.location.search);
+	                    const idEquipamento = urlParams.get('id');
+
+	                    // SE FOR TELA DE CADASTRO PURO (sem ID na URL): Trava por padrão na 161 - SSA
+	                    if (!idEquipamento) {
+	                        selectOrigem.value = "161";
+	                        selectOrigem.disabled = true;
+	                        selectOrigem.classList.add("bg-light");
+	                        selectOrigem.style.cursor = "not-allowed";
+
+	                        // Atualiza imediatamente o status para refletir apenas o que é permitido na matriz
+	                        carregarStatusEquipamento();
+	                    }
+	                }
+	            }
+	        } catch (error) {
+	            console.error("Erro ao carregar filiais:", error);
+	        }
+	    }
         
 	// 2. Função para carregar os dados do equipamento caso venha um ID na URL (Modo Edição)
     async function carregarEquipamentoParaEdicao() {
@@ -206,40 +231,32 @@ document.addEventListener("DOMContentLoaded", function() {
                 
                 const selectOrigem = document.getElementById("input-origem");
                 if (selectOrigem) {
-                    // 1. Define a origem do equipamento carregado imediatamente
-                    selectOrigem.value = eq.origemCodigo || '';
-
-                    const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : null;
-                    const ehMatriz161 = (codigoOrigemAtual === 161);
-
-                    if (!ehMatriz161 && (eq.idEquipamento == 1 || eq.id == 1 || eq.bloquearOrigem === true || eq.statusMovimentacao === 'EM_DESTINO_EXTERNO' || eq.origemBloqueada === true)) {
-                        selectOrigem.disabled = true;
-                        selectOrigem.classList.add("bg-light");
-
-                        let avisoOrigem = document.getElementById('avisoBloqueioOrigem');
-                        if (!avisoOrigem) {
-                            avisoOrigem = document.createElement('div');
-                            avisoOrigem.id = 'avisoBloqueioOrigem';
-                            avisoOrigem.className = 'form-text text-danger mt-1';
-                            avisoOrigem.style.fontSize = '0.75rem';
-                            avisoOrigem.innerHTML = '<i class="fa fa-lock me-1"></i> A origem está bloqueada porque o equipamento foi recebido em outra filial. Só será liberada após o retorno oficial (devolução) para a origem original.';
-                            selectOrigem.parentNode.appendChild(avisoOrigem);
-                        }
-                    } else {
-                        selectOrigem.disabled = false;
-                        selectOrigem.classList.remove("bg-light");
-                        const aviso = document.getElementById('avisoBloqueioOrigem');
-                        if (aviso) aviso.remove();
-                    }
-                }
+					// 1. Define a origem do equipamento carregado imediatamente
+	                selectOrigem.value = eq.origemCodigo || '';
+	
+	                // BLOQUEIO DEFINITIVO DA ORIGEM NA EDIÇÃO (Regra de Negócio)
+	                selectOrigem.disabled = true;
+	                selectOrigem.classList.add("bg-light");
+	                selectOrigem.style.cursor = "not-allowed";
+	
+	                let avisoOrigem = document.getElementById('avisoBloqueioOrigem');
+	                if (!avisoOrigem) {
+	                    avisoOrigem = document.createElement('div');
+	                    avisoOrigem.id = 'avisoBloqueioOrigem';
+	                    avisoOrigem.className = 'form-text text-muted mt-1';
+	                    avisoOrigem.style.fontSize = '0.75rem';
+	                    avisoOrigem.innerHTML = '<i class="fa fa-lock me-1"></i> A origem é fixa e controlada pelo fluxo de movimentações do sistema.';
+	                    selectOrigem.parentNode.appendChild(avisoOrigem);
+	                }
+	            }
                 
-                // 3. Define o status correto com base nos dados recebidos
+                // 2. Define o status correto com base nos dados recebidos
                 if (selectStatus) {
                     selectStatus.value = eq.statusId || '';
                     window.statusOriginalEquipamentoId = eq.statusId;
                 }
                 
-                // 4. REGRA: SE JÁ FOI ATIVADO ANTERIORMENTE, REMOVE O STATUS "BAIXADO" DA OPÇÃO
+                // 3. REGRA: SE JÁ FOI ATIVADO ANTERIORMENTE, REMOVE O STATUS "BAIXADO" DA OPÇÃO
                 const STATUS_BAIXADO_ID = 4; // Ajuste para o ID numérico correto do "Baixado" no seu banco
                 if (window.statusOriginalEquipamentoId && Number(window.statusOriginalEquipamentoId) !== STATUS_BAIXADO_ID) {
                     if (selectStatus) {
@@ -341,7 +358,7 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Carrega as opções para o select de Status do Equipamento
 	async function carregarStatusEquipamento() {
-        try {
+	try {
             const contextPath = window.location.pathname.substring(0, window.location.pathname.indexOf("/", 1));
             const response = await fetch(`${contextPath}/api/status-equipamento`);
             if (response.ok) {
@@ -350,25 +367,12 @@ document.addEventListener("DOMContentLoaded", function() {
                     const valorAtual = selectStatus.value;
                     selectStatus.innerHTML = '<option value="">Selecione o status...</option>';
                     
-                    const selectOrigem = document.getElementById("input-origem");
-                    const origemValor = selectOrigem && selectOrigem.value ? parseInt(selectOrigem.value) : null;
-                    const eMatriz161 = (origemValor === 161);
-
                     if (Array.isArray(listaStatus)) {
                         listaStatus.forEach(s => {
                             if (s.id !== undefined && s.nome) {
-                                const nomeStatus = s.nome.toLowerCase();
-                                
-                                // REGRA DO STATUS: Se NÃO for a matriz (161) e o status for "Inativo", oculta/pula. 
-                                if (!eMatriz161 && nomeStatus.includes('inativo')) {
-                                    return;
-                                }
-                                
-                                // OCULTA "EM MANUTENÇÃO" (ID 2) E "BAIXADO" (ID 4) DO SELETOR MANUAL,
-                                // MAS PERMITE SE O EQUIPAMENTO JÁ ESTIVER SALVO COM ELES NA EDIÇÃO
-                                const ehManutencaoOuBaixado = (s.id === 2 || s.id === 4 || nomeStatus.includes('manuten') || nomeStatus.includes('baixado'));
-                                if (ehManutencaoOuBaixado && valorAtual != s.id) {
-                                    return;
+                                // RESTRITO UNIVERSAL: Exibe APENAS "Ativo" (ID 1) e "Encaminhado p/ Chamado" (ID 5)
+                                if (s.id !== 1 && s.id !== 5) {
+                                    return; 
                                 }
 
                                 const option = document.createElement("option");
@@ -747,11 +751,17 @@ document.addEventListener("DOMContentLoaded", function() {
                 patrimonio: document.getElementById("input-patrimonio").value.trim(),
                 numeroSerie: document.getElementById("input-numeroserie").value.trim(),
                 nomeIdentificador: document.getElementById("input-nomeidentificador").value.trim(),
-                origemCodigo: (function() {
-                    const elOrigem = document.getElementById("input-origem");
-                    if (!elOrigem) return null;
-                    return elOrigem.value ? parseInt(elOrigem.value) : null;
-                })(),
+				origemCodigo: (function() {
+			    const elOrigem = document.getElementById("input-origem");
+			    if (!elOrigem) return 161;
+			    
+			    // Se o elemento tem um valor preenchido (seja via edição ou seleção), usa ele independentemente de estar disabled
+			    if (elOrigem.value) {
+			        return parseInt(elOrigem.value);
+			    }
+			    
+			    return 161; // Padrão caso venha vazio
+				})(),
                 ipAtual: checkPossuiIp && checkPossuiIp.checked ? document.getElementById("input-ip").value.trim() : "",
                 
                 statusId: selectStatus && selectStatus.value ? parseInt(selectStatus.value) : null,
@@ -783,14 +793,15 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 const result = await response.json();
 
-                if (response.ok && result.sucesso) {
-                    if (typeof ModalService !== 'undefined') {
-                        await ModalService.success("Sucesso", result.mensagem);
-                    } else {
-                        alert(result.mensagem);
-                    }
-                    window.location.href = contextPath + '/ConsultaEquipamentosServlet';
-                } else {
+				if (response.ok && result.sucesso) {
+				    if (typeof ModalService !== 'undefined') {
+				        await ModalService.success("Sucesso", result.mensagem);
+				    } else {
+				        alert(result.mensagem);
+				    }
+				    const basePath = window.location.pathname.substring(0, window.location.pathname.indexOf("/", 1));
+				    window.location.href = basePath + '/ConsultaEquipamentosServlet';
+				} else {
                     if (typeof ModalService !== 'undefined') {
                         await ModalService.error("Erro", result.erro || "Não foi possível salvar o equipamento.");
                     } else {

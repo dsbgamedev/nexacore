@@ -25,7 +25,7 @@ function carregarUsuarios() {
             listaUsuariosGlobal = data.users || [];
             filtrarUsuarios(); 
         } else {
-            alert("Erro ao carregar usuários: " + (data.error || "Erro desconhecido"));
+            ModalService.error("Erro", "Erro ao carregar usuários: " + (data.error || "Erro desconhecido"));
         }
     })
     .catch(error => console.error("Erro na requisição:", error));
@@ -42,8 +42,6 @@ function filtrarUsuarios() {
         const nomeStr = (u.nomeCompleto || u.nome || '').toLowerCase();
         const emailStr = (u.email || '').toLowerCase();
         const perfilStr = (u.perfil || '').toLowerCase();
-        
-        // Incluído u.unidadeAtivaNome aqui para o filtro global funcionar com a filial
         const filialStr = (u.unidadeAtivaNome || u.unidadePrincipal || u.filialPrincipal || '').toLowerCase();
 
         const combinaTexto = !termo || 
@@ -83,12 +81,20 @@ function preencherTabela(usuarios) {
 
     usuarios.forEach(u => {
         let tr = document.createElement("tr");
+		
+		// === ESTA É A PARTE QUE FALTAVA ADICIONAR ===
+        if (!u.ativo) {
+            tr.classList.add("usuario-inativo");
+        }
 
         let statusBadge = u.ativo 
             ? `<span class="badge bg-success">Ativo</span>` 
             : `<span class="badge bg-secondary">Inativo</span>`;
 
-        // Mapeia corretamente u.unidadeAtivaNome para puxar a filial carregada pelo DAO
+        // Define o ícone e o texto do botão de status dinamicamente (se está ativo, mostra opção para desativar e vice-versa)
+        let iconeStatus = u.ativo ? "bi-toggle-on text-success" : "bi-toggle-off text-secondary";
+        let tituloStatus = u.ativo ? "Desativar Usuário" : "Ativar Usuário";
+
         let nomeCompleto = u.nomeCompleto || u.nome || '-';
         let filialNome = u.unidadeAtivaNome || u.unidadePrincipal || u.filialPrincipal || '-';
         let ultimoAcessoFormatado = u.ultimoAcesso || '-'; 
@@ -103,11 +109,17 @@ function preencherTabela(usuarios) {
             <td>${ultimoAcessoFormatado}</td>
             <td>${statusBadge}</td>
             <td class="text-center" style="white-space: nowrap;">
+                <!-- Botão Editar -->
                 <a href="${contextPath}/CadastrarUsuarioServlet?action=edit&id=${u.id}" class="btn btn-outline-primary btn-sm me-1" title="Editar">
                     <i class="bi bi-pencil"></i>
                 </a>
-                <button class="btn btn-outline-danger btn-sm" title="Excluir/Desativar" onclick="desativarUsuario(${u.id})">
-                    <i class="bi bi-person-x"></i>
+                <!-- Botão Alternar Status (Ativar / Desativar) -->
+                <button class="btn btn-outline-secondary btn-sm me-1" title="${tituloStatus}" onclick="alternarStatus(${u.id})">
+                    <i class="bi ${iconeStatus}"></i>
+                </button>
+                <!-- Botão Exclusão Definitiva -->
+                <button class="btn btn-outline-danger btn-sm" title="Excluir Permanentemente" onclick="excluirUsuario(${u.id})">
+                    <i class="bi bi-trash"></i>
                 </button>
             </td>
         `;
@@ -115,10 +127,53 @@ function preencherTabela(usuarios) {
     });
 }
 
-function desativarUsuario(id) {
-    if (!confirm("Deseja realmente excluir/desativar este usuário?")) {
-        return;
-    }
+/**
+ * Apenas altera o status entre Ativo e Inativo chamando a action "toggleStatus"
+ */
+async function alternarStatus(id) {
+    const confirmado = await ModalService.confirm(
+        "Alterar Situação", 
+        "Deseja realmente alterar o status (ativo/inativo) deste usuário?", 
+        "warning"
+    );
+
+    if (!confirmado) return;
+
+    fetch(contextPath + "/GerenciarUsuariosServlet", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest"
+        },
+        body: JSON.stringify({ action: "toggleStatus", id: id })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            ModalService.success("Sucesso", data.message).then(() => {
+                carregarUsuarios();
+            });
+        } else {
+            ModalService.error("Erro", data.message || "Não foi possível alterar o status.");
+        }
+    })
+    .catch(error => {
+        console.error("Erro:", error);
+        ModalService.error("Erro", "Ocorreu um erro na requisição.");
+    });
+}
+
+/**
+ * Remove o usuário permanentemente do banco chamando a action "delete"
+ */
+async function excluirUsuario(id) {
+    const confirmado = await ModalService.confirm(
+        "Exclusão Definitiva", 
+        "Atenção: Esta ação excluirá o usuário permanentemente do sistema. Deseja continuar?", 
+        "error"
+    );
+
+    if (!confirmado) return;
 
     fetch(contextPath + "/GerenciarUsuariosServlet", {
         method: "POST",
@@ -131,11 +186,15 @@ function desativarUsuario(id) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(data.message);
-            carregarUsuarios(); 
+            ModalService.success("Sucesso", data.message).then(() => {
+                carregarUsuarios();
+            });
         } else {
-            alert("Erro: " + (data.message || "Não foi possível excluir."));
+            ModalService.error("Erro", data.message || "Não foi possível excluir o usuário.");
         }
     })
-    .catch(error => console.error("Erro:", error));
+    .catch(error => {
+        console.error("Erro:", error);
+        ModalService.error("Erro", "Ocorreu um erro na requisição.");
+    });
 }

@@ -105,6 +105,8 @@ public class MovimentacaoRecebimentoDAO {
         String sqlBuscaDestino = "SELECT f.origem_codigo FROM movimentacao_envio e " +
                                  "JOIN filiais f ON e.destino_id = f.id_filial " +
                                  "WHERE e.id_envio = ?";
+        // Busca diretamente o ID da filial de destino da movimentação
+        //String sqlBuscaDestino = "SELECT destino_id FROM movimentacao_envio WHERE id_envio = ?";
                                  
         String sqlBuscaItens = "SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?";
         String sqlAtualizaEquip = "UPDATE equipamentos SET origem_codigo = ?, situacao_id = 7 WHERE id_equipamento = ?";
@@ -140,6 +142,15 @@ public class MovimentacaoRecebimentoDAO {
                     }
                 }
             }
+            /*int origemCodigoDestino = 0;
+            try (PreparedStatement stmtDestino = conn.prepareStatement(sqlBuscaDestino)) {
+                stmtDestino.setInt(1, idEnvio);
+                try (ResultSet rsDestino = stmtDestino.executeQuery()) {
+                    if (rsDestino.next()) {
+                        origemCodigoDestino = rsDestino.getInt("destino_id"); // Pega o ID correto do destino
+                    }
+                }
+            }*/
 
             // 2. Insere o recebimento
             try (PreparedStatement stmt = conn.prepareStatement(sqlRecebimento)) {
@@ -298,10 +309,12 @@ public class MovimentacaoRecebimentoDAO {
         String sqlBuscaDestino = "SELECT f.origem_codigo FROM movimentacao_envio e " +
                                  "JOIN filiais f ON e.destino_id = f.id_filial " +
                                  "WHERE e.id_envio = ?";
+        //String sqlBuscaDestino = "SELECT destino_id FROM movimentacao_envio WHERE id_envio = ?";
                                  
         String sqlBuscaItens = "SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?";
-        String sqlAtualizaEquip = "UPDATE equipamentos SET situacao_id = 1, origem_codigo = ? WHERE id_equipamento = ?";
-
+        //Stri ng sqlAtualizaEquip = "UPDATE equipamentos SET status_id = 1, situacao_id = 1, origem_codigo = ? WHERE id_equipamento = ?";
+        String sqlAtualizaEquip = "UPDATE equipamentos SET status_id = ?, origem_codigo = ?, situacao_id = 1 WHERE id_equipamento = ?";
+        
         Connection conn = null;
         try {
             conn = Conexao.conectar();
@@ -332,6 +345,15 @@ public class MovimentacaoRecebimentoDAO {
                     }
                 }
             }
+            /*int origemCodigoDestino = 0;
+            try (PreparedStatement stmtDestino = conn.prepareStatement(sqlBuscaDestino)) {
+                stmtDestino.setInt(1, idDevolucao);
+                try (ResultSet rsDestino = stmtDestino.executeQuery()) {
+                    if (rsDestino.next()) {
+                        origemCodigoDestino = rsDestino.getInt("destino_id"); // Pega o ID correto do destino da devolução
+                    }
+                }
+            }*/
 
             // B. Insere o recebimento da devolução
             try (PreparedStatement stmt = conn.prepareStatement(sqlRecebimento)) {
@@ -350,18 +372,19 @@ public class MovimentacaoRecebimentoDAO {
 
             // D. Atualiza os equipamentos de volta para Disponível (1) e aplica o origem_codigo correto
             try (PreparedStatement stmtBusca = conn.prepareStatement(sqlBuscaItens);
-                 PreparedStatement stmtEq = conn.prepareStatement(sqlAtualizaEquip)) {
-                
-                stmtBusca.setInt(1, idDevolucao);
-                try (ResultSet rs = stmtBusca.executeQuery()) {
-                    while (rs.next()) {
-                        int idEq = rs.getInt("id_equipamento");
-                        stmtEq.setInt(1, origemCodigoDestino);
-                        stmtEq.setInt(2, idEq);
-                        stmtEq.executeUpdate();
-                    }
-                }
-            }
+                    PreparedStatement stmtEq = conn.prepareStatement(sqlAtualizaEquip)) {
+                   
+                   stmtBusca.setInt(1, idDevolucao);
+                   try (ResultSet rs = stmtBusca.executeQuery()) {
+                       while (rs.next()) {
+                           int idEq = rs.getInt("id_equipamento");
+                           stmtEq.setInt(1, 1);                  // 1º ? -> status_id (Ativo)
+                           stmtEq.setInt(2, origemCodigoDestino); // 2º ? -> origem_codigo (Filial de destino)
+                           stmtEq.setInt(3, idEq);                // 3º ? -> id_equipamento
+                           stmtEq.executeUpdate();
+                       }
+                   }
+               }
 
             conn.commit();
             return true;

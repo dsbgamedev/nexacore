@@ -9,7 +9,8 @@ public class MovimentacaoEnvio {
     private LocalDate dataEnvio;
     private Long origemId;
     private Long destinoId;
-    private String responsavel;
+    private String responsavel; // Quem criou / iniciou (ex: devolução/envio comum)
+    private String responsavelEnvio;   // Novo: Quem efetivou o envio físico
     private String transportadora;
     private String codigoRastreio;
     private LocalDate dataPrevisaoEntrega;
@@ -46,6 +47,10 @@ public class MovimentacaoEnvio {
 
     public String getResponsavel() { return responsavel; }
     public void setResponsavel(String responsavel) { this.responsavel = responsavel; }
+    
+    // Novos Getters e Setters para o Responsável pelo Envio
+    public String getResponsavelEnvio() { return responsavelEnvio; }
+    public void setResponsavelEnvio(String responsavelEnvio) { this.responsavelEnvio = responsavelEnvio; }
 
     public String getTransportadora() { return transportadora; }
     public void setTransportadora(String transportadora) { this.transportadora = transportadora; }

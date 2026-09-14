@@ -124,6 +124,7 @@
                 <ul class="sidebar-menu">
                     <li><a href="<%=ctx%>/EnvioEquipamentoServlet"><i class="bi bi-arrow-up-right-circle"></i> Envios</a></li>
                     <li><a href="<%=ctx%>/ConsultaEnvioServlet"><i class="bi bi-search"></i> Consulta de Envios</a></li>
+                    <li><a href="<%=ctx%>/DevolucaoEquipamentoServlet"><i class="bi bi-arrow-return-left"></i> Devolução de Equipamento</a></li>
                     <li><a href="<%=ctx%>/RecebimentoServlet"><i class="bi bi-arrow-down-left-circle"></i> Recebimentos/Devoluções</a></li>
                 </ul>
             </c:if>

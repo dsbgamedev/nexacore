@@ -254,15 +254,15 @@ hr{
 ========================================================== */
 /* Container que centraliza tudo */
 .modal-content-custom {
-    background-color: #fefefe;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+    background-color: #ffffff !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+    padding: 30px !important;
     text-align: center;
     width: 100%;
     max-width: 400px;
     margin: auto;
-    border: 2px solid transparent; /* Para aplicar a cor de borda conforme o sucesso/erro */
+    border: 2px solid #dfe6ef !important; /* <--- ESPESSURA PADRÃO DA BORDA */
 }
 
 .modal-content-custom h3 {
@@ -283,8 +283,8 @@ hr{
     justify-content: center;
     gap: 15px;
     margin-top: 20px;
-    position: relative; /* Garante posicionamento */
-    z-index: 1060;      /* Fica acima de qualquer backdrop */
+    position: relative;
+    z-index: 1060;
 }
 
 .modal-buttons button {
@@ -292,38 +292,28 @@ hr{
     font-size: 1em;
     border-radius: 6px;
     border: none;
-    cursor: pointer !important; /* Força a mãozinha */
-    pointer-events: auto !important; /* Força a clicabilidade */
+    cursor: pointer !important;
+    pointer-events: auto !important;
     transition: background-color 0.3s;
 }
 
-/* Container base limpo */
-.modal-content-custom {
-    background-color: #ffffff !important;
-    /*border: 2px solid #ccc !important;*/
-    border-radius: 12px !important;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
-    padding: 30px !important;
-    text-align: center;
-}
-
-/* Quando o JS adicionar a classe 'error' no container: */
+/* Quando o JS adicionar a classe 'error' (Exclusão -> Vermelho) */
 .modal-content-custom.error {
-    border-color: #dc3545 !important; /* Cor danger do seu bootstrap */
+    border: 2px solid #dc3545 !important;
 }
 .modal-content-custom.error h3 {
     color: #dc3545 !important;
 }
 
-/* Quando o JS adicionar a classe 'success' no container: */
-/* Borda verde e título verde */
+/* Quando o JS adicionar a classe 'success' (Sucesso -> Verde) */
 .modal-content-custom.success {
-    border: 2px solid #198754 !important; /* Cor verde do Bootstrap */
+    border: 2px solid #198754 !important;
 }
 .modal-content-custom.success h3 {
     color: #198754 !important;
 }
-/* Quando o JS adicionar a classe 'warning' no container: */
+
+/* Quando o JS adicionar a classe 'warning' (Inativar -> Amarelo) */
 .modal-content-custom.warning {
     border: 2px solid var(--warning-color) !important;
 }
@@ -346,4 +336,3 @@ hr{
 .flex-center { display: flex; align-items: center; justify-content: center; }
 .text-center { text-align: center; }
 .w-100 { width: 100%; }
-
