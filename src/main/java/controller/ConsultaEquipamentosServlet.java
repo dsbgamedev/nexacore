@@ -17,34 +17,38 @@ public class ConsultaEquipamentosServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
-        // Utiliza o método inteligente do objeto Usuario para validar se tem permissão de CONSULTAR no módulo "equipamentos"
-        // (Ele já valida automaticamente se o usuário é ADMIN ou SUPER_ADMINISTRADOR)
+        // Valida se tem permissão de CONSULTAR no módulo "equipamentos"
         boolean temPermissao = usuario != null && usuario.temPermissao("equipamentos", "CONSULTAR");
 
         if (!temPermissao) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            response.setContentType("application/json; charset=UTF-8");
-            response.getWriter().write("{\"error\": \"Acesso negado. Você não possui permissão para consultar este módulo.\"}");
+            // Se o usuário não estiver logado ou não tiver permissão, redireciona ou avisa adequadamente
+            if (usuario == null) {
+                response.sendRedirect(request.getContextPath() + "/login.jsp");
+            } else {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Acesso negado. Você não possui permissão para consultar este módulo.");
+            }
             return false;
         }
         return true;
     }
     
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        // Validação no início para bloquear acessos negados via GET
-        if (!validarPermissao(request, response)) {
-            return;
-        }
-        request.getRequestDispatcher("/WEB-INF/jsp/consulta-equipamento.jsp").forward(request, response);
-    }
-
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        // Validação de segurança primeiro!
         if (!validarPermissao(request, response)) {
             return;
         }
         
-        // Se passou, executa o fluxo desejado (ou repassa para o doGet se comportar igual)
+     // Recupera o usuário logado para extrair as filiais permitidas
+        HttpSession session = request.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+       
+        
+        request.getRequestDispatcher("/WEB-INF/jsp/consulta-equipamento.jsp").forward(request, response);
+    }
+
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        if (!validarPermissao(request, response)) {
+            return;
+        }
         doGet(request, response);
     }
 }

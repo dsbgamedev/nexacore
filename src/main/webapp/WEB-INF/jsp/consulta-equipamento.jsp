@@ -252,14 +252,27 @@
     // Variável global de contexto padronizada para os arquivos JS externos
     const contextPath = "${pageContext.request.contextPath}";
 
-    // Injeta as permissões granulares do usuário logado diretamente no JS
+ // Injeta as permissões e dados do usuário logado diretamente no JS
     <%
         model.Usuario uLogado = (model.Usuario) session.getAttribute("usuarioLogado");
         boolean podeEditarGlob = uLogado != null && uLogado.temPermissao("equipamentos", "EDITAR");
         boolean podeExcluirGlob = uLogado != null && uLogado.temPermissao("equipamentos", "EXCLUIR");
+        
+        boolean isAdmin = uLogado != null && (
+            "SUPER_ADMINISTRADOR".equalsIgnoreCase(uLogado.getPerfil()) || 
+            "ADMINISTRADOR".equalsIgnoreCase(uLogado.getPerfil()) ||
+            (uLogado.getPerfil() != null && uLogado.getPerfil().toUpperCase().contains("SUPER"))
+        );
+
+        String filialCod = "";
+        if (uLogado != null && uLogado.getUnidadesPermitidas() != null && !uLogado.getUnidadesPermitidas().isEmpty()) {
+            filialCod = uLogado.getUnidadesPermitidas().get(0);
+        }
     %>
     const permissaoEditarEquipamento = <%= podeEditarGlob %>;
     const permissaoExcluirEquipamento = <%= podeExcluirGlob %>;
+    const usuarioAdmin = <%= isAdmin %>;
+    const filialUsuarioCodigo = "<%= filialCod %>";
 </script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/consulta-equipamento.js"></script>

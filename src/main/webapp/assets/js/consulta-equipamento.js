@@ -224,42 +224,51 @@ function limparFiltros() {
     // Limpa todos os inputs de texto
     document.getElementById("formFiltroEquipamento").reset();
     
-    // Garante que os selects voltem para o valor padrão (vazio)
-    document.getElementById("filtroOrigem").value = "";
+    // Ajusta o select de origem dependendo se é admin ou usuário comum
+    const selectOrigem = document.getElementById("filtroOrigem");
+    if (selectOrigem) {
+        selectOrigem.value = usuarioAdmin ? "" : "todos";
+    }
+
     document.getElementById("filtroDepartamento").value = "";
     document.getElementById("filtroStatus").value = "";
     document.getElementById("filtroSituacao").value = "";
     document.getElementById("busca-global").value = "";
 
-    // Executa a pesquisa novamente para trazer tudo
+    // Executa a pesquisa novamente aplicando os filtros limpos
     pesquisarEquipamentos();
 }
 
 // FUNÇÕES DE CARREGAMENTO DOS FILTROS DA TELA DE CONSULTA
 async function carregarFiltroFiliais() {
     try {
-        const response = await fetch('/nexacore/api/empresas/');
+        const select = document.getElementById("filtroOrigem");
+        if (!select) return;
+
+        // Sempre busca as filiais permitidas diretamente do endpoint do EquipamentoServlet que criamos
+        const response = await fetch(contextPath + '/api/equipamentos?acaoOrigens=listar-origens');
         if (response.ok) {
             const filiais = await response.json();
-            const select = document.getElementById("filtroOrigem");
-            if (select) {
-                select.innerHTML = `
-                    <option value="">Selecione...</option>
-                    <option value="todos">Todos</option>
-                `;
-                filiais.forEach(f => {
-                    const option = document.createElement("option");
-                    option.value = f.origemCodigo;
-                    option.textContent = `${f.origemCodigo} - ${f.sufixo || f.nomeEmpresa || ''}`;
-                    select.appendChild(option);
-                });
-            }
+            
+            /*select.innerHTML = `
+                <option value="">Selecione...</option>
+               // <option value="todos">Todos</option>
+            `;*/
+
+            filiais.forEach(f => {
+                const option = document.createElement("option");
+                option.value = f.origemCodigo;
+                option.textContent = `${f.origemCodigo} - ${f.sufixo || f.nomeEmpresa || ''}`;
+                select.appendChild(option);
+            });
+
+            // Se for usuário comum e ele tiver uma filial ativa na sessão/menu, podemos deixá-la selecionada por padrão se desejar, 
+            // ou deixar "todos" selecionado para ele ver tudo o que tem direito.
         }
     } catch (e) {
         console.error("Erro ao carregar filiais para o filtro:", e);
     }
 }
-
 async function carregarFiltroDepartamentos() {
     try {
         const response = await fetch('/nexacore/api/departamentos');
@@ -482,6 +491,7 @@ function extrairValorPropriedade(obj, prop) {
 }
 
 // Sua função de pesquisa mantendo toda a lógica intacta
+// Sua função de pesquisa ajustada para posicionar a filial do usuário comum caso necessário
 async function pesquisarEquipamentos() {
     const tbody = document.getElementById('tabelaEquipamentosBody');
     if (!tbody) return;
@@ -490,11 +500,16 @@ async function pesquisarEquipamentos() {
         const el = document.getElementById(id);
         if (!el) return '';
         const val = el.value.trim();
-        // Se o usuário selecionou "Todos", tratamos como vazio para o filtro não restringir
         return (val === 'todos') ? '' : val;
     };
 
     tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4">Buscando...</td></tr>';
+
+    // Se NÃO for admin e o filtro estiver vazio ou em "Todos", força a busca na filial permitida da sessão
+    let origemVal = getVal('filtroOrigem');
+    if (!usuarioAdmin && (!origemVal || document.getElementById('filtroOrigem').value === 'todos')) {
+        origemVal = filialUsuarioCodigo;
+    }
 
     const params = new URLSearchParams({
         pesquisaGlobal: getVal('busca-global'),
@@ -502,12 +517,12 @@ async function pesquisarEquipamentos() {
         idSistema: getVal('filtroIdSistema'),
         patrimonio: getVal('filtroPatrimonio'),
         serial: getVal('filtroSerial'),
-        origem: getVal('filtroOrigem'),
+        origem: origemVal, // <--- Utiliza a origem tratada para o usuário comum
         departamento: getVal('filtroDepartamento'),
         usuario: getVal('filtroUsuario'),
         status: getVal('filtroStatus'),
         situacao: getVal('filtroSituacao'),
-		limite: 20 // <--- Adiciona o limite fixo de 20 registros enviados ao backend
+        limite: 20 // <--- Adiciona o limite fixo de 20 registros enviados ao backend
     });
 
     try {
@@ -521,10 +536,10 @@ async function pesquisarEquipamentos() {
 
         // Salva os dados globalmente para permitir a ordenação sem nova requisição
         listaGlobalEquipamentos = Array.isArray(data) ? data : [];
-		const listaBruta = Array.isArray(data) ? data : [];
+        const listaBruta = Array.isArray(data) ? data : [];
 
         // Elementos de select dos filtros para capturar os nomes amigáveis por ID
-		const selOrigem = document.getElementById('filtroOrigem');
+        const selOrigem = document.getElementById('filtroOrigem');
         const selDepto = document.getElementById('filtroDepartamento');
 
         // Pré-processa os dados para normalizar os textos exibidos na tabela
@@ -548,7 +563,7 @@ async function pesquisarEquipamentos() {
             }
             eq._origemNormalizada = origemTexto || '-';
 
-            // Normaliza Produto (Catálogo) correspondente à coluna da tabela (${eq.codigoCatalogo || eq.idProduto || '-'})
+            // Normaliza Produto (Catálogo)
             eq._produtoNormalizado = eq.codigoCatalogo || eq.idProduto || eq.produtoNome || eq.nomeCatalogo || '';
 
             return eq;
@@ -927,19 +942,48 @@ async function carregarEspecificacoesDossie(idProduto, idEquipamento) {
     }
 }
 
-function iniciarDevolucao(idEquipamento) {
-    fetch('api/envios?acao=iniciarDevolucao', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ equipamentosIds: [idEquipamento] })
-    })
-    .then(res => res.json())
-    .then(resposta => {
-        if (resposta.sucesso) {
-            // Redireciona para o Servlet de devolução, passando o ID e a flag de tipo
+async function iniciarDevolucao(idEquipamento) {
+    try {
+        const response = await fetch('api/envios?acao=iniciarDevolucao', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ equipamentosIds: [idEquipamento] })
+        });
+        
+        // Tenta ler o JSON da resposta (mesmo que dê erro 403, o Servlet envia um JSON estruturado)
+        let resposta;
+        try {
+            resposta = await response.json();
+        } catch (e) {
+            resposta = { sucesso: false, mensagem: "Erro ao processar resposta do servidor." };
+        }
+
+        if (response.ok && resposta.sucesso) {
+            // Se deu tudo certo, redireciona para a tela de devolução
             window.location.href = `DevolucaoEquipamentoServlet?idEquipamento=${idEquipamento}&tipo=devolucao`;
         } else {
-            alert(resposta.mensagem);
+            // SE O USUÁRIO NÃO TIVER PERMISSÃO OU OCORREU UM ERRO DE NEGÓCIO:
+            // Dispara o ModalService padronizado usando os métodos corretos disponíveis
+            const mensagemErro = resposta.mensagem || "Você não possui permissão para realizar esta operação.";
+            
+            if (typeof ModalService !== 'undefined') {
+                if (typeof ModalService.error === 'function') {
+                    await ModalService.error("Acesso Negado / Atenção", mensagemErro);
+                } else if (typeof ModalService.alert === 'function') {
+                    await ModalService.alert("Acesso Negado / Atenção", mensagemErro, "warning");
+                } else {
+                    alert(mensagemErro);
+                }
+            } else {
+                alert(mensagemErro);
+            }
         }
-    });
+    } catch (err) {
+        console.error("Erro ao iniciar devolução:", err);
+        if (typeof ModalService !== 'undefined' && typeof ModalService.error === 'function') {
+            await ModalService.error("Erro", "Erro de comunicação ao tentar iniciar a devolução.");
+        } else {
+            alert("Erro de comunicação ao tentar iniciar a devolução.");
+        }
+    }
 }

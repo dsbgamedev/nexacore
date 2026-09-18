@@ -8,6 +8,7 @@ import dao.EquipamentoDAO;
 import dao.FilialDAO;
 import dao.ManutencaoDAO;
 import dao.MovimentacaoEnvioDAO;
+import dto.UnidadeDTO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -34,75 +35,64 @@ public class MenuServlet extends HttpServlet {
             return;
         }
         
-        // 1. Declaração global da filial atual com fallback seguro para a Matriz (161)
-        Integer filialAtualId = 161; 
-        if (usuario.getUnidadeAtivaId() != null && usuario.getUnidadeAtivaId() > 0) {
-            try {
-                FilialDAO filialDao = new FilialDAO();
-                Integer origemCodigoMapeado = filialDao.buscarOrigemCodigoPorId(usuario.getUnidadeAtivaId());
-                if (origemCodigoMapeado != null) {
-                    filialAtualId = origemCodigoMapeado;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        // --- 1. TRADUÇÃO DAS UNIDADES USANDO O FILIALDAO (MVC Respeitado) ---
+        FilialDAO filialDao = new FilialDAO();
+        List<Integer> unidadesPermitidas = new ArrayList<>();
+        
+        try {
+            unidadesPermitidas = filialDao.traduzirUnidadesParaCodigoOrigem(usuario.getUnidadesPermitidas());
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         
-        // 2. Busca as 5 movimentações recentes com status pendentes/em trânsito para o dashboard
+        System.out.println("=== [DEBUG] Unidades Permitidas Convertidas para Origem Código: " + unidadesPermitidas);
+        
+        // --- 2. GARANTIR UNIDADE ATIVA PADRÃO NA SESSÃO ---
+        if (usuario.getUnidadeAtivaId() == null && unidadesPermitidas != null && !unidadesPermitidas.isEmpty()) {
+            int primeiraFilial = unidadesPermitidas.get(0);
+            usuario.setUnidadeAtivaId(primeiraFilial);
+            
+            if (usuario.getUnidadesPermitidasObjetos() != null) {
+                for (UnidadeDTO u : usuario.getUnidadesPermitidasObjetos()) {
+                    if (u.getId() == primeiraFilial) {
+                        usuario.setUnidadeAtivaNome(u.getNome());
+                        break;
+                    }
+                }
+            }
+            session.setAttribute("usuarioLogado", usuario);
+        }
+        
+        // --- 3. CARREGAMENTO DOS DADOS DO DASHBOARD ---
         try {
-            MovimentacaoEnvioDAO dao = new MovimentacaoEnvioDAO();
-            List<MovimentacaoEnvio> listaRecentes = dao.listarRecentesPendentes(5);
-            request.setAttribute("listaMovimentacoesRecentes", listaRecentes);
+            MovimentacaoEnvioDAO movDao = new MovimentacaoEnvioDAO();
+            request.setAttribute("listaMovimentacoesRecentes", movDao.listarRecentesPendentes(5));
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("erroDashboard", "Não foi possível carregar as movimentações recentes.");
         }
         
-        // 3. Busca os chamados abertos recentes para o dashboard
         try {
             ManutencaoDAO manutencaoDao = new ManutencaoDAO();
-            List<ManutencaoChamado> listaChamadosRecentes = manutencaoDao.listarRecentesAbertos(5);
-            request.setAttribute("listaChamadosRecentes", listaChamadosRecentes);
+            request.setAttribute("listaChamadosRecentes", manutencaoDao.listarRecentesAbertos(5));
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("erroDashboardManutencao", "Não foi possível carregar os chamados recentes.");
         }
         
-        // 4. Busca os equipamentos com status "Em Manutenção" utilizando a regra da Filial Atual
         try {
             EquipamentoDAO eqDao = new EquipamentoDAO();
-            System.out.println("=== [DEBUG] INICIO BUSCA MANUTENCAO ===");
-            System.out.println("Filial Atual ID enviado ao DAO: " + filialAtualId);
-            
-            // Alterado de "Em Manutenção" para o novo status de intenção/alerta
-            List<Equipamento> listaEquipamentosEmManutencao = eqDao.listarPorStatusEUnidade(filialAtualId, "Encaminhado p/ Chamado");
-            
-            System.out.println("Tamanho da lista retornado pelo DAO: " + (listaEquipamentosEmManutencao != null ? listaEquipamentosEmManutencao.size() : "NULL"));
-            if (listaEquipamentosEmManutencao != null) {
-                for (Equipamento eq : listaEquipamentosEmManutencao) {
-                    System.out.println(" -> Encontrado ID: " + eq.getIdEquipamento() + " | Nome: " + eq.getNomeProduto() + " | Status: " + eq.getStatusNome());
-                }
-            }
-            System.out.println("=== [DEBUG] FIM BUSCA MANUTENCAO ===");
-            
-            request.setAttribute("listaEquipamentosEmManutencao", listaEquipamentosEmManutencao);
+            request.setAttribute("listaEquipamentosEmManutencao", eqDao.listarPorStatusEUnidades(5, unidadesPermitidas));
+            request.setAttribute("totalEquipamentos", eqDao.contarTotalEquipamentos(unidadesPermitidas));
+            request.setAttribute("totalAtivos", eqDao.contarEquipamentosAtivos(unidadesPermitidas));
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("listaEquipamentosEmManutencao", new ArrayList<>());
-        }
-        
-        // 5. Busca as contagens de equipamentos considerando a regra da Filial Atual
-        try {
-            EquipamentoDAO eqDao = new EquipamentoDAO();
-            request.setAttribute("totalEquipamentos", eqDao.contarTotalEquipamentos(filialAtualId));
-            request.setAttribute("totalAtivos", eqDao.contarEquipamentosAtivos(filialAtualId));
-        } catch (Exception e) {
-            e.printStackTrace();
             request.setAttribute("totalEquipamentos", 0);
             request.setAttribute("totalAtivos", 0);
         }
         
-        // Encaminha de forma segura para o menu.jsp protegendo o layout
+        // Encaminha para a View
         request.getRequestDispatcher("WEB-INF/jsp/menu.jsp").forward(request, response);
     }
         

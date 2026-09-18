@@ -112,226 +112,248 @@ public class EquipamentoDAO {
 	    return 0;
 	}
 
-	public List<Equipamento> listar() throws SQLException {
-        List<Equipamento> lista = new ArrayList<>();
-        String sql = "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, t.nome as nome_tipo, " +
-                     "se.nome AS status_nome, se.cor AS status_cor, " +
-                     "sit.nome AS situacao_nome, " +
-                     "mc.id_status_chamado AS status_chamado_id, " +
-                     "CASE WHEN m.nome_marca IS NOT NULL AND m.nome_marca <> '' THEN m.nome_marca || ' - ' || p.modelo ELSE p.modelo END AS produto_completo " +
-                     "FROM equipamentos e " +
-                     "INNER JOIN produtos p ON e.id_produto = p.id " +
-                     "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
-                     "LEFT JOIN tipos_produto t ON p.tipo_id = t.id " +
-                     "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
-                     "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
-                     "LEFT JOIN ( " +
-                     "    SELECT m1.id_equipamento, m1.id_status_chamado, " +
-                     "    ROW_NUMBER() OVER(PARTITION BY m1.id_equipamento ORDER BY m1.id_chamado DESC) as rn " + 
-                     "    FROM manutencao_chamados m1 " +
-                     ") mc ON mc.id_equipamento = e.id_equipamento AND mc.rn = 1 " +
-                     //"WHERE e.status_id != 3 " + 
-                     "ORDER BY e.id_equipamento DESC";
-        
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-        
-        try {
-            conn = Conexao.conectar();
-            stmt = conn.prepareStatement(sql);
-            rs = stmt.executeQuery();
-            
-            while (rs.next()) {
-                Equipamento eq = new Equipamento();
-                eq.setIdEquipamento(rs.getInt("id_equipamento"));
-                eq.setIdProduto(rs.getInt("id_produto"));
-                eq.setCodigoCatalogo(rs.getString("codigo_catalogo"));
-                eq.setNomeProduto(rs.getString("produto_completo"));
-                
-                eq.setIdSistema(rs.getString("id_sistema"));
-                eq.setPatrimonio(rs.getString("patrimonio"));
-                eq.setNumeroSerie(rs.getString("numero_serie"));
-                eq.setNomeIdentificador(rs.getString("nome_identificador"));
-                
-                int origemCod = rs.getInt("origem_codigo");
-                eq.setOrigemCodigo(rs.wasNull() ? null : origemCod);
+	public List<Equipamento> listar(List<Integer> unidadesPermitidas) throws SQLException {
+	    List<Equipamento> lista = new ArrayList<>();
+	    
+	    if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+	        return lista;
+	    }
 
-                eq.setIpAtual(rs.getString("ip_atual"));
-                
-                eq.setStatusId(rs.getInt("status_id"));
-                eq.setSituacaoId(rs.getInt("situacao_id"));
-                eq.setStatusNome(rs.getString("status_nome"));
-                eq.setStatusCor(rs.getString("status_cor"));
-                eq.setSituacaoNome(rs.getString("situacao_nome"));
+	    StringBuilder sql = new StringBuilder(
+	        "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, t.nome as nome_tipo, " +
+	        "se.nome AS status_nome, se.cor AS status_cor, " +
+	        "sit.nome AS situacao_nome, " +
+	        "mc.id_status_chamado AS status_chamado_id, " +
+	        "CASE WHEN m.nome_marca IS NOT NULL AND m.nome_marca <> '' THEN m.nome_marca || ' - ' || p.modelo ELSE p.modelo END AS produto_completo, " +
+	        "(f.origem_codigo || '-' || f.sufixo) AS nome_origem, " +
+	        "d.nome_departamento AS nome_departamento " +
+	        "FROM equipamentos e " +
+	        "INNER JOIN produtos p ON e.id_produto = p.id " +
+	        "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+	        "LEFT JOIN tipos_produto t ON p.tipo_id = t.id " +
+	        "LEFT JOIN filiais f ON e.origem_codigo = f.origem_codigo " +
+	        "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
+	        "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
+	        "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
+	        "LEFT JOIN ( " +
+	        "    SELECT m1.id_equipamento, m1.id_status_chamado, " +
+	        "    ROW_NUMBER() OVER(PARTITION BY m1.id_equipamento ORDER BY m1.id_chamado DESC) as rn " + 
+	        "    FROM manutencao_chamados m1 " +
+	        ") mc ON mc.id_equipamento = e.id_equipamento AND mc.rn = 1 " +
+	        "WHERE e.origem_codigo IN ("
+	    );
 
-                int statusChamadoId = rs.getInt("status_chamado_id");
-                eq.setStatusChamadoId(rs.wasNull() ? null : statusChamadoId);
+	    for (int i = 0; i < unidadesPermitidas.size(); i++) {
+	        sql.append(i == 0 ? "?" : ", ?");
+	    }
+	    sql.append(") ORDER BY e.id_equipamento DESC");
+	    
+	    try (Connection conn = Conexao.conectar();
+	         PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+	        
+	        for (int i = 0; i < unidadesPermitidas.size(); i++) {
+	            stmt.setInt(i + 1, unidadesPermitidas.get(i));
+	        }
+	        
+	        try (ResultSet rs = stmt.executeQuery()) {
+	            while (rs.next()) {
+	                Equipamento eq = new Equipamento();
+	                eq.setIdEquipamento(rs.getInt("id_equipamento"));
+	                eq.setIdProduto(rs.getInt("id_produto"));
+	                eq.setCodigoCatalogo(rs.getString("codigo_catalogo"));
+	                eq.setNomeProduto(rs.getString("produto_completo"));
+	                eq.setIdSistema(rs.getString("id_sistema"));
+	                eq.setPatrimonio(rs.getString("patrimonio"));
+	                eq.setNumeroSerie(rs.getString("numero_serie"));
+	                eq.setNomeIdentificador(rs.getString("nome_identificador"));
+	                
+	                int origemCod = rs.getInt("origem_codigo");
+	                eq.setOrigemCodigo(rs.wasNull() ? null : origemCod);
 
-                eq.setUsuarioAtual(rs.getString("usuario_atual"));
-                
-                int depId = rs.getInt("departamento_id");
-                eq.setDepartamentoId(rs.wasNull() ? null : depId);
+	                eq.setIpAtual(rs.getString("ip_atual"));
+	                eq.setStatusId(rs.getInt("status_id"));
+	                eq.setSituacaoId(rs.getInt("situacao_id"));
+	                eq.setStatusNome(rs.getString("status_nome"));
+	                eq.setStatusCor(rs.getString("status_cor"));
+	                eq.setSituacaoNome(rs.getString("situacao_nome"));
 
-                eq.setObservacoes(rs.getString("observacoes"));
-                eq.setDataCadastro(rs.getString("data_cadastro"));
-                
-                lista.add(eq);
-            }
-        } finally {
-            Conexao.fechar(rs, stmt, conn);
-        }
-        return lista;
-    }
-    
-	public List<Equipamento> listarComFiltros(String pesquisaGlobal, String idSistema, String patrimonio, String serial, String origem, String departamento, String statusIdFiltro, String situacaoIdFiltro, String produto, String usuario) throws SQLException {
-        List<Equipamento> lista = new ArrayList<>();
-        
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
+	                int statusChamadoId = rs.getInt("status_chamado_id");
+	                eq.setStatusChamadoId(rs.wasNull() ? null : statusChamadoId);
 
-        try {
-            conn = Conexao.conectar();
+	                eq.setUsuarioAtual(rs.getString("usuario_atual"));
+	                
+	                int depId = rs.getInt("departamento_id");
+	                eq.setDepartamentoId(rs.wasNull() ? null : depId);
 
-            StringBuilder sql = new StringBuilder(
-				"SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, " +
-		                "se.nome AS status_nome, se.cor AS status_cor, " +
-		                "sit.nome AS situacao_nome, " +
-		                "mc.id_status_chamado AS status_chamado_id, " +
-		                "CASE WHEN m.nome_marca IS NOT NULL AND m.nome_marca <> '' THEN m.nome_marca || ' - ' || p.modelo ELSE p.modelo END AS produto_completo, " +
-		                "f.nome_empresa as nome_origem, d.nome_departamento as nome_departamento " +
-		                "FROM equipamentos e " +
-		                "INNER JOIN produtos p ON e.id_produto = p.id " +
-		                "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
-		                "LEFT JOIN filiais f ON e.origem_codigo = f.origem_codigo " +
-		                "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
-		                "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
-		                "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
-		                "LEFT JOIN ( " +
-		                "    SELECT m1.id_equipamento, m1.id_status_chamado, " +
-		                "    ROW_NUMBER() OVER(PARTITION BY m1.id_equipamento ORDER BY m1.id_chamado DESC) as rn " + 
-		                "    FROM manutencao_chamados m1 " +
-		                ") mc ON mc.id_equipamento = e.id_equipamento AND mc.rn = 1 " +
-		                "WHERE 1=1"
-            );
-            
-            List<Object> parametros = new ArrayList<>();
+	                eq.setObservacoes(rs.getString("observacoes"));
+	                eq.setDataCadastro(rs.getString("data_cadastro"));
+	                
+	                try { eq.getClass().getMethod("setNomeOrigem", String.class).invoke(eq, rs.getString("nome_origem")); } catch (Exception ignored) {}
+	                try { eq.getClass().getMethod("setNomeDepartamento", String.class).invoke(eq, rs.getString("nome_departamento")); } catch (Exception ignored) {}
 
-            if ((statusIdFiltro == null || statusIdFiltro.trim().isEmpty()) && (pesquisaGlobal == null || pesquisaGlobal.trim().isEmpty())) {
-                sql.append(" AND e.status_id != 3");
-            }
+	                lista.add(eq);
+	            }
+	        }
+	    }
+	    return lista;
+	}
+	public List<Equipamento> listarComFiltros(String pesquisaGlobal, String idSistema, String patrimonio, String serial, String origem, String departamento, String statusIdFiltro, String situacaoIdFiltro, String produto, String usuario, List<Integer> unidadesPermitidas) throws SQLException {
+	    List<Equipamento> lista = new ArrayList<>();
+	    
+	    if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+	        return lista; 
+	    }
+	    
+	    Connection conn = null;
+	    PreparedStatement stmt = null;
+	    ResultSet rs = null;
 
-            if (pesquisaGlobal != null && !pesquisaGlobal.trim().isEmpty()) {
-                sql.append(" AND (e.id_sistema ILIKE ? OR e.patrimonio ILIKE ? OR e.numero_serie ILIKE ? OR e.usuario_atual ILIKE ? OR e.nome_identificador ILIKE ? OR p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ? OR f.nome_empresa ILIKE ? OR d.nome_departamento ILIKE ?)");
-                String termoGlobal = "%" + pesquisaGlobal.trim() + "%";
-                for (int i = 0; i < 9; i++) {
-                    parametros.add(termoGlobal);
-                }
-            }
+	    try {
+	        conn = Conexao.conectar();
 
-            if (idSistema != null && !idSistema.trim().isEmpty()) {
-                sql.append(" AND e.id_sistema ILIKE ?");
-                parametros.add("%" + idSistema.trim() + "%");
-            }
-            if (patrimonio != null && !patrimonio.trim().isEmpty()) {
-                sql.append(" AND e.patrimonio ILIKE ?");
-                parametros.add("%" + patrimonio.trim() + "%");
-            }
-            if (serial != null && !serial.trim().isEmpty()) {
-                sql.append(" AND e.numero_serie ILIKE ?");
-                parametros.add("%" + serial.trim() + "%");
-            }
-            if (origem != null && !origem.trim().isEmpty()) {
-                try {
-                    int valorOrigem = Integer.parseInt(origem.trim());
-                    Integer codigoReal = buscarOrigemCodigoPorIdFilial(conn, valorOrigem);
-                    sql.append(" AND e.origem_codigo = ?");
-                    parametros.add(codigoReal != null ? codigoReal : valorOrigem);
-                } catch (NumberFormatException e) {
-                    // Ignora se não for número válido
-                }
-            }
-            if (departamento != null && !departamento.trim().isEmpty()) {
-                sql.append(" AND e.departamento_id = ?");
-                parametros.add(Integer.parseInt(departamento));
-            }
-            
-            // Tratamento correto para o Status
-            if (statusIdFiltro != null && !statusIdFiltro.trim().isEmpty()) {
-                sql.append(" AND e.status_id = ?");
-                parametros.add(Integer.parseInt(statusIdFiltro));
-            }
+	        StringBuilder sql = new StringBuilder(
+	            "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, " +
+	            "se.nome AS status_nome, se.cor AS status_cor, " +
+	            "sit.nome AS situacao_nome, " +
+	            "mc.id_status_chamado AS status_chamado_id, " +
+	            "CASE WHEN m.nome_marca IS NOT NULL AND m.nome_marca <> '' THEN m.nome_marca || ' - ' || p.modelo ELSE p.modelo END AS produto_completo, " +
+	            "(f.origem_codigo || '-' || f.sufixo) AS nome_origem, " +
+	            "d.nome_departamento AS nome_departamento " +
+	            "FROM equipamentos e " +
+	            "INNER JOIN produtos p ON e.id_produto = p.id " +
+	            "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+	            "LEFT JOIN filiais f ON e.origem_codigo = f.origem_codigo " +
+	            "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
+	            "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
+	            "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
+	            "LEFT JOIN ( " +
+	            "    SELECT m1.id_equipamento, m1.id_status_chamado, " +
+	            "    ROW_NUMBER() OVER(PARTITION BY m1.id_equipamento ORDER BY m1.id_chamado DESC) as rn " + 
+	            "    FROM manutencao_chamados m1 " +
+	            ") mc ON mc.id_equipamento = e.id_equipamento AND mc.rn = 1 " +
+	            "WHERE 1=1"
+	        );
+	        
+	        List<Object> parametros = new ArrayList<>();
+	        
+	        sql.append(" AND e.origem_codigo IN (");
+	        for (int i = 0; i < unidadesPermitidas.size(); i++) {
+	            sql.append(i == 0 ? "?" : ", ?");
+	            parametros.add(unidadesPermitidas.get(i));
+	        }
+	        sql.append(")");
 
-            if (situacaoIdFiltro != null && !situacaoIdFiltro.trim().isEmpty()) {
-                sql.append(" AND e.situacao_id = ?");
-                parametros.add(Integer.parseInt(situacaoIdFiltro));
-                if ("6".equals(situacaoIdFiltro.trim())) {
-                    sql.append(" AND NOT EXISTS (SELECT 1 FROM manutencao_chamados c WHERE c.id_equipamento = e.id_equipamento AND c.id_status_chamado IN (1, 2, 3, 4, 5))");
-                }
-            }
-            if (produto != null && !produto.trim().isEmpty()) {
-                sql.append(" AND (p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ?)");
-                parametros.add("%" + produto.trim() + "%");
-                parametros.add("%" + produto.trim() + "%");
-            }
-            if (usuario != null && !usuario.trim().isEmpty()) {
-                sql.append(" AND e.usuario_atual ILIKE ?");
-                parametros.add("%" + usuario.trim() + "%");
-            }
-            sql.append(" ORDER BY e.id_equipamento DESC");
-            
-            // limite fixo de 20 registros
-            sql.append(" LIMIT 20");
+	        if ((statusIdFiltro == null || statusIdFiltro.trim().isEmpty()) && (pesquisaGlobal == null || pesquisaGlobal.trim().isEmpty())) {
+	            sql.append(" AND e.status_id != 3");
+	        }
 
-            stmt = conn.prepareStatement(sql.toString());
+	        if (pesquisaGlobal != null && !pesquisaGlobal.trim().isEmpty()) {
+	            // CORRIGIDO: Substituído f.nome_empresa por f.sufixo e f.origem_codigo para evitar erro de coluna
+	            sql.append(" AND (e.id_sistema ILIKE ? OR e.patrimonio ILIKE ? OR e.numero_serie ILIKE ? OR e.usuario_atual ILIKE ? OR e.nome_identificador ILIKE ? OR p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ? OR f.sufixo ILIKE ? OR CAST(f.origem_codigo AS TEXT) ILIKE ? OR d.nome_departamento ILIKE ?)");
+	            String termoGlobal = "%" + pesquisaGlobal.trim() + "%";
+	            for (int i = 0; i < 10; i++) { // Ajustado para 10 parâmetros pois adicionamos um campo na busca
+	                parametros.add(termoGlobal);
+	            }
+	        }
 
-            for (int i = 0; i < parametros.size(); i++) {
-                stmt.setObject(i + 1, parametros.get(i));
-            }
+	        if (idSistema != null && !idSistema.trim().isEmpty()) {
+	            sql.append(" AND e.id_sistema ILIKE ?");
+	            parametros.add("%" + idSistema.trim() + "%");
+	        }
+	        if (patrimonio != null && !patrimonio.trim().isEmpty()) {
+	            sql.append(" AND e.patrimonio ILIKE ?");
+	            parametros.add("%" + patrimonio.trim() + "%");
+	        }
+	        if (serial != null && !serial.trim().isEmpty()) {
+	            sql.append(" AND e.numero_serie ILIKE ?");
+	            parametros.add("%" + serial.trim() + "%");
+	        }
+	        if (origem != null && !origem.trim().isEmpty()) {
+	            try {
+	                int valorOrigem = Integer.parseInt(origem.trim());
+	                Integer codigoReal = buscarOrigemCodigoPorIdFilial(conn, valorOrigem);
+	                sql.append(" AND e.origem_codigo = ?");
+	                parametros.add(codigoReal != null ? codigoReal : valorOrigem);
+	            } catch (NumberFormatException e) {
+	                // Ignora
+	            }
+	        }
+	        if (departamento != null && !departamento.trim().isEmpty()) {
+	            sql.append(" AND e.departamento_id = ?");
+	            parametros.add(Integer.parseInt(departamento));
+	        }
+	        
+	        if (statusIdFiltro != null && !statusIdFiltro.trim().isEmpty()) {
+	            sql.append(" AND e.status_id = ?");
+	            parametros.add(Integer.parseInt(statusIdFiltro));
+	        }
 
-            rs = stmt.executeQuery();
+	        if (situacaoIdFiltro != null && !situacaoIdFiltro.trim().isEmpty()) {
+	            sql.append(" AND e.situacao_id = ?");
+	            parametros.add(Integer.parseInt(situacaoIdFiltro));
+	            if ("6".equals(situacaoIdFiltro.trim())) {
+	                sql.append(" AND NOT EXISTS (SELECT 1 FROM manutencao_chamados c WHERE c.id_equipamento = e.id_equipamento AND c.id_status_chamado IN (1, 2, 3, 4, 5))");
+	            }
+	        }
+	        if (produto != null && !produto.trim().isEmpty()) {
+	            sql.append(" AND (p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ?)");
+	            parametros.add("%" + produto.trim() + "%");
+	            parametros.add("%" + produto.trim() + "%");
+	        }
+	        if (usuario != null && !usuario.trim().isEmpty()) {
+	            sql.append(" AND e.usuario_atual ILIKE ?");
+	            parametros.add("%" + usuario.trim() + "%");
+	        }
+	        sql.append(" ORDER BY e.id_equipamento DESC");
+	        sql.append(" LIMIT 20");
 
-            while (rs.next()) {
-                Equipamento eq = new Equipamento();
-                eq.setIdEquipamento(rs.getInt("id_equipamento"));
-                eq.setIdProduto(rs.getInt("id_produto"));
-                eq.setCodigoCatalogo(rs.getString("codigo_catalogo"));
-                eq.setNomeProduto(rs.getString("produto_completo")); 
-                eq.setIdSistema(rs.getString("id_sistema"));
-                eq.setPatrimonio(rs.getString("patrimonio"));
-                eq.setNumeroSerie(rs.getString("numero_serie"));
-                eq.setNomeIdentificador(rs.getString("nome_identificador"));
-                
-                int origemCod = rs.getInt("origem_codigo");
-                eq.setOrigemCodigo(rs.wasNull() ? null : origemCod);
-                
-                int depId = rs.getInt("departamento_id");
-                eq.setDepartamentoId(rs.wasNull() ? null : depId);
-                
-                int statusChamadoId = rs.getInt("status_chamado_id");
-                eq.setStatusChamadoId(rs.wasNull() ? null : statusChamadoId);
+	        stmt = conn.prepareStatement(sql.toString());
 
-                eq.setIpAtual(rs.getString("ip_atual"));
-                eq.setStatusId(rs.getInt("status_id"));
-                eq.setSituacaoId(rs.getInt("situacao_id"));
-                eq.setStatusNome(rs.getString("status_nome"));
-                eq.setStatusCor(rs.getString("status_cor"));
-                eq.setSituacaoNome(rs.getString("situacao_nome"));
-                eq.setUsuarioAtual(rs.getString("usuario_atual"));
-                eq.setObservacoes(rs.getString("observacoes"));
-                
-                try { eq.getClass().getMethod("setNomeOrigem", String.class).invoke(eq, rs.getString("nome_origem")); } catch (Exception ignored) {}
-                try { eq.getClass().getMethod("setNomeDepartamento", String.class).invoke(eq, rs.getString("nome_departamento")); } catch (Exception ignored) {}
+	        for (int i = 0; i < parametros.size(); i++) {
+	            stmt.setObject(i + 1, parametros.get(i));
+	        }
 
-                lista.add(eq);
-            }
-        } finally {
-            Conexao.fechar(rs, stmt, conn);
-        }
-        return lista;
-    }
-	
+	        rs = stmt.executeQuery();
+
+	        while (rs.next()) {
+	            Equipamento eq = new Equipamento();
+	            eq.setIdEquipamento(rs.getInt("id_equipamento"));
+	            eq.setIdProduto(rs.getInt("id_produto"));
+	            eq.setCodigoCatalogo(rs.getString("codigo_catalogo"));
+	            eq.setNomeProduto(rs.getString("produto_completo")); 
+	            eq.setIdSistema(rs.getString("id_sistema"));
+	            eq.setPatrimonio(rs.getString("patrimonio"));
+	            eq.setNumeroSerie(rs.getString("numero_serie"));
+	            eq.setNomeIdentificador(rs.getString("nome_identificador"));
+	            
+	            int origemCod = rs.getInt("origem_codigo");
+	            eq.setOrigemCodigo(rs.wasNull() ? null : origemCod);
+	            
+	            int depId = rs.getInt("departamento_id");
+	            eq.setDepartamentoId(rs.wasNull() ? null : depId);
+	            
+	            int statusChamadoId = rs.getInt("status_chamado_id");
+	            eq.setStatusChamadoId(rs.wasNull() ? null : statusChamadoId);
+
+	            eq.setIpAtual(rs.getString("ip_atual"));
+	            eq.setStatusId(rs.getInt("status_id"));
+	            eq.setSituacaoId(rs.getInt("situacao_id"));
+	            eq.setStatusNome(rs.getString("status_nome"));
+	            eq.setStatusCor(rs.getString("status_cor"));
+	            eq.setSituacaoNome(rs.getString("situacao_nome"));
+	            eq.setUsuarioAtual(rs.getString("usuario_atual"));
+	            eq.setObservacoes(rs.getString("observacoes"));
+	            
+	            try { eq.getClass().getMethod("setNomeOrigem", String.class).invoke(eq, rs.getString("nome_origem")); } catch (Exception ignored) {}
+	            try { eq.getClass().getMethod("setNomeDepartamento", String.class).invoke(eq, rs.getString("nome_departamento")); } catch (Exception ignored) {}
+
+	            lista.add(eq);
+	        }
+	    } finally {
+	        Conexao.fechar(rs, stmt, conn);
+	    }
+	    return lista;
+	}
 	public List<Map<String, Object>> listarSituacoesEdicaoDireta() throws SQLException {
         List<Map<String, Object>> lista = new ArrayList<>();
         String sql = "SELECT id, nome FROM situacao_equipamento WHERE permite_edicao_direta = true ORDER BY nome";
@@ -485,23 +507,36 @@ public class EquipamentoDAO {
         return lista;
     }
     
-	public Equipamento buscarPorId(int idEquipamento) throws SQLException {
-	    String sqlEquipamento = "SELECT e.*, p.codigo_catalogo, p.modelo, p.descricao_catalogo, " +
-	                 "m.nome_marca, t.nome as nome_tipo, d.nome_departamento, " +
-	                 "se.nome AS status_nome, se.cor AS status_cor, sit.nome AS situacao_nome " +
-	                 "FROM equipamentos e " +
-	                 "INNER JOIN produtos p ON e.id_produto = p.id " +
-	                 "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
-	                 "LEFT JOIN tipos_produto t ON p.tipo_id = t.id " +
-	                 "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
-	                 "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
-	                 "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
-	                 "WHERE e.id_equipamento = ?";
+    public Equipamento buscarPorId(int idEquipamento, List<Integer> unidadesPermitidas) throws SQLException {
+		if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+	        return null;
+	    }
+	    
+		// Constrói a query de forma dinâmica para incluir o IN com base nas unidades permitidas
+	    StringBuilder sqlEquipamento = new StringBuilder(
+	        "SELECT e.*, p.codigo_catalogo, p.modelo, p.descricao_catalogo, " +
+	        "m.nome_marca, t.nome as nome_tipo, d.nome_departamento, " +
+	        "se.nome AS status_nome, se.cor AS status_cor, sit.nome AS situacao_nome " +
+	        "FROM equipamentos e " +
+	        "INNER JOIN produtos p ON e.id_produto = p.id " +
+	        "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+	        "LEFT JOIN tipos_produto t ON p.tipo_id = t.id " +
+	        "LEFT JOIN departamentos d ON e.departamento_id = d.id_departamento " +
+	        "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
+	        "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
+	        "WHERE e.id_equipamento = ? AND e.origem_codigo IN ("
+	    );
+	    
+	    for (int i = 0; i < unidadesPermitidas.size(); i++) {
+	        sqlEquipamento.append(i == 0 ? "?" : ", ?");
+	    }
+	    sqlEquipamento.append(")");
 	    
 	    String sqlEspecificacoes = "SELECT ee.campo_id, ee.valor, a.nome as nome_campo " +
 	                               "FROM equipamento_especificacoes ee " +
 	                               "LEFT JOIN atributos a ON ee.campo_id = a.id " +
 	                               "WHERE ee.id_equipamento = ?";
+	    
 	    
 	    Connection conn = null;
 	    PreparedStatement stmt = null;
@@ -511,9 +546,15 @@ public class EquipamentoDAO {
 	    try {
 	        conn = Conexao.conectar();
 	        
-	        // 1. Busca os dados principais
-	        stmt = conn.prepareStatement(sqlEquipamento);
+	       // 1. Busca os dados principais aplicando o ID e as unidades permitidas
+	        stmt = conn.prepareStatement(sqlEquipamento.toString());
 	        stmt.setInt(1, idEquipamento);
+	        
+	       // Seta os valores das unidades permitidas a partir do índice 2
+	        for (int i = 0; i < unidadesPermitidas.size(); i++) {
+	            stmt.setInt(i + 2, unidadesPermitidas.get(i));
+	        }
+	        
 	        rs = stmt.executeQuery();
 	        
 	        if (rs.next()) {
@@ -577,13 +618,14 @@ public class EquipamentoDAO {
 	    return eq;
 	}
 
-	public boolean atualizar(Equipamento eq) throws SQLException {
-		// Se o status escolhido for Devolução (6), força a situação para Em Devolução (8)
-        if (eq.getStatusId() == 6) {
+    public boolean atualizar(Equipamento eq) throws SQLException {
+        // Proteção segura contra NullPointerException caso o statusId venha nulo
+        Integer statusId = eq.getStatusId();
+        if (statusId != null && statusId == 6) {
             eq.setSituacaoId(8);
         }
 		
-		String sqlEquipamento = "UPDATE equipamentos SET id_produto = ?, patrimonio = ?, numero_serie = ?, nome_identificador = ?, origem_codigo = ?, ip_atual = ?, status_id = ?, situacao_id = ?, usuario_atual = ?, departamento_id = ?, observacoes = ? WHERE id_equipamento = ?";
+        String sqlEquipamento = "UPDATE equipamentos SET id_produto = ?, patrimonio = ?, numero_serie = ?, nome_identificador = ?, origem_codigo = ?, ip_atual = ?, status_id = ?, situacao_id = ?, usuario_atual = ?, departamento_id = ?, observacoes = ? WHERE id_equipamento = ?";
         
         // Upsert: Se já existe o campo para este equipamento, atualiza o valor; se não existe, insere.
         String sqlUpsertEspecificacao = "INSERT INTO equipamento_especificacoes (id_equipamento, campo_id, valor) VALUES (?, ?, ?) " +
@@ -603,7 +645,14 @@ public class EquipamentoDAO {
             
             // 1. Atualiza dados principais do equipamento
             stmtEq = conn.prepareStatement(sqlEquipamento);
-            stmtEq.setInt(1, eq.getIdProduto());
+            
+            // Correção da checagem do ID do produto
+            if (eq.getIdProduto() > 0) {
+                stmtEq.setInt(1, eq.getIdProduto());
+            } else {
+                stmtEq.setNull(1, Types.INTEGER);
+            }
+            
             stmtEq.setString(2, eq.getPatrimonio());
             stmtEq.setString(3, eq.getNumeroSerie());
             stmtEq.setString(4, eq.getNomeIdentificador());
@@ -616,8 +665,11 @@ public class EquipamentoDAO {
             }
             
             stmtEq.setString(6, eq.getIpAtual());
-            stmtEq.setInt(7, eq.getStatusId() > 0 ? eq.getStatusId() : 1);
-            stmtEq.setInt(8, eq.getSituacaoId() > 0 ? eq.getSituacaoId() : 1);
+            
+            // Uso seguro das variáveis encapsuladas
+            stmtEq.setInt(7, (statusId != null && statusId > 0) ? statusId : 1);
+            stmtEq.setInt(8, (eq.getSituacaoId() != null && eq.getSituacaoId() > 0) ? eq.getSituacaoId() : 1);
+            
             stmtEq.setString(9, eq.getUsuarioAtual());
             
             if (eq.getDepartamentoId() != null) {
@@ -712,51 +764,23 @@ public class EquipamentoDAO {
         return idFilialOuCodigo;
     }
     
-  //Contador especial na tela de Dashboard Menu
-    // Conta o total geral (Se for a Matriz 161, mostra tudo. Senão, filtra pela filial)
-    public int contarTotalEquipamentos(int origemCodigo) throws SQLException {
-        String sql;
-        boolean isMatriz = (origemCodigo == 161);
-
-        if (isMatriz) {
-            sql = "SELECT COUNT(*) FROM equipamentos WHERE status_id != 3";
-        } else {
-            sql = "SELECT COUNT(*) FROM equipamentos WHERE status_id != 3 AND origem_codigo = ?";
+ // Conta o total geral considerando a lista de unidades permitidas
+    public int contarTotalEquipamentos(List<Integer> unidadesPermitidas) throws SQLException {
+        if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+            return 0;
         }
+
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM equipamentos WHERE status_id != 3 AND origem_codigo IN (");
+        for (int i = 0; i < unidadesPermitidas.size(); i++) {
+            sql.append(i == 0 ? "?" : ", ?");
+        }
+        sql.append(")");
 
         try (Connection conn = Conexao.conectar();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
             
-            if (!isMatriz) {
-                stmt.setInt(1, origemCodigo);
-            }
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
-            }
-        }
-        return 0;
-    }
-
-    //Contador especial na tela de Dashboard Menu
-    // Conta os ativos (Se for a Matriz 161, mostra todos. Senão, filtra pela filial)
-    public int contarEquipamentosAtivos(int origemCodigo) throws SQLException {
-        String sql;
-        boolean isMatriz = (origemCodigo == 161);
-
-        if (isMatriz) {
-            sql = "SELECT COUNT(*) FROM equipamentos WHERE status_id = 1";
-        } else {
-            sql = "SELECT COUNT(*) FROM equipamentos WHERE status_id = 1 AND origem_codigo = ?";
-        }
-
-        try (Connection conn = Conexao.conectar();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            if (!isMatriz) {
-                stmt.setInt(1, origemCodigo);
+            for (int i = 0; i < unidadesPermitidas.size(); i++) {
+                stmt.setInt(i + 1, unidadesPermitidas.get(i));
             }
             
             try (ResultSet rs = stmt.executeQuery()) {
@@ -768,11 +792,42 @@ public class EquipamentoDAO {
         return 0;
     }
     
+ // Conta os ativos considerando a lista de unidades permitidas
+    public int contarEquipamentosAtivos(List<Integer> unidadesPermitidas) throws SQLException {
+        if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+            return 0;
+        }
+
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM equipamentos WHERE status_id = 1 AND origem_codigo IN (");
+        for (int i = 0; i < unidadesPermitidas.size(); i++) {
+            sql.append(i == 0 ? "?" : ", ?");
+        }
+        sql.append(")");
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+            
+            for (int i = 0; i < unidadesPermitidas.size(); i++) {
+                stmt.setInt(i + 1, unidadesPermitidas.get(i));
+            }
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
     //Tela que faz parte do dashboard
-  //Tela que faz parte do dashboard
-    public List<Equipamento> listarPorStatusEUnidade(int origemCodigo, String nomeStatus) throws SQLException {
+   // Tela que faz parte do dashboard
+    public List<Equipamento> listarPorStatusEUnidades(int statusId, List<Integer> unidadesPermitidas) throws SQLException {
         List<Equipamento> lista = new ArrayList<>();
-        boolean isMatriz = (origemCodigo == 161);
+        
+        // Retorna lista vazia caso não haja unidades permitidas na sessão
+        if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+            return lista;
+        }
 
         StringBuilder sql = new StringBuilder(
             "SELECT e.*, p.codigo_catalogo, p.modelo, m.nome_marca, " +
@@ -784,22 +839,22 @@ public class EquipamentoDAO {
             "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
             "LEFT JOIN status_equipamento se ON e.status_id = se.id " +
             "LEFT JOIN situacao_equipamento sit ON e.situacao_id = sit.id " +
-            "WHERE se.nome = ? AND e.status_id != 3"
+            "WHERE e.status_id = ? AND e.origem_codigo IN ("
         );
 
-        if (!isMatriz) {
-            sql.append(" AND e.origem_codigo = ?");
+        for (int i = 0; i < unidadesPermitidas.size(); i++) {
+            sql.append(i == 0 ? "?" : ", ?");
         }
-
-        sql.append(" ORDER BY e.id_equipamento DESC");
+        sql.append(") ORDER BY e.id_equipamento DESC");
 
         try (Connection conn = Conexao.conectar();
              PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
             
-            // Passamos o novo status direto: "Encaminhado p/ Chamado"
-            stmt.setString(1, nomeStatus);
-            if (!isMatriz) {
-                stmt.setInt(2, origemCodigo);
+            // Passa o ID 5 diretamente (Encaminhado p/ Chamado)
+            stmt.setInt(1, statusId);
+            
+            for (int i = 0; i < unidadesPermitidas.size(); i++) {
+                stmt.setInt(i + 2, unidadesPermitidas.get(i));
             }
             
             try (ResultSet rs = stmt.executeQuery()) {
@@ -848,6 +903,30 @@ public class EquipamentoDAO {
  // Realiza a virada automática do status e situação quando a devolução é iniciada
     public void atualizarStatusParaDevolucao(long idEquipamento) throws SQLException {
         String sql = "UPDATE equipamentos SET status_id = 6, situacao_id = 8 WHERE id_equipamento = ?";
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idEquipamento);
+            stmt.executeUpdate();
+        }
+    }
+    
+    /**
+     * Reverte o status para 1 (Ativo) e ajusta a situação:
+     * - Se a filial for 161 (Matriz): Retorna para 1 (Disponível)
+     * - Se for qualquer outra filial: Retorna para 2 (Em Uso)
+     */
+    public void reverterStatusDevolucao(Long idEquipamento) throws SQLException {
+        // Como você utiliza origem_codigo, vamos buscar a filial associada ao equipamento de forma segura via JOIN
+        // Se a matriz for origem_codigo = 161, ajustamos para 1 (Disponível), senão 2 (Em Uso).
+        
+        String sql = "UPDATE equipamentos e " +
+                     "SET status_id = 1, " +
+                     "    situacao_id = CASE " +
+                     "                      WHEN e.origem_codigo = 161 THEN 1 " + // Matriz -> Disponível
+                     "                      ELSE 2 " +                              // Outras filiais -> Em Uso
+                     "                  END " +
+                     "WHERE e.id_equipamento = ?";
+
         try (Connection conn = Conexao.conectar();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idEquipamento);

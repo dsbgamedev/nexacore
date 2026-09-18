@@ -10,6 +10,7 @@ import dao.EquipamentoDAO;
 import dao.MovimentacaoEnvioDAO;
 import model.MovimentacaoEnvio;
 import model.Usuario;
+import util.ValidadorContextoUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -33,7 +34,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
     private MovimentacaoEnvioDAO dao = new MovimentacaoEnvioDAO();
     private EquipamentoDAO equipamentoDAO = new EquipamentoDAO();
     
-    // Gson blindado para o Java 17+ utilizando um TypeAdapter seguro para LocalDate
     private Gson gson = new GsonBuilder()
         .registerTypeAdapter(LocalDate.class, new TypeAdapter<LocalDate>() {
             private final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -53,7 +53,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 return str != null ? LocalDate.parse(str, formatter) : null;
             }
         })
-        // Adicionado TypeAdapter para LocalDateTime para suportar a classe MovimentacaoHistorico
         .registerTypeAdapter(LocalDateTime.class, new TypeAdapter<LocalDateTime>() {
             private final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -75,7 +74,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         .disableHtmlEscaping()
         .create();
     
-   
     private static class EnvioPayload {
         public String dataEnvio;
         public Long origemId;
@@ -90,10 +88,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         public List<Long> equipamentosIds;
     }
     
-    /**
-     * Validação granular integrada com o método inteligente do objeto Usuario.
-     * Verifica se o usuário possui a permissão específica (CONSULTAR, INSERIR, EDITAR, EXCLUIR) no módulo "movimentacao_envio".
-     */
     private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response, String acaoEspecifica) throws IOException {
         HttpSession session = request.getSession(false);
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
@@ -117,7 +111,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         return true;
     }
     
-    // 1. GET: Retorna o JSON com a lista de envios ou um envio específico (Exige CONSULTAR)
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         if (!validarPermissao(req, resp, "CONSULTAR")) {
             return;
@@ -168,18 +161,22 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         }
     }
 
-    // 2. POST: Cadastra o novo envio ou inicia devolução (Exige INSERIR)
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        if (!validarPermissao(req, resp, "INSERIR")) {
+        String acao = req.getParameter("acao");
+        String permissaoNecessaria = "INSERIR";
+        if ("iniciarDevolucao".equals(acao) || "cancelarDevolucao".equals(acao)) {
+            permissaoNecessaria = "EDITAR";
+        }
+        
+        if (!validarPermissao(req, resp, permissaoNecessaria)) {
             return;
         }
         
         resp.setContentType("application/json;charset=UTF-8");
         PrintWriter out = resp.getWriter();
-        String acao = req.getParameter("acao");
         
-        if ("iniciarDevolucao".equals(acao)) {
+        if ("iniciarDevolucao".equals(acao) || "cancelarDevolucao".equals(acao)) {
             EnvioPayload payload = gson.fromJson(req.getReader(), EnvioPayload.class);
             
             if (payload == null || payload.equipamentosIds == null || payload.equipamentosIds.isEmpty()) {
@@ -189,12 +186,17 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             }
 
             try {
+                // Valida o contexto da filial ativa com base na origem ou equipamentos se necessário
                 for (Long idEqp : payload.equipamentosIds) {
-                    equipamentoDAO.atualizarStatusParaDevolucao(idEqp);
+                    if ("iniciarDevolucao".equals(acao)) {
+                        equipamentoDAO.atualizarStatusParaDevolucao(idEqp);
+                    } else {
+                        equipamentoDAO.reverterStatusDevolucao(idEqp);
+                    }
                 }
                 
                 resp.setStatus(HttpServletResponse.SC_OK);
-                out.print("{\"sucesso\": true, \"mensagem\": \"Equipamentos marcados para devolução com sucesso.\"}");
+                out.print("{\"sucesso\": true, \"mensagem\": \"Operação realizada com sucesso.\"}");
             } catch (Exception e) {
                 e.printStackTrace();
                 resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
@@ -211,6 +213,17 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 out.print("{\"sucesso\": false, \"mensagem\": \"Dados do envio não informados ou nenhum equipamento selecionado.\"}");
                 return;
+            }
+            
+            // --- VALIDAÇÃO DE CONTEXTO DE FILIAL ATIVA ---
+            if (payload.origemId != null) {
+                try {
+                    ValidadorContextoUtil.validarFilialAtiva(req, payload.origemId.intValue());
+                } catch (SecurityException se) {
+                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    out.print("{\"sucesso\": false, \"mensagem\": \"" + se.getMessage() + "\"}");
+                    return;
+                }
             }
             
             for (Long idEquipamento : payload.equipamentosIds) {
@@ -297,7 +310,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         }
     }
 
-    // 3. PUT: Efetiva envio ou confirma recebimento (Exige EDITAR)
     @Override
     protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         if (!validarPermissao(req, resp, "EDITAR")) {
@@ -387,7 +399,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         }
     }
 
-    // 4. DELETE: Cancela envio ou devolução (Exige EXCLUIR)
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         if (!validarPermissao(req, resp, "EXCLUIR")) {
@@ -436,7 +447,7 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 util.AuditoriaService.registrar(
                     Long.valueOf(usuario.getId()),
                     usuario.getUsername(),
-                    "Movimentação de Envio",
+                    "Movimentacao de Envio",
                     "EXCLUIR",
                     "movimentacao_envio",
                     idEnvio,

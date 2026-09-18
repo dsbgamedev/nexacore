@@ -222,25 +222,56 @@ document.addEventListener("DOMContentLoaded", function() {
 // Função para buscar filiais e popular os selects de origem e destino
 // Função para buscar filiais e popular os selects de origem e destino
 function carregarFiliais() {
-    return fetch(contextPath + '/api/empresas')
-        .then(res => res.json())
+    return fetch(contextPath + '/api/equipamentos?acaoOrigens=listar-origens')
+        .then(res => {
+            if (!res.ok) {
+                console.warn("A API de origens retornou status " + res.status + ". Usando fallback seguro.");
+                return [];
+            }
+            return res.json();
+        })
         .then(data => {
             const selectOrigem = document.getElementById("origemId");
             const selectDestino = document.getElementById("destinoId");
             
             if (!selectOrigem || !selectDestino) return;
 
-            data.forEach(filial => {
-                let texto = filial.origemCodigo + " - " + filial.nomeEmpresa;
-                selectOrigem.add(new Option(texto, filial.idFilial));
-                selectDestino.add(new Option(texto, filial.idFilial));
+            // BLINDAGEM: Garante que 'data' seja tratado como array
+            let listaEmpresas = [];
+            if (Array.isArray(data)) {
+                listaEmpresas = data;
+            } else if (data && typeof data === 'object') {
+                listaEmpresas = data.content || data.empresas || data.lista || Object.values(data).find(v => Array.isArray(v)) || [];
+            }
+
+            // Limpa as opções existentes mantendo apenas a opção padrão "Selecione..."
+            selectOrigem.innerHTML = '<option value="">Selecione a origem...</option>';
+
+            // Popula os selects com as filiais permitidas
+            listaEmpresas.forEach(filial => {
+                let id = filial.origemCodigo || filial.idFilial || filial.id || filial.codigo;
+                let codigo = filial.origemCodigo || filial.codigo || id;
+                let nome = filial.sufixo || filial.nomeEmpresa || filial.nome || "Filial";
+                let texto = codigo + " - " + nome;
+
+                if (id && ![...selectOrigem.options].some(opt => opt.value == id)) {
+                    selectOrigem.add(new Option(texto, id));
+                }
+                if (id && ![...selectDestino.options].some(opt => opt.value == id)) {
+                    selectDestino.add(new Option(texto, id));
+                }
             });
 
-            // GARANTE O TRAVAMENTO DO DESTINO NA MATRIZ (161) APENAS NA TELA DE DEVOLUÇÃO
+            // GARANTIA DE SEGURANÇA: Se a Matriz (161) não estiver no destino, injetamos manualmente
             const urlParams = new URLSearchParams(window.location.search);
             const tipoParam = (window.isDevolucaoForcada) ? 'devolucao' : urlParams.get('tipo');
 
             if (tipoParam === 'devolucao') {
+                let matrizExiste = [...selectDestino.options].some(opt => opt.value == "161" || opt.text.includes("161"));
+                if (!matrizExiste) {
+                    selectDestino.add(new Option("161 - CBA DIESEL SP MATRIZ", "161"));
+                }
+
                 for (let i = 0; i < selectDestino.options.length; i++) {
                     let optVal = selectDestino.options[i].value;
                     let optText = selectDestino.options[i].text.toUpperCase();
@@ -256,7 +287,16 @@ function carregarFiliais() {
                 selectDestino.classList.add("bg-light");
             }
         })
-        .catch(err => console.error("Erro ao carregar filiais:", err));
+        .catch(err => {
+            console.error("Erro crítico ao carregar filiais:", err);
+            const selectDestino = document.getElementById("destinoId");
+            if (selectDestino && selectDestino.options.length <= 1) {
+                selectDestino.add(new Option("161 - CBA DIESEL SP MATRIZ", "161"));
+                selectDestino.value = "161";
+                selectDestino.disabled = true;
+                selectDestino.style.backgroundColor = "#e9ecef";
+            }
+        });
 }
 
 // Carrega o equipamento de devolução definindo a Origem na filial atual e o Destino fixo na Matriz (ID 7 / Código 161)
@@ -466,10 +506,11 @@ async function removerItemEnvio(id) {
 
     if (tipoParam === 'devolucao') {
         try {
-            const response = await fetch(`${contextPath}/api/equipamentos/cancelar-devolucao`, {
+            // CORRIGIDO: Utiliza a API unificada de envios com a ação correta
+            const response = await fetch(`${contextPath}/api/envios?acao=cancelarDevolucao`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idEquipamento: id })
+                body: JSON.stringify({ equipamentosIds: [id] }) // Passando no formato que a API espera
             });
 
             const resposta = await response.json();
@@ -504,7 +545,6 @@ async function removerItemEnvio(id) {
             selectOrigem.value = "";
         }
         
-        // Só limpa/destrava o destino se NÃO for tela de devolução
         if (tipoParam !== 'devolucao') {
             const selectDestino = document.getElementById("destinoId");
             if (selectDestino) {

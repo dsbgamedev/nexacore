@@ -14,7 +14,6 @@ import jakarta.servlet.http.HttpSession;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,16 +42,45 @@ public class FilialServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-    	if (!validarPermissao(request, response)) {
+        HttpSession session = request.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+        if (!validarPermissao(request, response)) {
             return;
         }
-    	
-    	response.setContentType("application/json");
+        
+        response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
 
         try {
-            List<Filial> lista = dao.listar();
+            List<Filial> lista;
+            
+            // Verifica se é Administrador / Super Administrador
+            boolean isAdmin = usuario != null && (
+                "SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || 
+                "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) ||
+                (usuario.getPerfil() != null && usuario.getPerfil().toUpperCase().contains("SUPER"))
+            );
+
+            if (isAdmin) {
+                // Admin vê todas as filiais
+                lista = dao.listar();
+            } else {
+                // Usuário comum: Usa o método centralizado do DAO para traduzir e filtrar as unidades permitidas
+                List<Filial> todas = dao.listar();
+                List<Integer> codigosPermitidos = dao.traduzirUnidadesParaCodigoOrigem(usuario.getUnidadesPermitidas());
+
+                lista = new java.util.ArrayList<>();
+                if (codigosPermitidos != null && !codigosPermitidos.isEmpty()) {
+                    for (Filial f : todas) {
+                        if (codigosPermitidos.contains(f.getOrigemCodigo())) {
+                            lista.add(f);
+                        }
+                    }
+                }
+            }
+
             out.print(gson.toJson(lista));
         } catch (Exception e) {
             e.printStackTrace();
@@ -65,11 +93,11 @@ public class FilialServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-    	if (!validarPermissao(request, response)) {
+        if (!validarPermissao(request, response)) {
             return;
         }
-    	
-    	response.setContentType("application/json");
+        
+        response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
         Map<String, Object> resp = new HashMap<>();
@@ -104,7 +132,6 @@ public class FilialServlet extends HttpServlet {
                 BufferedReader reader = request.getReader();
                 Filial filial = gson.fromJson(reader, Filial.class);
 
-                // Opcional: Validar se o sufixo pertence a outro registro (ignorando o próprio código)
                 boolean sucesso = dao.atualizar(filial);
 
                 if (sucesso) {
@@ -117,46 +144,46 @@ public class FilialServlet extends HttpServlet {
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 }
             } 
-         // 3. Fluxo Padrão: Cadastrar Novo Registro (INSERT)
+            // 3. Fluxo Padrão: Cadastrar Novo Registro (INSERT)
             else {
-            BufferedReader reader = request.getReader();
-            Filial filial = gson.fromJson(reader, Filial.class);
+                BufferedReader reader = request.getReader();
+                Filial filial = gson.fromJson(reader, Filial.class);
 
-            // Validação de campos obrigatórios no servidor
-            if (filial.getOrigemCodigo() <= 0 || filial.getSufixo() == null || filial.getSufixo().trim().isEmpty() ||
-                filial.getNomeEmpresa() == null || filial.getNomeEmpresa().trim().isEmpty() ||
-                filial.getCnpj() == null || filial.getCnpj().trim().isEmpty()) {
-                
-                resp.put("sucesso", false);
-                resp.put("erro", "Preencha todos os campos obrigatórios, incluindo Origem e Sufixo.");
-                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            } else {
-                boolean origemExiste = dao.existePorOrigemCodigo(filial.getOrigemCodigo());
-                boolean sufixoExiste = dao.existePorSufixo(filial.getSufixo());
-
-                if (origemExiste) {
+                // Validação de campos obrigatórios no servidor
+                if (filial.getOrigemCodigo() <= 0 || filial.getSufixo() == null || filial.getSufixo().trim().isEmpty() ||
+                    filial.getNomeEmpresa() == null || filial.getNomeEmpresa().trim().isEmpty() ||
+                    filial.getCnpj() == null || filial.getCnpj().trim().isEmpty()) {
+                    
                     resp.put("sucesso", false);
-                    resp.put("erro", "Já existe um cadastro com o código de origem (" + filial.getOrigemCodigo() + ") no banco de dados.");
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                } else if (sufixoExiste) {
-                    resp.put("sucesso", false);
-                    resp.put("erro", "Já existe um cadastro com o sufixo (" + filial.getSufixo() + ") no banco de dados.");
+                    resp.put("erro", "Preencha todos os campos obrigatórios, incluindo Origem e Sufixo.");
                     response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 } else {
-                    boolean sucesso = dao.inserir(filial);
+                    boolean origemExiste = dao.existePorOrigemCodigo(filial.getOrigemCodigo());
+                    boolean sufixoExiste = dao.existePorSufixo(filial.getSufixo());
 
-                    if (sucesso) {
-                        resp.put("sucesso", true);
-                        resp.put("mensagem", "Empresa/Filial cadastrada com sucesso!");
-                        response.setStatus(HttpServletResponse.SC_OK);
-                    } else {
+                    if (origemExiste) {
                         resp.put("sucesso", false);
-                        resp.put("erro", "Não foi possível salvar a empresa no banco de dados.");
+                        resp.put("erro", "Já existe um cadastro com o código de origem (" + filial.getOrigemCodigo() + ") no banco de dados.");
                         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    } else if (sufixoExiste) {
+                        resp.put("sucesso", false);
+                        resp.put("erro", "Já existe um cadastro com o sufixo (" + filial.getSufixo() + ") no banco de dados.");
+                        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    } else {
+                        boolean sucesso = dao.inserir(filial);
+
+                        if (sucesso) {
+                            resp.put("sucesso", true);
+                            resp.put("mensagem", "Empresa/Filial cadastrada com sucesso!");
+                            response.setStatus(HttpServletResponse.SC_OK);
+                        } else {
+                            resp.put("sucesso", false);
+                            resp.put("erro", "Não foi possível salvar a empresa no banco de dados.");
+                            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        }
                     }
                 }
             }
-         }
             out.print(gson.toJson(resp));
         } catch (Exception e) {
             e.printStackTrace();

@@ -450,7 +450,7 @@
                     </div>
                 </div>
                 <!-- Chamados Abertos -->
-                <div class="col-lg-6">
+                <div class="col-lg-6"> 
                     <div class="card-section p-4 h-100">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="fw-bold mb-0">Chamados Abertos</h5>

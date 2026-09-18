@@ -158,4 +158,41 @@ public class FilialDAO {
         }
         return null;
     }
+    
+    // --- NOVO: Traduz a lista de strings da sessão (IDs ou códigos) para uma lista de códigos de origem reais ---
+    public List<Integer> traduzirUnidadesParaCodigoOrigem(List<String> unidadesStr) {
+        List<Integer> unidadesPermitidas = new ArrayList<>();
+        if (unidadesStr == null || unidadesStr.isEmpty()) {
+            return unidadesPermitidas;
+        }
+
+        String sql = "SELECT origem_codigo FROM filiais WHERE id_filial = ? OR origem_codigo = ?";
+        
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            for (String s : unidadesStr) {
+                try {
+                    int idOuCodigo = Integer.parseInt(s.trim());
+                    stmt.setInt(1, idOuCodigo);
+                    stmt.setInt(2, idOuCodigo);
+                    
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            int origemCodigoReal = rs.getInt("origem_codigo");
+                            if (!unidadesPermitidas.contains(origemCodigoReal)) {
+                                unidadesPermitidas.add(origemCodigoReal);
+                            }
+                        }
+                    }
+                } catch (NumberFormatException e) {
+                    // Ignora valores não numéricos
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        return unidadesPermitidas;
+    }
 }

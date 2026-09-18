@@ -924,4 +924,20 @@ public class UsuarioDAO {
         }
         return mapaPermissoes;
     }
+    public List<Integer> carregarOrigensPermitidasDoUsuario(Connection conn, int userId) throws SQLException {
+        List<Integer> origens = new ArrayList<>();
+        String sql = "SELECT f.origem_codigo " +
+                     "FROM public.usuario_unidades uu " +
+                     "JOIN public.filiais f ON uu.unidade_id = f.id_filial " +
+                     "WHERE uu.usuario_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    origens.add(rs.getInt("origem_codigo"));
+                }
+            }
+        }
+        return origens;
+    }
 }
