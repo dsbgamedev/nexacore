@@ -29,32 +29,25 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 	
-	// =================================================================
-    // CORRIGIDO: Evento do Botão Cancelar (Limpa a tela, data e atualiza os selects)
-    // =================================================================
     const btnCancelar = document.getElementById('btnCancelar');
     if (btnCancelar) {
         btnCancelar.addEventListener('click', function(e) {
-            e.preventDefault(); // Evita qualquer comportamento padrão
+            e.preventDefault(); 
             limparCampos();
             
-            // Restaura a data de hoje ao limpar
             const hoje = new Date().toISOString().split('T')[0];
             const inputData = document.getElementById('dataRecebimento');
             if (inputData) inputData.value = hoje;
 
-            carregarMovimentacoesPorTipo(tipoOperacaoAtual); // Atualiza a lista do select sem refresh (F5)
+            carregarMovimentacoesPorTipo(tipoOperacaoAtual); 
         });
     }
 
-	const formRecebimento = document.getElementById('formRecebimento');
+    const formRecebimento = document.getElementById('formRecebimento');
     if (formRecebimento) {
         formRecebimento.addEventListener('submit', function (e) {
             e.preventDefault();
             
-            // =================================================================
-            // TRAVA DE SEGURANÇA: Evita submeter se não houver itens listados
-            // =================================================================
             const linhasTabela = document.querySelectorAll('#tabelaItensRecebimento tbody tr');
             let temItensValidos = false;
             linhasTabela.forEach(tr => {
@@ -66,7 +59,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (!temItensValidos) {
                 ModalService.error("Atenção", "Não há equipamentos para receber. Selecione uma movimentação válida.");
-                return; // Para a execução aqui mesmo e não chama a API
+                return; 
             }
 
             const formData = new URLSearchParams(new FormData(this));
@@ -76,47 +69,40 @@ document.addEventListener("DOMContentLoaded", function () {
                 ? '/api/devolucoes/receber' 
                 : '/api/envios/receber';
 
-			fetch(contextPath + endpointRecebimento, {
-	                method: 'POST',
-	                body: formData
-	            })
-	            .then(async response => {
-	                const data = await response.json();
-	                if (!response.ok) {
-	                    // Se deu erro no Java, lança com a mensagem
-	                    throw new Error(data.mensagem || "Erro ao processar a solicitação.");
-	                }
-	                return data;
-	            })
-				.then(data => {
-                    // VERIFICAÇÃO DE SEGURANÇA EXTRA: 
-                    // Se o Java retornou um JSON indicando falha/erro interno (ex: data.sucesso === false)
-                    if (data && data.sucesso === false) {
-                        throw new Error(data.mensagem || "Ação negada pelo servidor.");
-                    }
+            fetch(contextPath + endpointRecebimento, {
+                method: 'POST',
+                body: formData
+            })
+            .then(async response => {
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.mensagem || "Erro ao processar a solicitação.");
+                }
+                return data;
+            })
+            .then(data => {
+                if (data && data.sucesso === false) {
+                    throw new Error(data.mensagem || "Ação negada pelo servidor.");
+                }
 
-	                const mensagemSucesso = tipoOperacaoAtual === 'devolucao' 
-	                    ? "Devolução efetuada com sucesso e estoque atualizado!" 
-	                    : (data.mensagem || "Recebimento confirmado e estoque atualizado com sucesso!");
-	
-	                // Aqui sim é o sucesso real (verde)
-	                ModalService.success("Sucesso", mensagemSucesso);
-	
-	                marcarItensComoRecebidosNaTabela();
-	                
-	                setTimeout(() => {
-	                    limparCampos();
-	                    carregarMovimentacoesPorTipo(tipoOperacaoAtual); 
-	                }, 2000);
-	            })
-	            .catch(error => {
-	                console.error('Erro:', error);
-	                
-	                // GARANTA QUE AQUI É USADO O ERROR (Vermelho) E NÃO SUCCESS!
-	                ModalService.error("Atenção", error.message);
-	                
-	                carregarMovimentacoesPorTipo(tipoOperacaoAtual);
-	            });
+                const mensagemSucesso = tipoOperacaoAtual === 'devolucao' 
+                    ? "Devolução efetuada com sucesso e estoque atualizado!" 
+                    : (data.mensagem || "Recebimento confirmado e estoque atualizado com sucesso!");
+
+                ModalService.success("Sucesso", mensagemSucesso);
+
+                marcarItensComoRecebidosNaTabela();
+                
+                setTimeout(() => {
+                    limparCampos();
+                    carregarMovimentacoesPorTipo(tipoOperacaoAtual); 
+                }, 2000);
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                ModalService.error("Atenção", error.message);
+                carregarMovimentacoesPorTipo(tipoOperacaoAtual);
+            });
         });
     }
 });
@@ -138,6 +124,7 @@ function atualizarVisualCards(tipo) {
     const labelSelect = document.getElementById('labelSelectMovimentacao');
     const labelCampoOrigemDestino = document.getElementById('labelCampoOrigemDestino'); 
     const btnSubmit = document.querySelector("button[type='submit']");
+    const origemInput = document.getElementById('origem');
 
     if (tipo === 'envio') {
         if (radioEnvio) radioEnvio.checked = true;
@@ -146,13 +133,25 @@ function atualizarVisualCards(tipo) {
         if (labelSelect) labelSelect.textContent = "Selecionar Envio (Trânsito) *";
         if (labelCampoOrigemDestino) labelCampoOrigemDestino.textContent = "Origem"; 
         if (btnSubmit) btnSubmit.textContent = "Confirmar Recebimento";
+        
+        // Garante que o campo origem fica travado e com estilo padrão
+        if (origemInput) {
+            origemInput.setAttribute('readonly', true);
+            origemInput.classList.add('bg-light');
+        }
     } else {
         if (radioDevolucao) radioDevolucao.checked = true;
         if (cardDevolucao) cardDevolucao.classList.add('border-success');
         if (cardEnvio) cardEnvio.classList.remove('border-success');
         if (labelSelect) labelSelect.textContent = "Selecionar Devolução (Trânsito) *";
-        if (labelCampoOrigemDestino) labelCampoOrigemDestino.textContent = "Destino"; // Agora o rótulo vira Destino perfeitamente
+        if (labelCampoOrigemDestino) labelCampoOrigemDestino.textContent = "Destino"; 
         if (btnSubmit) btnSubmit.textContent = "Confirmar Devolução";
+
+        // Trava rigidamente o campo de Destino na devolução para ninguém alterar
+        if (origemInput) {
+            origemInput.setAttribute('readonly', true);
+            origemInput.classList.add('bg-light');
+        }
     }
 }
 
@@ -186,7 +185,7 @@ function carregarMovimentacoesPorTipo(tipo) {
         .catch(err => console.error("Erro ao carregar movimentações:", err));
 }
 
-// Direciona para a busca de detalhes correta
+// Direciona para a busca de detalhes correta e trava o campo de origem/destino
 function buscarDetalhesMovimentacao(idMov) {
     const endpoint = tipoOperacaoAtual === 'devolucao' ? `/api/devolucoes/detalhes?id=${idMov}` : `/api/envios/detalhes?id=${idMov}`;
 
@@ -195,19 +194,31 @@ function buscarDetalhesMovimentacao(idMov) {
         .then(data => {
             const origemInput = document.getElementById('origem');
             if (origemInput) {
-                // Se for devolução, preenche com o destino; se for envio, preenche com a origem
                 if (tipoOperacaoAtual === 'devolucao') {
+                    // Preenche com o destino real da devolução (ex: filial que vai receber)
                     origemInput.value = data.destinoNome || data.filialDestinoNome || data.destino || '';
                 } else {
+                    // Preenche com a origem real do envio
                     origemInput.value = data.origemNome || data.filialOrigemNome || data.origem || '';
                 }
+                // BLINDA O CAMPO: Assegura que permaneça bloqueado para edição manual
+                origemInput.setAttribute('readonly', true);
+                origemInput.classList.add('bg-light');
             }
 
             const transpInput = document.getElementById('transportadora');
-            if (transpInput) transpInput.value = data.transportadora || '';
+            if (transpInput) {
+                transpInput.value = data.transportadora || '';
+                transpInput.setAttribute('readonly', true);
+                transpInput.classList.add('bg-light');
+            }
 
             const rastreioInput = document.getElementById('codigoRastreio');
-            if (rastreioInput) rastreioInput.value = data.codigoRastreio || '';
+            if (rastreioInput) {
+                rastreioInput.value = data.codigoRastreio || '';
+                rastreioInput.setAttribute('readonly', true);
+                rastreioInput.classList.add('bg-light');
+            }
 
             const tbody = document.querySelector('#tabelaItensRecebimento tbody');
             if (!tbody) return;
@@ -232,6 +243,7 @@ function buscarDetalhesMovimentacao(idMov) {
         })
         .catch(err => console.error("Erro ao buscar detalhes:", err));
 }
+
 function marcarItensComoRecebidosNaTabela() {
     const badges = document.querySelectorAll('#tabelaItensRecebimento tbody tr td .badge');
     badges.forEach(badge => {
@@ -242,27 +254,36 @@ function marcarItensComoRecebidosNaTabela() {
     });
 }
 
-
-
 function limparCampos() {
     const select = document.getElementById('selectEnvio');
     if (select) select.value = ''; 
 
     const origemInput = document.getElementById('origem');
-    if (origemInput) origemInput.value = '';
+    if (origemInput) {
+        origemInput.value = '';
+        origemInput.removeAttribute('readonly'); // Libera temporariamente para limpeza limpa
+        origemInput.classList.remove('bg-light');
+    }
 
     const transpInput = document.getElementById('transportadora');
-    if (transpInput) transpInput.value = '';
+    if (transpInput) {
+        transpInput.value = '';
+        transpInput.removeAttribute('readonly');
+        transpInput.classList.remove('bg-light');
+    }
 
     const rastreioInput = document.getElementById('codigoRastreio');
-    if (rastreioInput) rastreioInput.value = '';
+    if (rastreioInput) {
+        rastreioInput.value = '';
+        rastreioInput.removeAttribute('readonly');
+        rastreioInput.classList.remove('bg-light');
+    }
 	
     const responsavelInput = document.getElementById('responsavel');
     if (responsavelInput) responsavelInput.value = '';
 
-    // Limpa também o campo "Condição Geral" que aparece na sua tela
     const condicaoGeralInput = document.getElementById('condicaoGeral');
-    if (condicaoGeralInput) condicaoGeralInput.value = 'Todos os itens em perfeito estado'; // Volta para o padrão ou vazio ('')
+    if (condicaoGeralInput) condicaoGeralInput.value = 'Todos os itens em perfeito estado';
 
     const tbody = document.querySelector('#tabelaItensRecebimento tbody');
     if (tbody) {

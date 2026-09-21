@@ -159,6 +159,23 @@ public class FilialDAO {
         return null;
     }
     
+ // --- NOVO: Traduz o origem_codigo para o id_filial (Chave Primária real) ---
+    public Long buscarIdFilialPorOrigemCodigo(int origemCodigo) {
+        String sql = "SELECT id_filial FROM filiais WHERE origem_codigo = ?";
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, origemCodigo);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getLong("id_filial");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
     // --- NOVO: Traduz a lista de strings da sessão (IDs ou códigos) para uma lista de códigos de origem reais ---
     public List<Integer> traduzirUnidadesParaCodigoOrigem(List<String> unidadesStr) {
         List<Integer> unidadesPermitidas = new ArrayList<>();

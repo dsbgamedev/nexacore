@@ -111,18 +111,18 @@ document.addEventListener('DOMContentLoaded', () => {
             mensagem = decodeURIComponent(urlParams.get('msg').replace(/\+/g, ' '));
         }
 
-        setTimeout(() => {
-            if (typeof ModalService !== 'undefined') {
-                ModalService.error("Atenção", mensagem).then(() => {
-                    const novaUrl = window.location.pathname;
-                    window.history.replaceState({}, document.title, novaUrl);
-                });
-            } else {
-                alert(mensagem);
-                const novaUrl = window.location.pathname;
-                window.history.replaceState({}, document.title, novaUrl);
-            }
-        }, 300);
+		setTimeout(() => {
+		            if (typeof ModalService !== 'undefined') {
+		                ModalService.error("Atenção", mensagem).then(() => {
+		                    const novaUrl = window.location.pathname;
+		                    window.history.replaceState({}, document.title, novaUrl);
+		                });
+		            } else {
+		                alert(mensagem);
+		                const novaUrl = window.location.pathname;
+		                window.history.replaceState({}, document.title, novaUrl);
+		            }
+		        }, 300);
     }
 });
 function abrirModalDetalhesChamado(idChamado) {

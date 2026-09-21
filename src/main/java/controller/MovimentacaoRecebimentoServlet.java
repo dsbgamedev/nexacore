@@ -1,7 +1,6 @@
 package controller;
 
 import com.google.gson.Gson;
-
 import dao.MovimentacaoRecebimentoDAO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -15,6 +14,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Map;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @WebServlet(urlPatterns = {
     "/api/envios/transito", 
@@ -22,7 +22,7 @@ import java.util.List;
     "/api/envios/receber",
     "/api/devolucoes/transito",
     "/api/devolucoes/detalhes",
-    "/api/devolucoes/receber" // <--- Adicionado aqui para mapear a URL de recebimento de devolução
+    "/api/devolucoes/receber"
 })
 public class MovimentacaoRecebimentoServlet extends HttpServlet {
 
@@ -47,17 +47,38 @@ public class MovimentacaoRecebimentoServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-    	if (!validarPermissao(request, response)) {
+        if (!validarPermissao(request, response)) {
             return;
         }
-    	
-    	String path = request.getServletPath();
+        
+        HttpSession session = request.getSession(false);
+        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+        
+        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
+        Integer unidadeAtivaId = usuario != null ? usuario.getUnidadeAtivaId() : null;
+
+        String path = request.getServletPath();
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
 
         if ("/api/envios/transito".equals(path)) {
             List<Map<String, Object>> lista = dao.listarEnviosEmTransito();
+            
+            // Se não for admin, filtra rigorosamente para exibir apenas itens onde o destino bate com a filial ativa
+            if (!isAdmin && unidadeAtivaId != null) {
+                lista = lista.stream().filter(envio -> {
+                    Object destIdObj = envio.get("destinoId");
+                    if (destIdObj != null) {
+                        int destId = Integer.parseInt(destIdObj.toString());
+                        return destId == unidadeAtivaId;
+                    }
+                    return false;
+                }).collect(Collectors.toList());
+            } else if (!isAdmin) {
+                lista.clear(); // Se não tem filial ativa definida, não traz nada
+            }
+            
             out.write(gson.toJson(lista));
             
         } else if ("/api/envios/detalhes".equals(path)) {
@@ -72,6 +93,21 @@ public class MovimentacaoRecebimentoServlet extends HttpServlet {
             
         } else if ("/api/devolucoes/transito".equals(path)) {
             List<Map<String, Object>> lista = dao.listarDevolucoesEmTransito();
+            
+            // Se não for admin, filtra rigorosamente para exibir apenas devoluções destinadas à filial ativa
+            if (!isAdmin && unidadeAtivaId != null) {
+                lista = lista.stream().filter(dev -> {
+                    Object destIdObj = dev.get("destinoId");
+                    if (destIdObj != null) {
+                        int destId = Integer.parseInt(destIdObj.toString());
+                        return destId == unidadeAtivaId;
+                    }
+                    return false;
+                }).collect(Collectors.toList());
+            } else if (!isAdmin) {
+                lista.clear();
+            }
+            
             out.write(gson.toJson(lista));
             
         } else if ("/api/devolucoes/detalhes".equals(path)) {
@@ -88,39 +124,59 @@ public class MovimentacaoRecebimentoServlet extends HttpServlet {
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-    	if (!validarPermissao(request, response)) {
+        if (!validarPermissao(request, response)) {
             return;
         }
-    	
-    	String path = request.getServletPath();
+        
+        String path = request.getServletPath();
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         PrintWriter out = response.getWriter();
 
         if ("/api/envios/receber".equals(path) || "/api/devolucoes/receber".equals(path)) {
             try {
+                HttpSession session = request.getSession(false);
+                Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+                
+                String idEnvioStr = request.getParameter("idMovimentacao"); 
+                if (idEnvioStr == null || idEnvioStr.isEmpty()) {
+                    idEnvioStr = request.getParameter("idEnvio");
+                }
+
+                if (idEnvioStr == null || idEnvioStr.isEmpty()) {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.write("{\"sucesso\": false, \"mensagem\": \"ID da movimentação não informado.\"}");
+                    return;
+                }
+
+                int idMovimentacao = Integer.parseInt(idEnvioStr);
+
+                // =========================================================================
+                // VALIDAÇÃO RIGOROSA DE FILIAL: Apenas a filial de destino (ou Admin) pode confirmar
+                // =========================================================================
+                int destinoIdMovimentacao = dao.buscarDestinoIdPorMovimentacao(idMovimentacao);
+                boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
+
+                if (!isAdmin) {
+                    Integer unidadeAtivaId = usuario != null ? usuario.getUnidadeAtivaId() : null;
+                    if (unidadeAtivaId == null || unidadeAtivaId != destinoIdMovimentacao) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        out.write("{\"sucesso\": false, \"mensagem\": \"Acesso negado: Sua filial ativa não possui permissão para confirmar operações destinadas a esta unidade.\"}");
+                        return;
+                    }
+                }
+                // =========================================================================
+
                 String tipoOperacao = request.getParameter("tipoOperacao");
                 boolean ehDevolucao = "/api/devolucoes/receber".equals(path);
                 if (ehDevolucao) {
                     tipoOperacao = "devolucao";
                 }
 
-                String idEnvioStr = request.getParameter("idMovimentacao"); 
-                
-                if (idEnvioStr == null || idEnvioStr.isEmpty()) {
-                    idEnvioStr = request.getParameter("idEnvio");
-                }
-
                 String dataRecebimento = request.getParameter("dataRecebimento");
                 String responsavel = request.getParameter("responsavel");
                 String condicaoGeral = request.getParameter("condicaoGeral");
 
-                if (idEnvioStr == null || idEnvioStr.isEmpty()) {
-                    out.write("{\"sucesso\": false, \"mensagem\": \"ID da movimentação não informado.\"}");
-                    return;
-                }
-
-                int idMovimentacao = Integer.parseInt(idEnvioStr);
                 boolean sucesso = false;
 
                 if ("devolucao".equals(tipoOperacao)) {
@@ -130,9 +186,7 @@ public class MovimentacaoRecebimentoServlet extends HttpServlet {
                 }
 
                 if (sucesso) {
-                    // --- REGISTRO DE AUDITORIA (RECEBIMENTO DE ENVIO OU DEVOLUÇÃO) ---
-                    HttpSession session = request.getSession(false);
-                    Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+                    // --- REGISTRO DE AUDITORIA ---
                     String ipCliente = request.getHeader("X-Forwarded-For");
                     if (ipCliente == null || ipCliente.isEmpty()) {
                         ipCliente = request.getRemoteAddr();
@@ -161,14 +215,15 @@ public class MovimentacaoRecebimentoServlet extends HttpServlet {
                             ipCliente
                         );
                     }
-                    // -----------------------------------------------------------------
 
                     out.write("{\"sucesso\": true, \"mensagem\": \"Recebimento confirmado e estoque atualizado com sucesso!\"}");
                 } else {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                     out.write("{\"sucesso\": false, \"mensagem\": \"Erro ao processar o recebimento no banco de dados.\"}");
                 }
             } catch (Exception e) {
                 e.printStackTrace();
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                 out.write("{\"sucesso\": false, \"mensagem\": \"Erro técnico: " + e.getMessage() + "\"}");
             }
         }

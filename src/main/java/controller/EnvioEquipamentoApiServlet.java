@@ -7,6 +7,7 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
 import dao.EquipamentoDAO;
+import dao.FilialDAO; // Importação necessária
 import dao.MovimentacaoEnvioDAO;
 import model.MovimentacaoEnvio;
 import model.Usuario;
@@ -33,6 +34,7 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
 	
     private MovimentacaoEnvioDAO dao = new MovimentacaoEnvioDAO();
     private EquipamentoDAO equipamentoDAO = new EquipamentoDAO();
+    private FilialDAO filialDAO = new FilialDAO(); // Instância do FilialDAO
     
     private Gson gson = new GsonBuilder()
         .registerTypeAdapter(LocalDate.class, new TypeAdapter<LocalDate>() {
@@ -112,7 +114,7 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
     }
     
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        if (!validarPermissao(req, resp, "CONSULTAR")) {
+    	if (!validarPermissao(req, resp, "CONSULTAR")) {
             return;
         }
         
@@ -120,13 +122,22 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         PrintWriter out = resp.getWriter();
 
         try {
+            // Recupera o usuário logado da sessão para aplicar o filtro de segurança por filial
+            HttpSession session = req.getSession(false);
+            Usuario usuarioLogado = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
             String idEnvioParam = req.getParameter("idEnvio");
             String tipoParam = req.getParameter("tipo");
             boolean ehDevolucao = "devolucao".equals(tipoParam);
             
             if (idEnvioParam != null && !idEnvioParam.isEmpty()) {
                 Long idEnvio = Long.parseLong(idEnvioParam);
-                List<MovimentacaoEnvio> lista = ehDevolucao ? dao.listarTodosExcetoRascunho() : dao.listarTodos();
+                
+                // Utiliza o método filtrado por usuário para garantir que ele só acesse o ID se tiver permissão
+                List<MovimentacaoEnvio> lista = dao.listarComFiltrosPorUsuario(null, null, null, usuarioLogado);
+                if (ehDevolucao) {
+                    lista.removeIf(e -> e.getStatusId() != null && e.getStatusId().equals(5L));
+                }
                 
                 MovimentacaoEnvio envioEncontrado = lista.stream()
                     .filter(e -> e.getIdEnvio().equals(idEnvio))
@@ -141,13 +152,11 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             String dataInicioStr = req.getParameter("dataInicio");
             String dataFimStr = req.getParameter("dataFim");
 
-            List<MovimentacaoEnvio> listaFiltrada;
+            // CORREÇÃO PRINCIPAL: Substitui o listarComFiltros por listarComFiltrosPorUsuario
+            List<MovimentacaoEnvio> listaFiltrada = dao.listarComFiltrosPorUsuario(statusFiltro, dataInicioStr, dataFimStr, usuarioLogado);
 
             if (ehDevolucao) {
-                listaFiltrada = dao.listarComFiltros(statusFiltro, dataInicioStr, dataFimStr);
                 listaFiltrada.removeIf(e -> e.getStatusId() != null && e.getStatusId().equals(5L));
-            } else {
-                listaFiltrada = dao.listarComFiltros(statusFiltro, dataInicioStr, dataFimStr);
             }
 
             out.print(gson.toJson(listaFiltrada));
@@ -186,7 +195,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             }
 
             try {
-                // Valida o contexto da filial ativa com base na origem ou equipamentos se necessário
                 for (Long idEqp : payload.equipamentosIds) {
                     if ("iniciarDevolucao".equals(acao)) {
                         equipamentoDAO.atualizarStatusParaDevolucao(idEqp);
@@ -215,6 +223,36 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 return;
             }
             
+            // --- CONVERSÃO DE ORIGEM_CODIGO PARA O ID_FILIAL REAL ---
+            if (payload.origemId != null) {
+                Long idFilialReal = filialDAO.buscarIdFilialPorOrigemCodigo(payload.origemId.intValue());
+                if (idFilialReal == null) {
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.print("{\"sucesso\": false, \"mensagem\": \"Filial de origem não encontrada para o código informado.\"}");
+                    return;
+                }
+                payload.origemId = idFilialReal;
+            }
+
+            if (payload.destinoId != null) {
+                Long idFilialRealDestino = filialDAO.buscarIdFilialPorOrigemCodigo(payload.destinoId.intValue());
+                if (idFilialRealDestino == null) {
+                    resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    out.print("{\"sucesso\": false, \"mensagem\": \"Filial de destino não encontrada para o código informado.\"}");
+                    return;
+                }
+                payload.destinoId = idFilialRealDestino;
+            }
+            
+            // =========================================================================
+            // REGRA DE SEGURANÇA E LÓGICA: Origem e Destino não podem ser iguais
+            // =========================================================================
+            if (payload.origemId != null && payload.origemId.equals(payload.destinoId)) {
+                resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                out.print("{\"sucesso\": false, \"mensagem\": \"A operação não pode ser realizada: A unidade de origem e a unidade de destino não podem ser iguais.\"}");
+                return;
+            }
+
             // --- VALIDAÇÃO DE CONTEXTO DE FILIAL ATIVA ---
             if (payload.origemId != null) {
                 try {

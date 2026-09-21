@@ -404,10 +404,17 @@
                 <!-- Equipamentos em Manutenção (Card da Esquerda) -->
                 <div class="col-lg-6">
                     <div class="card-section p-4 h-100">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold mb-0">Equipamentos em Manutenção</h5>
-                            <a href="<%=ctx%>/ManutencaoServlet" class="small text-decoration-none">Ver todos</a>
-                        </div>
+                       <div class="d-flex justify-content-between align-items-center mb-3">
+						   <h5 class="fw-bold mb-0">Equipamentos em Manutenção</h5>
+						   <c:choose>
+						       <c:when test="${canWriteManutencao}">
+						           <a href="<%=ctx%>/ManutencaoServlet" class="small text-decoration-none">Ver todos</a>
+						       </c:when>
+						       <c:otherwise>
+						           <a href="<%=ctx%>/MenuServlet?erro=sem_permissao&modulo=manutencao_chamados" class="small text-decoration-none">Ver todos</a>
+						       </c:otherwise>
+						   </c:choose>
+						</div>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0 small">
                                 <thead class="table-light">

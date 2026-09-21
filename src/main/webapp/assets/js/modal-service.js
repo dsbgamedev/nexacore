@@ -41,12 +41,12 @@ const ModalService = {
             btn.addEventListener('click', handler);
         });
     },
-	// --- Adicione este atalho dentro do ModalService.js ---
-	    info: (title, message) => ModalService.alert(title, message, 'info'),
-		
+
     // --- Atalhos de Conveniência ---
     success: (title, message) => ModalService.alert(title, message, 'success'),
     error: (title, message) => ModalService.alert(title, message, 'error'),
+    warning: (title, message) => ModalService.alert(title, message, 'warning'), // <--- Naitayon ditoy ti warning shortcut
+    info: (title, message) => ModalService.alert(title, message, 'info'),
 
 	/**
      * Exibe um modal de confirmação com opções de Sim/Não.

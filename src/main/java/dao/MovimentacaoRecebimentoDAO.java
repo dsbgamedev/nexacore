@@ -399,4 +399,21 @@ public class MovimentacaoRecebimentoDAO {
             }
         }
     }
+    
+    //07. Método para descobrir o destino_id de uma movimentação (envio ou devolução)
+    public int buscarDestinoIdPorMovimentacao(int idMovimentacao) {
+        String sql = "SELECT destino_id FROM movimentacao_envio WHERE id_envio = ?";
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, idMovimentacao);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("destino_id");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
 }

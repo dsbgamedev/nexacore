@@ -199,6 +199,10 @@
 <script>
     // Context path padrão do projeto para os arquivos JS
     const contextPath = "${pageContext.request.contextPath}";
+    
+    // Injeta a filial do usuário logado da sessão para travar na Origem
+    // Ajuste "filialId" para o nome exato do atributo guardado na sua sessão (ex: ${sessionScope.usuario.filialId})
+    const usuarioFilialId = "${not empty sessionScope.usuario.filialId ? sessionScope.usuario.filialId : (not empty filialIdUsuario ? filialIdUsuario : '')}";
 </script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/envio-equipamento.js"></script>

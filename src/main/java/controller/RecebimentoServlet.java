@@ -16,13 +16,19 @@ public class RecebimentoServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
-        boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
-        // Aceita as variações de nomes do módulo de recebimento
+        if (usuario == null) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Sessão expirada.");
+            return;
+        }
+
+        boolean isAdmin = "SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil());
+        
+        // 1. Validação de Permissão de Módulo
         boolean temPermissaoModulo = false;
-        if (usuario != null && usuario.getModulosPermitidos() != null) {
+        if (usuario.getModulosPermitidos() != null) {
             for (String m : usuario.getModulosPermitidos()) {
                 if (m.equalsIgnoreCase("movimentacao") || 
-                    m.equalsIgnoreCase("movimentacoes") || 
+                    m.equalsIgnoreCase("movimentacaoes") || 
                     m.equalsIgnoreCase("movimentacao_recebimento")) {
                     temPermissaoModulo = true;
                     break;
@@ -30,12 +36,20 @@ public class RecebimentoServlet extends HttpServlet {
             }
         }
 
-        if (usuario == null || (!isAdmin && !temPermissaoModulo)) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Acesso negado.");
+        if (!isAdmin && !temPermissaoModulo) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Acesso negado: Você não possui permissão para este módulo.");
             return;
         }
 
-        // Se o usuário acessou via /DevolucaoServlet, podemos passar um atributo opcional ou deixar o JS ler a URL
+        // 2. Validação de Filial Ativa (Opcional por página, caso queira garantir que o usuário 
+        // só abra a tela de recebimentos se estiver com uma filial válida selecionada no menu superior)
+        Integer filialAtivaId = usuario.getUnidadeAtivaId();
+        if (!isAdmin && filialAtivaId == null) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Acesso negado: Nenhuma filial ativa selecionada no menu superior.");
+            return;
+        }
+
+        // Se passou por todas as barreiras, encaminha para a tela JSP de recebimento/devolução
         request.getRequestDispatcher("/WEB-INF/jsp/recebimento-equipamento.jsp").forward(request, response);
     }
 }

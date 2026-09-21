@@ -2,7 +2,10 @@ package dao;
 
 import conexao.Conexao;
 import model.MovimentacaoEnvio;
+import model.Usuario;
+
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -899,6 +902,58 @@ public class MovimentacaoEnvioDAO {
             }
         }
         return false;
+    }
+	
+	// --- PADRONIZADO: Lista envios aplicando a restrição de filiais permitidas do usuário ---
+    public List<MovimentacaoEnvio> listarComFiltrosPorUsuario(String statusFiltro, String dataInicioStr, String dataFimStr, Usuario usuario) throws SQLException {
+        
+        // 1. Obtém a listagem completa baseada nos filtros de status e datas
+        List<MovimentacaoEnvio> listaCompleta = listarComFiltros(statusFiltro, dataInicioStr, dataFimStr);
+
+        // 2. Se o usuário for Administrador Global, retorna tudo sem restrições
+        if (usuario != null) {
+            String perfil = usuario.getPerfil();
+            boolean isAdmin = perfil != null && (
+                "SUPER_ADMINISTRADOR".equalsIgnoreCase(perfil) || 
+                "ADMINISTRADOR".equalsIgnoreCase(perfil) ||
+                perfil.toUpperCase().contains("SUPER")
+            );
+
+            if (isAdmin) {
+                return listaCompleta;
+            }
+
+            // 3. Obtém os códigos de origem permitidos diretamente do UsuarioDAO usando a conexão padrão
+            List<Integer> origensPermitidasCodigo = new ArrayList<>();
+            try (Connection conn = Conexao.conectar()) {
+                UsuarioDAO usuarioDAO = new UsuarioDAO();
+                origensPermitidasCodigo = usuarioDAO.carregarOrigensPermitidasDoUsuario(conn, usuario.getId());
+            }
+
+            // 4. Precisamos mapear esses origem_codigo para os id_filial correspondentes da tabela filiais,
+            // ou comparar diretamente se o ID guardado no envio se refere ao id_filial. 
+            // Como a tabela movimentacao_envio armazena 'origem_id' e 'destino_id' como IDs de filiais (id_filial),
+            // vamos buscar quais id_filial correspondem aos origem_codigo permitidos:
+            FilialDAO filialDAO = new FilialDAO();
+            List<Long> idsFiliaisPermitidas = new ArrayList<>();
+            for (Integer origemCodigo : origensPermitidasCodigo) {
+                Long idFilialReal = filialDAO.buscarIdFilialPorOrigemCodigo(origemCodigo);
+                if (idFilialReal != null) {
+                    idsFiliaisPermitidas.add(idFilialReal);
+                }
+            }
+
+            // 5. Filtra a lista removendo o que não pertencer à alçada do usuário
+            listaCompleta.removeIf(envio -> {
+                boolean origemPermitida = envio.getOrigemId() != null && idsFiliaisPermitidas.contains(envio.getOrigemId());
+                boolean destinoPermitido = envio.getDestinoId() != null && idsFiliaisPermitidas.contains(envio.getDestinoId());
+                
+                // Mantém o registro apenas se a origem OU o destino forem permitidos para o usuário
+                return !origemPermitida && !destinoPermitido;
+            });
+        }
+
+        return listaCompleta;
     }
 	
 	public void efetivarEnvio(Long idEnvio, String nomeResponsavelEnvio) throws SQLException {

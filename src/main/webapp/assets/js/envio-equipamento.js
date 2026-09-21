@@ -131,95 +131,124 @@ document.addEventListener("DOMContentLoaded", function() {
 	    });
 	}
 
-    // 5. Evento de submissão do formulário principal de Envio
-    const formEnvio = document.getElementById("formEnvio");
-    if (formEnvio) {
-        formEnvio.addEventListener("submit", function(e) {
-            e.preventDefault();
+    // =========================================================================
+    // NOVA VALIDAÇÃO EM TEMPO REAL: Dispara assim que altera a Origem ou Destino
+    // =========================================================================
+    const selectOrigemEl = document.getElementById("origemId");
+    const selectDestinoEl = document.getElementById("destinoId");
 
-            if (equipamentosSelecionadosMap.size === 0) {
-                if (typeof ModalService !== 'undefined') {
-                    ModalService.warning("Atenção", "Adicione pelo menos um equipamento ao envio.");
-                } else {
-                    alert("Adicione pelo menos um equipamento ao envio.");
-                }
-                return;
+    function validarOrigemDestinoIgual() {
+        if (!selectOrigemEl || !selectDestinoEl) return false;
+        
+        let origemVal = selectOrigemEl.value;
+        let destinoVal = selectDestinoEl.value;
+
+        if (origemVal && destinoVal && origemVal === destinoVal) {
+            const msg = "A unidade de origem e a unidade de destino não podem ser iguais. Selecione locais diferentes para realizar a movimentação.";
+            if (typeof ModalService !== 'undefined') {
+                ModalService.warning("Origem e Destino Iguais", msg);
+            } else {
+                alert(msg);
             }
-
-            const selectOrigem = document.getElementById("origemId");
-            let origemIdValor = null;
-            if (selectOrigem) {
-                origemIdValor = selectOrigem.value;
-            }
-
-            const selectDestino = document.getElementById("destinoId");
-            let destinoIdValor = selectDestino ? selectDestino.value : null;
-
-            const payload = {
-                dataEnvio: document.getElementById("dataEnvio").value,
-                origemId: parseInt(origemIdValor),
-                destinoId: parseInt(destinoIdValor),
-                responsavel: document.getElementById("responsavel").value,
-                transportadora: document.getElementById("transportadora").value,
-                codigoRastreio: document.getElementById("codigoRastreio").value,
-                numeroNota: document.getElementById("numeroNota") ? document.getElementById("numeroNota").value : null,
-                dataPrevisaoEntrega: document.getElementById("dataPrevisao").value,
-                observacoes: document.getElementById("observacoes").value,
-                equipamentosIds: Array.from(equipamentosSelecionadosMap.keys())
-            };
-
-			// Recalcula o tipoParam de forma segura dentro do submit
-            const urlParamsCheck = new URLSearchParams(window.location.search);
-            const tipoAtual = (window.isDevolucaoForcada) ? 'devolucao' : urlParamsCheck.get('tipo');
-
-            let urlEndpoint = contextPath + '/api/envios';
-            if (tipoAtual === 'devolucao') {
-                urlEndpoint += '?tipo=devolucao';
-            }
-            const btnSubmit = formEnvio.querySelector('button[type="submit"]');
-            if (btnSubmit) btnSubmit.disabled = true;
-
-            fetch(urlEndpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json;charset=UTF-8' },
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(resposta => {
-                if (resposta.sucesso) {
-                    equipamentosSelecionadosMap.clear();
-                    
-                    if (typeof ModalService !== 'undefined') {
-                        ModalService.success("Sucesso", resposta.mensagem).then(() => {
-                            window.location.href = contextPath + '/ConsultaEnvioServlet';
-                        });
-                    } else {
-                        alert(resposta.mensagem);
-                        window.location.href = contextPath + '/ConsultaEnvioServlet';
-                    }
-                } else {
-                    if (btnSubmit) btnSubmit.disabled = false;
-                    if (typeof ModalService !== 'undefined') {
-                        ModalService.error("Erro", resposta.mensagem);
-                    } else {
-                        alert(resposta.mensagem);
-                    }
-                }
-            })
-            .catch(err => {
-                console.error("Erro:", err);
-                if (btnSubmit) btnSubmit.disabled = false;
-                if (typeof ModalService !== 'undefined') {
-                    ModalService.error("Erro", "Erro de comunicação ao efetuar o envio.");
-                } else {
-                    alert("Erro de comunicação ao efetuar o envio.");
-                }
-            });
-        });
+            return true;
+        }
+        return false;
     }
+
+    if (selectOrigemEl) selectOrigemEl.addEventListener("change", validarOrigemDestinoIgual);
+    if (selectDestinoEl) selectDestinoEl.addEventListener("change", validarOrigemDestinoIgual);
+    // =========================================================================
+
+	  // 5. Evento de submissão do formulário principal de Envio
+	    const formEnvio = document.getElementById("formEnvio");
+	    if (formEnvio) {
+	        formEnvio.addEventListener("submit", function(e) {
+	            e.preventDefault();
+
+	            if (equipamentosSelecionadosMap.size === 0) {
+	                if (typeof ModalService !== 'undefined') {
+	                    ModalService.warning("Atenção", "Adicione pelo menos um equipamento ao envio.");
+	                } else {
+	                    alert("Adicione pelo menos um equipamento ao envio.");
+	                }
+	                return;
+	            }
+
+	            const selectOrigem = document.getElementById("origemId");
+	            let origemIdValor = selectOrigem ? selectOrigem.value : null;
+
+	            const selectDestino = document.getElementById("destinoId");
+	            let destinoIdValor = selectDestino ? selectDestino.value : null;
+
+	            // Validação final antes de enviar
+	            if (validarOrigemDestinoIgual()) {
+	                return; // Interrompe o envio se forem iguais
+	            }
+
+	            const payload = {
+	                dataEnvio: document.getElementById("dataEnvio").value,
+	                origemId: parseInt(origemIdValor),
+	                destinoId: parseInt(destinoIdValor),
+	                responsavel: document.getElementById("responsavel").value,
+	                transportadora: document.getElementById("transportadora").value,
+	                codigoRastreio: document.getElementById("codigoRastreio").value,
+	                numeroNota: document.getElementById("numeroNota") ? document.getElementById("numeroNota").value : null,
+	                dataPrevisaoEntrega: document.getElementById("dataPrevisao").value,
+	                observacoes: document.getElementById("observacoes").value,
+	                equipamentosIds: Array.from(equipamentosSelecionadosMap.keys())
+	            };
+
+	            // Recalcula o tipoParam de forma segura dentro do submit
+	            const urlParamsCheck = new URLSearchParams(window.location.search);
+	            const tipoAtual = (window.isDevolucaoForcada) ? 'devolucao' : urlParamsCheck.get('tipo');
+
+	            let urlEndpoint = contextPath + '/api/envios';
+	            if (tipoAtual === 'devolucao') {
+	                urlEndpoint += '?tipo=devolucao';
+	            }
+	            const btnSubmit = formEnvio.querySelector('button[type="submit"]');
+	            if (btnSubmit) btnSubmit.disabled = true;
+
+	            fetch(urlEndpoint, {
+	                method: 'POST',
+	                headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+	                body: JSON.stringify(payload)
+	            })
+	            .then(res => res.json())
+	            .then(resposta => {
+	                if (resposta.sucesso) {
+	                    equipamentosSelecionadosMap.clear();
+	                    
+	                    if (typeof ModalService !== 'undefined') {
+	                        ModalService.success("Sucesso", resposta.mensagem).then(() => {
+	                            window.location.href = contextPath + '/ConsultaEnvioServlet';
+	                        });
+	                    } else {
+	                        alert(resposta.mensagem);
+	                        window.location.href = contextPath + '/ConsultaEnvioServlet';
+	                    }
+	                } else {
+	                    if (btnSubmit) btnSubmit.disabled = false;
+	                    if (typeof ModalService !== 'undefined') {
+	                        ModalService.error("Erro", resposta.mensagem);
+	                    } else {
+	                        alert(resposta.mensagem);
+	                    }
+	                }
+	            })
+	            .catch(err => {
+	                console.error("Erro:", err);
+	                if (btnSubmit) btnSubmit.disabled = false;
+	                if (typeof ModalService !== 'undefined') {
+	                    ModalService.error("Erro", "Erro de comunicação ao efetuar o envio.");
+	                } else {
+	                    alert("Erro de comunicação ao efetuar o envio.");
+	                }
+	            });
+	        });
+	    }
 });
 
-// Função para buscar filiais e popular os selects de origem e destino
 // Função para buscar filiais e popular os selects de origem e destino
 function carregarFiliais() {
     return fetch(contextPath + '/api/equipamentos?acaoOrigens=listar-origens')
@@ -299,8 +328,7 @@ function carregarFiliais() {
         });
 }
 
-// Carrega o equipamento de devolução definindo a Origem na filial atual e o Destino fixo na Matriz (ID 7 / Código 161)
-// Carrega o equipamento de devolução definindo a Origem na filial atual e o Destino fixo na Matriz (ID 7 / Código 161)
+// Carrega o equipamento de devolução definindo a Origem na filial atual e o Destino fixo na Matriz
 async function carregarEquipamentoDevolucaoAutomatico(idEquipamento) {
     try {
         const resEq = await fetch(`${contextPath}/api/equipamentos?id=${idEquipamento}`);
@@ -331,7 +359,7 @@ async function carregarEquipamentoDevolucaoAutomatico(idEquipamento) {
 
                 if (!encontrado && tentativas < 5) {
                     tentativas++;
-                    setTimeout(tentarSelecionarOrigem, 100); // Tenta novamente se o DOM das options ainda não populou
+                    setTimeout(tentarSelecionarOrigem, 100);
                     return;
                 }
 
@@ -371,7 +399,6 @@ async function carregarEquipamentoDevolucaoAutomatico(idEquipamento) {
 }
 
 // Função para buscar equipamentos disponíveis para o modal com regra exata de filtragem por tipo
-// Função para buscar equipamentos disponíveis para o modal com regra exata de filtragem por tipo
 function carregarEquipamentosDisponiveis() {
     const urlParams = new URLSearchParams(window.location.search);
     const tipo = (window.isDevolucaoForcada) ? 'devolucao' : urlParams.get('tipo');
@@ -397,7 +424,6 @@ function carregarEquipamentosDisponiveis() {
             }
 
             const equipamentosValidos = lista.filter(eq => {
-                // Se for devolução e tivermos o ID específico, restringe unicamente a ele
                 if (tipo === 'devolucao' && idEquipamentoDevolucao) {
                     return eq.idEquipamento == idEquipamentoDevolucao;
                 }
@@ -418,7 +444,6 @@ function carregarEquipamentosDisponiveis() {
                 }
 
                 if (tipo === 'devolucao') {
-                    // CORRIGIDO: Removido o filtro "em uso" para não puxar itens incorretos
                     return situacaoTexto.includes("devolução") || situacaoTexto.includes("devolucao");
                 }
 
@@ -506,11 +531,10 @@ async function removerItemEnvio(id) {
 
     if (tipoParam === 'devolucao') {
         try {
-            // CORRIGIDO: Utiliza a API unificada de envios com a ação correta
             const response = await fetch(`${contextPath}/api/envios?acao=cancelarDevolucao`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ equipamentosIds: [id] }) // Passando no formato que a API espera
+                body: JSON.stringify({ equipamentosIds: [id] })
             });
 
             const resposta = await response.json();
