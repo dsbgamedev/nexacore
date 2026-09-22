@@ -22,6 +22,11 @@ public class MovimentacaoEnvio {
     // Campos para exibir os nomes na tela de consulta
     private String nomeOrigem;
     private String nomeDestino;
+ // Campos para Código e Sufixo da Origem e Destino
+    private Long origemCodigo;
+    private String origemSufixo;
+    private Long destinoCodigo;
+    private String destinoSufixo;
 
     // Campos para o controle do status da movimentação
     private Long statusId;
@@ -70,6 +75,19 @@ public class MovimentacaoEnvio {
 
     public String getNomeDestino() { return nomeDestino; }
     public void setNomeDestino(String nomeDestino) { this.nomeDestino = nomeDestino; }
+         
+    //Getters e Setter para Origem Codigo e Sufixo filiais e matriz
+    public Long getOrigemCodigo() { return origemCodigo;}
+    public void setOrigemCodigo(Long origemCodigo) { this.origemCodigo = origemCodigo;}
+    
+    public String getOrigemSufixo() { return origemSufixo;}
+    public void setOrigemSufixo(String origemSufixo) { this.origemSufixo = origemSufixo;}
+    
+    public Long getDestinoCodigo() { return destinoCodigo; }
+    public void setDestinoCodigo(Long destinoCodigo) { this.destinoCodigo = destinoCodigo;}
+    
+    public String getDestinoSufixo() { return destinoSufixo;}
+    public void setDestinoSufixo(String destinoSufixo) { this.destinoSufixo = destinoSufixo;}
 
     // Getters e Setters para o Status da Movimentação
     public Long getStatusId() { return statusId; }

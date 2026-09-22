@@ -227,13 +227,16 @@ function limparFiltros() {
     // Ajusta o select de origem dependendo se é admin ou usuário comum
     const selectOrigem = document.getElementById("filtroOrigem");
     if (selectOrigem) {
-        selectOrigem.value = usuarioAdmin ? "" : "todos";
+        //selectOrigem.value = usuarioAdmin ? "" : "todos";
+		selectOrigem.value = "";
     }
 
     document.getElementById("filtroDepartamento").value = "";
     document.getElementById("filtroStatus").value = "";
     document.getElementById("filtroSituacao").value = "";
     document.getElementById("busca-global").value = "";
+	document.getElementById("origemVal").value = "";
+	
 
     // Executa a pesquisa novamente aplicando os filtros limpos
     pesquisarEquipamentos();
@@ -249,11 +252,12 @@ async function carregarFiltroFiliais() {
         const response = await fetch(contextPath + '/api/equipamentos?acaoOrigens=listar-origens');
         if (response.ok) {
             const filiais = await response.json();
-            
-            /*select.innerHTML = `
+			
+			// Limpa e adiciona as opções padrão iniciais
+            select.innerHTML = `
                 <option value="">Selecione...</option>
-               // <option value="todos">Todos</option>
-            `;*/
+                <option value="todos">Todos</option>
+            `;
 
             filiais.forEach(f => {
                 const option = document.createElement("option");
@@ -504,12 +508,29 @@ async function pesquisarEquipamentos() {
     };
 
     tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4">Buscando...</td></tr>';
+	
+	let origemVal = getVal('filtroOrigem');
+	    const selectOrigemEl = document.getElementById('filtroOrigem');
+	    const valorBrutoOrigem = selectOrigemEl ? selectOrigemEl.value : '';
+
+	    // Regra para usuário comum:
+	    // Se não for admin:
+	    // - Se o valor estiver vazio ("" / Selecione...), você pode optar por manter a filial do usuário por padrão ou deixar vazio. 
+	    // - Se estiver explicitamente como "todos", envia vazio para buscar tudo o que ele tem direito.
+	    if (!usuarioAdmin) {
+	        if (!valorBrutoOrigem) {
+	            // Se limpou e voltou para "Selecione...", define a filial padrão dele ou deixa vazio conforme sua regra de negócio
+	            origemVal = filialUsuarioCodigo; 
+	        } else if (valorBrutoOrigem === 'todos') {
+	            origemVal = ''; // ou a lógica que o backend espera para abranger as filiais permitidas dele
+	        }
+	    }
 
     // Se NÃO for admin e o filtro estiver vazio ou em "Todos", força a busca na filial permitida da sessão
-    let origemVal = getVal('filtroOrigem');
+    /*let origemVal = getVal('filtroOrigem');
     if (!usuarioAdmin && (!origemVal || document.getElementById('filtroOrigem').value === 'todos')) {
         origemVal = filialUsuarioCodigo;
-    }
+    }*/
 
     const params = new URLSearchParams({
         pesquisaGlobal: getVal('busca-global'),

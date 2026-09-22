@@ -7,7 +7,7 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 
 import dao.EquipamentoDAO;
-import dao.FilialDAO; // Importação necessária
+import dao.FilialDAO;
 import dao.MovimentacaoEnvioDAO;
 import model.MovimentacaoEnvio;
 import model.Usuario;
@@ -34,7 +34,7 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
 	
     private MovimentacaoEnvioDAO dao = new MovimentacaoEnvioDAO();
     private EquipamentoDAO equipamentoDAO = new EquipamentoDAO();
-    private FilialDAO filialDAO = new FilialDAO(); // Instância do FilialDAO
+    private FilialDAO filialDAO = new FilialDAO();
     
     private Gson gson = new GsonBuilder()
         .registerTypeAdapter(LocalDate.class, new TypeAdapter<LocalDate>() {
@@ -122,7 +122,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         PrintWriter out = resp.getWriter();
 
         try {
-            // Recupera o usuário logado da sessão para aplicar o filtro de segurança por filial
             HttpSession session = req.getSession(false);
             Usuario usuarioLogado = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
@@ -133,7 +132,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             if (idEnvioParam != null && !idEnvioParam.isEmpty()) {
                 Long idEnvio = Long.parseLong(idEnvioParam);
                 
-                // Utiliza o método filtrado por usuário para garantir que ele só acesse o ID se tiver permissão
                 List<MovimentacaoEnvio> lista = dao.listarComFiltrosPorUsuario(null, null, null, usuarioLogado);
                 if (ehDevolucao) {
                     lista.removeIf(e -> e.getStatusId() != null && e.getStatusId().equals(5L));
@@ -143,6 +141,12 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                     .filter(e -> e.getIdEnvio().equals(idEnvio))
                     .findFirst()
                     .orElse(null);
+                
+                if (envioEncontrado == null) {
+                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    out.print(gson.toJson(Map.of("sucesso", false, "mensagem", "Acesso negado: Este envio pertence a uma filial diferente da sua filial ativa.")));
+                    return;
+                }
                     
                 out.print(gson.toJson(envioEncontrado));
                 return;
@@ -152,7 +156,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             String dataInicioStr = req.getParameter("dataInicio");
             String dataFimStr = req.getParameter("dataFim");
 
-            // CORREÇÃO PRINCIPAL: Substitui o listarComFiltros por listarComFiltrosPorUsuario
             List<MovimentacaoEnvio> listaFiltrada = dao.listarComFiltrosPorUsuario(statusFiltro, dataInicioStr, dataFimStr, usuarioLogado);
 
             if (ehDevolucao) {
@@ -223,7 +226,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 return;
             }
             
-            // --- CONVERSÃO DE ORIGEM_CODIGO PARA O ID_FILIAL REAL ---
             if (payload.origemId != null) {
                 Long idFilialReal = filialDAO.buscarIdFilialPorOrigemCodigo(payload.origemId.intValue());
                 if (idFilialReal == null) {
@@ -244,16 +246,12 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 payload.destinoId = idFilialRealDestino;
             }
             
-            // =========================================================================
-            // REGRA DE SEGURANÇA E LÓGICA: Origem e Destino não podem ser iguais
-            // =========================================================================
             if (payload.origemId != null && payload.origemId.equals(payload.destinoId)) {
                 resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                 out.print("{\"sucesso\": false, \"mensagem\": \"A operação não pode ser realizada: A unidade de origem e a unidade de destino não podem ser iguais.\"}");
                 return;
             }
 
-            // --- VALIDAÇÃO DE CONTEXTO DE FILIAL ATIVA ---
             if (payload.origemId != null) {
                 try {
                     ValidadorContextoUtil.validarFilialAtiva(req, payload.origemId.intValue());
@@ -371,6 +369,37 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
 
             HttpSession session = req.getSession(false);
             Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+            
+            List<MovimentacaoEnvio> listaPermitida = dao.listarComFiltrosPorUsuario(null, null, null, usuario);
+            MovimentacaoEnvio envioAlvo = listaPermitida.stream()
+                .filter(e -> e.getIdEnvio().equals(idEnvio))
+                .findFirst()
+                .orElse(null);
+
+            if (envioAlvo == null) {
+                resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                out.print("{\"sucesso\": false, \"mensagem\": \"Ação negada: Você não possui permissão ou este envio pertence a uma filial diferente da sua filial ativa na sessão.\"}");
+                return;
+            }
+
+            // =========================================================================
+            // TRAVA DE SEGURANÇA ATIVADA: Valida se a filial ativa no menu bate com a origem
+            // =========================================================================
+            if (envioAlvo.getOrigemId() != null) {
+                try {
+                    // Usando o nome correto do método presente no FilialDAO:
+                    Integer codigoOrigem = filialDAO.buscarOrigemCodigoPorId(envioAlvo.getOrigemId().intValue());
+                    if (codigoOrigem != null) {
+                        ValidadorContextoUtil.validarFilialAtiva(req, codigoOrigem);
+                    }
+                } catch (SecurityException se) {
+                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    out.print("{\"sucesso\": false, \"mensagem\": \"" + se.getMessage().replace("\"", "'") + "\"}");
+                    return;
+                }
+            }
+            // =========================================================================
+
             String ipCliente = req.getHeader("X-Forwarded-For");
             if (ipCliente == null || ipCliente.isEmpty()) ipCliente = req.getRemoteAddr();
 
@@ -457,14 +486,40 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
 
             Long idEnvio = Long.parseLong(idEnvioStr);
 
-            List<MovimentacaoEnvio> lista = dao.listarTodos();
-            MovimentacaoEnvio envioEncontrado = lista.stream()
+            HttpSession session = req.getSession(false);
+            Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+            // Busca segura por usuário para evitar erros de sintaxe e validar escopo
+            List<MovimentacaoEnvio> listaPermitida = dao.listarComFiltrosPorUsuario(null, null, null, usuario);
+            MovimentacaoEnvio envioEncontrado = listaPermitida.stream()
                 .filter(e -> e.getIdEnvio().equals(idEnvio))
                 .findFirst()
                 .orElse(null);
 
-            boolean ehDevolucao = envioEncontrado != null && 
-                                  envioEncontrado.getCodigoRastreio() != null && 
+            if (envioEncontrado == null) {
+                resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                out.print("{\"sucesso\": false, \"mensagem\": \"Ação negada: Você não possui permissão ou este envio pertence a uma filial diferente.\"}");
+                return;
+            }
+
+            // =========================================================================
+            // TRAVA DE SEGURANÇA ATIVADA: Valida se a filial ativa no menu bate com a origem
+            // =========================================================================
+            if (envioEncontrado.getOrigemId() != null) {
+                try {
+                    Integer codigoOrigem = filialDAO.buscarOrigemCodigoPorId(envioEncontrado.getOrigemId().intValue());
+                    if (codigoOrigem != null) {
+                        ValidadorContextoUtil.validarFilialAtiva(req, codigoOrigem);
+                    }
+                } catch (SecurityException se) {
+                    resp.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    out.print("{\"sucesso\": false, \"mensagem\": \"" + se.getMessage().replace("\"", "'") + "\"}");
+                    return;
+                }
+            }
+            // =========================================================================
+
+            boolean ehDevolucao = envioEncontrado.getCodigoRastreio() != null && 
                                   envioEncontrado.getCodigoRastreio().startsWith("DEV-");
 
             if (ehDevolucao) {
@@ -473,8 +528,6 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
                 dao.cancelarEnvio(idEnvio);
             }
 
-            HttpSession session = req.getSession(false);
-            Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
             String ipCliente = req.getHeader("X-Forwarded-For");
             if (ipCliente == null || ipCliente.isEmpty()) ipCliente = req.getRemoteAddr();
 

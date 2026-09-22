@@ -162,8 +162,26 @@ function renderizarTabela(dados) {
         if (!envio) return;
 
         let idEnvio = envio.idEnvio || envio.id || 0;
-        let origemTexto = envio.nomeOrigem ? envio.nomeOrigem : ('ID: ' + (envio.origemId || '-'));
-        let destinoTexto = envio.nomeDestino ? envio.nomeDestino : ('ID: ' + (envio.destinoId || '-'));
+        
+        // --- MONTANDO ORIGEM E DESTINO COM CÓDIGO E SUFIXO ---
+        let origemTexto = '-';
+        if (envio.origemCodigo && envio.origemSufixo) {
+            origemTexto = `${envio.origemCodigo} - ${envio.origemSufixo}`;
+        } else if (envio.nomeOrigem) {
+            origemTexto = envio.nomeOrigem;
+        } else if (envio.origemId) {
+            origemTexto = 'ID: ' + envio.origemId;
+        }
+
+        let destinoTexto = '-';
+        if (envio.destinoCodigo && envio.destinoSufixo) {
+            destinoTexto = `${envio.destinoCodigo} - ${envio.destinoSufixo}`;
+        } else if (envio.nomeDestino) {
+            destinoTexto = envio.nomeDestino;
+        } else if (envio.destinoId) {
+            destinoTexto = 'ID: ' + envio.destinoId;
+        }
+        // -----------------------------------------------------
 
         let nomeStatus = envio.statusNome || envio.status || 'Enviado';
         let corStatus = envio.statusCor || '#0d6efd'; 
@@ -203,8 +221,8 @@ function renderizarTabela(dados) {
             ? `<a href="#" class="text-decoration-none text-primary fw-semibold">${envio.codigoRastreio} <i class="fa fa-arrow-up-right-from-square small"></i></a>` 
             : '-';
 
-			let tr = document.createElement("tr");
-			tr.innerHTML = `
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
             <td class="ps-3 fw-bold text-dark">#${idEnvio}</td>
             <td class="text-nowrap">${formatarDataBR(envio.dataEnvio || envio.data)}</td>
             <td class="text-nowrap" title="${origemTexto}">${origemTexto}</td>
@@ -221,8 +239,8 @@ function renderizarTabela(dados) {
                     : '<span class="text-muted small fst-italic">Aguardando efetivação</span>'}
             </td>
             <td class="text-center pe-3 acoes-col">${acoesHtml}</td>
-      		  `;
-	        tbody.appendChild(tr);
+        `;
+        tbody.appendChild(tr);
     });
 
     // Atualiza os botões e texto da paginação no rodapé
@@ -290,6 +308,10 @@ function filtrarEnvios(termo) {
             String(envio.idEnvio).includes(termoLower) ||
             String(envio.origemId).toLowerCase().includes(termoLower) ||
             String(envio.destinoId).toLowerCase().includes(termoLower) ||
+            (envio.origemCodigo && String(envio.origemCodigo).toLowerCase().includes(termoLower)) ||
+            (envio.origemSufixo && envio.origemSufixo.toLowerCase().includes(termoLower)) ||
+            (envio.destinoCodigo && String(envio.destinoCodigo).toLowerCase().includes(termoLower)) ||
+            (envio.destinoSufixo && envio.destinoSufixo.toLowerCase().includes(termoLower)) ||
             (envio.nomeOrigem && envio.nomeOrigem.toLowerCase().includes(termoLower)) ||
             (envio.nomeDestino && envio.nomeDestino.toLowerCase().includes(termoLower)) ||
             (envio.transportadora && envio.transportadora.toLowerCase().includes(termoLower)) ||
@@ -306,8 +328,25 @@ function visualizarEnvio(idEnvio) {
     const envio = listaGlobalEnvios.find(e => e.idEnvio === idEnvio || e.id === idEnvio);
 
     document.getElementById("tituloModalDetalhes").innerHTML = `<i class="fa fa-info-circle me-2"></i>Detalhes do Envio #${idEnvio}`;
-    document.getElementById("detalheOrigem").innerText = envio ? (envio.nomeOrigem || envio.origem || '-') : '-';
-    document.getElementById("detalheDestino").innerText = envio ? (envio.nomeDestino || envio.destino || '-') : '-';
+    
+    // --- EXIBIÇÃO NO MODAL FORMATADA ---
+    let origemModal = '-';
+    if (envio && envio.origemCodigo && envio.origemSufixo) {
+        origemModal = `${envio.origemCodigo} - ${envio.origemSufixo}`;
+    } else if (envio) {
+        origemModal = envio.nomeOrigem || envio.origem || '-';
+    }
+    document.getElementById("detalheOrigem").innerText = origemModal;
+
+    let destinoModal = '-';
+    if (envio && envio.destinoCodigo && envio.destinoSufixo) {
+        destinoModal = `${envio.destinoCodigo} - ${envio.destinoSufixo}`;
+    } else if (envio) {
+        destinoModal = envio.nomeDestino || envio.destino || '-';
+    }
+    document.getElementById("detalheDestino").innerText = destinoModal;
+    // -----------------------------------
+
     document.getElementById("detalheTransportadora").innerText = envio ? (envio.transportadora || '-') : '-';
     document.getElementById("detalheNota").innerText = envio ? (envio.numeroNota || envio.notaFiscal || '-') : '-';
 	
@@ -429,14 +468,20 @@ async function cancelarEnvio(idEnvio) {
             throw new Error("Resposta inválida do servidor: " + text);
         }
     })
-	.then(resultado => {
+    .then(resultado => {
         if (resultado.sucesso) {
-            // Como o cancelamento deve ser vermelho, usamos ModalService.error
-            ModalService.error("Atenção", resultado.mensagem).then(() => {
+            // Se foi bem-sucedido, usa um aviso de sucesso/atenção amigável
+            ModalService.success("Sucesso", resultado.mensagem).then(() => {
                 carregarEnvios();
             });
         } else {
-            ModalService.error("Erro", resultado.mensagem);
+            // Se o servidor retornou sucesso: false (como a trava de segurança de filial), 
+            // usamos ModalService.warning (amarelo/alerta) em vez de erro técnico vermelho!
+            if (typeof ModalService.warning === 'function') {
+                ModalService.warning("Atenção de Segurança", resultado.mensagem);
+            } else {
+                ModalService.error("Atenção", resultado.mensagem);
+            }
         }
     })
     .catch(error => {

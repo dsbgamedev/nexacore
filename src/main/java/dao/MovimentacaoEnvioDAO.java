@@ -217,16 +217,20 @@ public class MovimentacaoEnvioDAO {
 	    return idEnvioGerado;
 	}
 
+	//Lista tabela na tela Consulta Envio
 	public List<MovimentacaoEnvio> listarTodos() throws SQLException {
 	    String sql = "SELECT e.*, " +
-	                 "orig.nome_empresa AS nome_origem, " +
-	                 "dest.nome_empresa AS nome_destino, " +
-	                 "ms.nome AS status_nome, ms.cor AS status_cor " +
-	                 "FROM movimentacao_envio e " +
-	                 "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
-	                 "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
-	                 "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
-	                 "ORDER BY e.data_envio DESC, e.id_envio DESC";
+	             "orig.nome_empresa AS nome_origem, " +
+	             "orig.origem_codigo AS origem_codigo, " +
+	             "orig.sufixo AS origem_sufixo, " +
+	             "dest.nome_empresa AS nome_destino, " +
+	             "dest.origem_codigo AS destino_codigo, " +
+	             "dest.sufixo AS destino_sufixo, " +
+	             "ms.nome AS status_nome, ms.cor AS status_cor " +
+	             "FROM movimentacao_envio e " +
+	             "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
+	             "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
+	             "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id ...";
 
 	    String sqlItens = "SELECT iei.id_equipamento, eq.id_sistema, eq.patrimonio, eq.numero_serie, " +
 	                      "p.modelo AS nome_produto, m.nome_marca AS marca " +
@@ -253,13 +257,22 @@ public class MovimentacaoEnvioDAO {
 	            env.setDataEnvio(rs.getDate("data_envio").toLocalDate());
 	            env.setOrigemId(rs.getLong("origem_id"));
 	            env.setDestinoId(rs.getLong("destino_id"));
-	            env.setNomeOrigem(rs.getString("nome_origem"));
-	            env.setNomeDestino(rs.getString("nome_destino"));
-	            env.setResponsavel(rs.getString("responsavel"));
-	            env.setTransportadora(rs.getString("transportadora"));
-	            env.setCodigoRastreio(rs.getString("codigo_rastreio"));
-	            env.setNumeroNota(rs.getString("numero_nota"));
-	            env.setResponsavelEnvio(rs.getString("responsavel_envio"));
+	            
+	            // --- DADOS DA ORIGEM ---
+                env.setNomeOrigem(rs.getString("nome_origem"));
+                env.setOrigemCodigo(rs.getLong("origem_codigo")); // Corrigido para buscar do ResultSet
+                env.setOrigemSufixo(rs.getString("origem_sufixo"));
+                
+                // --- DADOS DO DESTINO (Adicionados aqui) ---
+                env.setNomeDestino(rs.getString("nome_destino"));
+                env.setDestinoCodigo(rs.getLong("destino_codigo")); 
+                env.setDestinoSufixo(rs.getString("destino_sufixo")); 
+
+                env.setResponsavel(rs.getString("responsavel"));
+                env.setTransportadora(rs.getString("transportadora"));
+                env.setCodigoRastreio(rs.getString("codigo_rastreio"));
+                env.setNumeroNota(rs.getString("numero_nota"));
+                env.setResponsavelEnvio(rs.getString("responsavel_envio"));
 	            
 	            if (rs.getDate("data_previsa_entrega") != null) {
 	                env.setDataPrevisaoEntrega(rs.getDate("data_previsa_entrega").toLocalDate());
@@ -315,16 +328,20 @@ public class MovimentacaoEnvioDAO {
 	}
 	
 	// Novo método exclusivo para telas que devem ocultar o Rascunho (ID 5)
-	public List<MovimentacaoEnvio> listarTodosExcetoRascunho() throws SQLException {
+	/*public List<MovimentacaoEnvio> listarTodosExcetoRascunho() throws SQLException {
 	    String sql = "SELECT e.*, " +
 	                 "orig.nome_empresa AS nome_origem, " +
+	                 "orig.origem_codigo AS origem_codigo, " +
+	                 "orig.sufixo AS origem_sufixo, " +
 	                 "dest.nome_empresa AS nome_destino, " +
+	                 "dest.origem_codigo AS destino_codigo, " +
+	                 "dest.sufixo AS destino_sufixo, " +
 	                 "ms.nome AS status_nome, ms.cor AS status_cor " +
 	                 "FROM movimentacao_envio e " +
 	                 "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
 	                 "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
 	                 "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
-	                 "WHERE e.status_id != 5 " + // <--- Filtro adicionado para ocultar os rascunhos
+	                 "WHERE e.status_id != 5 " + 
 	                 "ORDER BY e.data_envio DESC, e.id_envio DESC";
 
 	    String sqlItens = "SELECT iei.id_equipamento, eq.id_sistema, eq.patrimonio, eq.numero_serie, " +
@@ -335,10 +352,10 @@ public class MovimentacaoEnvioDAO {
 	                      "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
 	                      "WHERE iei.id_envio = ?";
 
-        String sqlHistoricoEnvio = "SELECT h.*, ms.nome AS status_nome, ms.cor AS status_cor " +
-                                   "FROM movimentacao_historico h " +
-                                   "LEFT JOIN movimentacao_status ms ON h.status_id = ms.id " +
-                                   "WHERE h.id_envio = ? ORDER BY h.data_hora ASC";
+	    String sqlHistoricoEnvio = "SELECT h.*, ms.nome AS status_nome, ms.cor AS status_cor " +
+	                               "FROM movimentacao_historico h " +
+	                               "LEFT JOIN movimentacao_status ms ON h.status_id = ms.id " +
+	                               "WHERE h.id_envio = ? ORDER BY h.data_hora ASC";
 
 	    List<MovimentacaoEnvio> lista = new java.util.ArrayList<>();
 
@@ -352,8 +369,17 @@ public class MovimentacaoEnvioDAO {
 	            env.setDataEnvio(rs.getDate("data_envio").toLocalDate());
 	            env.setOrigemId(rs.getLong("origem_id"));
 	            env.setDestinoId(rs.getLong("destino_id"));
+	            
+	            // --- DADOS DA ORIGEM E DESTINO COM CÓDIGO E SUFIXO ---
 	            env.setNomeOrigem(rs.getString("nome_origem"));
+	            env.setOrigemCodigo(rs.getLong("origem_codigo"));
+	            env.setOrigemSufixo(rs.getString("origem_sufixo"));
+	            
 	            env.setNomeDestino(rs.getString("nome_destino"));
+	            env.setDestinoCodigo(rs.getLong("destino_codigo"));
+	            env.setDestinoSufixo(rs.getString("destino_sufixo"));
+	            // -----------------------------------------------------
+
 	            env.setResponsavel(rs.getString("responsavel"));
 	            env.setTransportadora(rs.getString("transportadora"));
 	            env.setCodigoRastreio(rs.getString("codigo_rastreio"));
@@ -407,48 +433,60 @@ public class MovimentacaoEnvioDAO {
 	                }
 	            }
 	            env.setHistorico(listaHistorico);
-                lista.add(env);
+	            lista.add(env);
+	        }
+	    }
+	    return lista;
+	}*/
+	//Metodo utilizado para o MenuServlet movimentacao envio no Dashboard
+	public List<MovimentacaoEnvio> listarRecentesPendentes(int limite) throws SQLException {
+	    List<MovimentacaoEnvio> lista = new java.util.ArrayList<>();
+	    String sql = "SELECT e.*, " +
+	                 "orig.nome_empresa AS nome_origem, " +
+	                 "orig.origem_codigo AS origem_codigo, " +
+	                 "orig.sufixo AS origem_sufixo, " +
+	                 "dest.nome_empresa AS nome_destino, " +
+	                 "dest.origem_codigo AS destino_codigo, " +
+	                 "dest.sufixo AS destino_sufixo, " +
+	                 "ms.nome AS status_nome, ms.cor AS status_cor " +
+	                 "FROM movimentacao_envio e " +
+	                 "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
+	                 "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
+	                 "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
+	                 "WHERE ms.nome IN ('Aguardando Envio', 'Em Trânsito') " +
+	                 "ORDER BY e.data_envio DESC, e.id_envio DESC " +
+	                 "LIMIT ?";
+
+	    try (Connection conn = Conexao.conectar();
+	         PreparedStatement stmt = conn.prepareStatement(sql)) {
+	        
+	        stmt.setInt(1, limite);
+	        
+	        try (ResultSet rs = stmt.executeQuery()) {
+	            while (rs.next()) {
+	                MovimentacaoEnvio env = new MovimentacaoEnvio();
+	                env.setIdEnvio(rs.getLong("id_envio"));
+	                if (rs.getDate("data_envio") != null) {
+	                    env.setDataEnvio(rs.getDate("data_envio").toLocalDate());
+	                }
+	                
+	                // Padronizado com código e sufixo
+	                env.setNomeOrigem(rs.getString("nome_origem") != null ? rs.getString("nome_origem") : "-");
+	                env.setOrigemCodigo(rs.getLong("origem_codigo"));
+	                env.setOrigemSufixo(rs.getString("origem_sufixo"));
+
+	                env.setNomeDestino(rs.getString("nome_destino") != null ? rs.getString("nome_destino") : "-");
+	                env.setDestinoCodigo(rs.getLong("destino_codigo"));
+	                env.setDestinoSufixo(rs.getString("destino_sufixo"));
+
+	                env.setStatusNome(rs.getString("status_nome") != null ? rs.getString("status_nome") : "Desconhecido");
+	                env.setStatusCor(rs.getString("status_cor") != null ? rs.getString("status_cor") : "#0d6efd");
+	                lista.add(env);
+	            }
 	        }
 	    }
 	    return lista;
 	}
-	//Metodo utilizado para o MenuServlet movimentacao envio no Dashboard
-	public List<MovimentacaoEnvio> listarRecentesPendentes(int limite) throws SQLException {
-        List<MovimentacaoEnvio> lista = new java.util.ArrayList<>();
-        String sql = "SELECT e.*, " +
-                     "orig.nome_empresa AS nome_origem, " +
-                     "dest.nome_empresa AS nome_destino, " +
-                     "ms.nome AS status_nome, ms.cor AS status_cor " +
-                     "FROM movimentacao_envio e " +
-                     "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
-                     "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
-                     "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
-                     "WHERE ms.nome IN ('Aguardando Envio', 'Em Trânsito') " +
-                     "ORDER BY e.data_envio DESC, e.id_envio DESC " +
-                     "LIMIT ?";
-
-        try (Connection conn = Conexao.conectar();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, limite);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    MovimentacaoEnvio env = new MovimentacaoEnvio();
-                    env.setIdEnvio(rs.getLong("id_envio"));
-                    if (rs.getDate("data_envio") != null) {
-                        env.setDataEnvio(rs.getDate("data_envio").toLocalDate());
-                    }
-                    env.setNomeOrigem(rs.getString("nome_origem") != null ? rs.getString("nome_origem") : "-");
-                    env.setNomeDestino(rs.getString("nome_destino") != null ? rs.getString("nome_destino") : "-");
-                    env.setStatusNome(rs.getString("status_nome") != null ? rs.getString("status_nome") : "Desconhecido");
-                    env.setStatusCor(rs.getString("status_cor") != null ? rs.getString("status_cor") : "#0d6efd");
-                    lista.add(env);
-                }
-            }
-        }
-        return lista;
-    }
 	
 	 /*Busca no banco de dados todas movimentações envio e devolução
 	 * Construção Dinâmica da Query: Monta uma consulta SQL base fazendo junções (LEFT JOIN) com as 
@@ -466,18 +504,22 @@ public class MovimentacaoEnvioDAO {
      * executa subconsultas para preencher a lista de produtos/equipamentos vinculados e o histórico de
      *  movimentações/status, retornando a estrutura completa pronta para exibição ou conversão em JSON na API.
 	 */
-	public List<MovimentacaoEnvio> listarComFiltros(String statusFiltro, String dataInicioStr, String dataFimStr) throws SQLException {
-        StringBuilder sql = new StringBuilder(
-            "SELECT e.*, " +
-            "orig.nome_empresa AS nome_origem, " +
-            "dest.nome_empresa AS nome_destino, " +
-            "ms.nome AS status_nome, ms.cor AS status_cor " +
-            "FROM movimentacao_envio e " +
-            "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
-            "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
-            "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
-            "WHERE 1=1 "
-        );
+		public List<MovimentacaoEnvio> listarComFiltros(String statusFiltro, String dataInicioStr, String dataFimStr) throws SQLException {
+		    StringBuilder sql = new StringBuilder(
+		        "SELECT e.*, " +
+		        "orig.nome_empresa AS nome_origem, " +
+		        "orig.origem_codigo AS origem_codigo, " +
+		        "orig.sufixo AS origem_sufixo, " +
+		        "dest.nome_empresa AS nome_destino, " +
+		        "dest.origem_codigo AS destino_codigo, " +
+		        "dest.sufixo AS destino_sufixo, " +
+		        "ms.nome AS status_nome, ms.cor AS status_cor " +
+		        "FROM movimentacao_envio e " +
+		        "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
+		        "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
+		        "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
+		        "WHERE 1=1 "
+		    );
 
         java.util.List<Object> parametros = new java.util.ArrayList<>();
 
@@ -529,13 +571,22 @@ public class MovimentacaoEnvioDAO {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    MovimentacaoEnvio env = new MovimentacaoEnvio();
+                	MovimentacaoEnvio env = new MovimentacaoEnvio();
                     env.setIdEnvio(rs.getLong("id_envio"));
                     env.setDataEnvio(rs.getDate("data_envio").toLocalDate());
                     env.setOrigemId(rs.getLong("origem_id"));
                     env.setDestinoId(rs.getLong("destino_id"));
+                    
+                    // --- ATUALIZADO: Dados de Origem e Destino com Código e Sufixo ---
                     env.setNomeOrigem(rs.getString("nome_origem"));
+                    env.setOrigemCodigo(rs.getLong("origem_codigo"));
+                    env.setOrigemSufixo(rs.getString("origem_sufixo"));
+                    
                     env.setNomeDestino(rs.getString("nome_destino"));
+                    env.setDestinoCodigo(rs.getLong("destino_codigo"));
+                    env.setDestinoSufixo(rs.getString("destino_sufixo"));
+                    
+                    // ----------------------------------------------------------------
                     env.setResponsavel(rs.getString("responsavel"));
                     env.setTransportadora(rs.getString("transportadora"));
                     env.setCodigoRastreio(rs.getString("codigo_rastreio"));
