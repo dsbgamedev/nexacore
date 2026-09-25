@@ -101,114 +101,98 @@ public class MovimentacaoRecebimentoDAO {
         }
         return resultado;
     }
- // 3. Registra o recebimento de Envio (Com trava de segurança contra cancelamento)
-    public boolean registrarRecebimento(int idEnvio, String dataRecebimento, String responsavel, String condicaoGeral) {
-        String sqlVerificaStatus = "SELECT status_id FROM movimentacao_envio WHERE id_envio = ?";
-        String sqlRecebimento = "INSERT INTO movimentacao_recebimento (id_envio, data_recebimento, responsavel_recebimento, condicao_geral) VALUES (?, ?, ?, ?)";
-        String sqlAtualizaEnvio = "UPDATE movimentacao_envio SET status_id = 3 WHERE id_envio = ?";
-        String sqlHistorico = "INSERT INTO movimentacao_historico (id_envio, status_id, data_hora, observacao) VALUES (?, 3, NOW(), ?)";
-        
-        String sqlBuscaDestino = "SELECT f.origem_codigo FROM movimentacao_envio e " +
-                                 "JOIN filiais f ON e.destino_id = f.id_filial " +
-                                 "WHERE e.id_envio = ?";
-        // Busca diretamente o ID da filial de destino da movimentação
-        //String sqlBuscaDestino = "SELECT destino_id FROM movimentacao_envio WHERE id_envio = ?";
-                                 
-        String sqlBuscaItens = "SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?";
-        String sqlAtualizaEquip = "UPDATE equipamentos SET origem_codigo = ?, situacao_id = 7 WHERE id_equipamento = ?";
+    // 3. Registra o recebimento de Envio (Com trava de segurança contra cancelamento)
+	public boolean registrarRecebimento(int idEnvio, String dataRecebimento, String responsavel, String condicaoGeral, String caminhoComprovante) {
+	    String sqlVerificaStatus = "SELECT status_id FROM movimentacao_envio WHERE id_envio = ?";
+	    // Naingetan ti query ti INSERT tapno masaea ti dalan ti ladawan/comprovante
+	    String sqlRecebimento = "INSERT INTO movimentacao_recebimento (id_envio, data_recebimento, responsavel_recebimento, condicao_geral, comprovante) VALUES (?, ?, ?, ?, ?)";
+	    String sqlAtualizaEnvio = "UPDATE movimentacao_envio SET status_id = 3 WHERE id_envio = ?";
+	    String sqlHistorico = "INSERT INTO movimentacao_historico (id_envio, status_id, data_hora, observacao) VALUES (?, 3, NOW(), ?)";
+	    
+	    String sqlBuscaDestino = "SELECT f.origem_codigo FROM movimentacao_envio e " +
+	                             "JOIN filiais f ON e.destino_id = f.id_filial " +
+	                             "WHERE e.id_envio = ?";
+	                             
+	    String sqlBuscaItens = "SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?";
+	    String sqlAtualizaEquip = "UPDATE equipamentos SET origem_codigo = ?, situacao_id = 7 WHERE id_equipamento = ?";
 
-        Connection conn = null;
-        try {
-            conn = Conexao.conectar();
-            conn.setAutoCommit(false);
+	    Connection conn = null;
+	    try {
+	        conn = Conexao.conectar();
+	        conn.setAutoCommit(false);
 
-            // 0. TRAVA DE SEGURANÇA CONTRA CACHE/DUPLA ABA
-            try (PreparedStatement stmtStatus = conn.prepareStatement(sqlVerificaStatus)) {
-                stmtStatus.setInt(1, idEnvio);
-                try (ResultSet rs = stmtStatus.executeQuery()) {
-                    if (rs.next()) {
-                        long statusAtual = rs.getLong("status_id");
-                        // Se não estiver mais em trânsito (2) ou aguardando (1), bloqueia!
-                        if (statusAtual != 1L && statusAtual != 2L) {
-                            throw new RuntimeException("Ação negada: Este envio foi cancelado ou já foi finalizado em outra tela.");
-                        }
-                    } else {
-                        throw new RuntimeException("Envio não encontrado.");
-                    }
-                }
-            }
+	        try (PreparedStatement stmtStatus = conn.prepareStatement(sqlVerificaStatus)) {
+	            stmtStatus.setInt(1, idEnvio);
+	            try (ResultSet rs = stmtStatus.executeQuery()) {
+	                if (rs.next()) {
+	                    long statusAtual = rs.getLong("status_id");
+	                    if (statusAtual != 1L && statusAtual != 2L) {
+	                        throw new RuntimeException("Ação negada: Este envio foi cancelado ou já foi finalizado em outra tela.");
+	                    }
+	                } else {
+	                    throw new RuntimeException("Envio não encontrado.");
+	                }
+	            }
+	        }
 
-            // 1. Pega o origem_codigo real da filial de destino
-            int origemCodigoDestino = 0;
-            try (PreparedStatement stmtDestino = conn.prepareStatement(sqlBuscaDestino)) {
-                stmtDestino.setInt(1, idEnvio);
-                try (ResultSet rsDestino = stmtDestino.executeQuery()) {
-                    if (rsDestino.next()) {
-                        origemCodigoDestino = rsDestino.getInt("origem_codigo");
-                    }
-                }
-            }
-            /*int origemCodigoDestino = 0;
-            try (PreparedStatement stmtDestino = conn.prepareStatement(sqlBuscaDestino)) {
-                stmtDestino.setInt(1, idEnvio);
-                try (ResultSet rsDestino = stmtDestino.executeQuery()) {
-                    if (rsDestino.next()) {
-                        origemCodigoDestino = rsDestino.getInt("destino_id"); // Pega o ID correto do destino
-                    }
-                }
-            }*/
+	        int origemCodigoDestino = 0;
+	        try (PreparedStatement stmtDestino = conn.prepareStatement(sqlBuscaDestino)) {
+	            stmtDestino.setInt(1, idEnvio);
+	            try (ResultSet rsDestino = stmtDestino.executeQuery()) {
+	                if (rsDestino.next()) {
+	                    origemCodigoDestino = rsDestino.getInt("origem_codigo");
+	                }
+	            }
+	        }
 
-            // 2. Insere o recebimento
-            try (PreparedStatement stmt = conn.prepareStatement(sqlRecebimento)) {
-                stmt.setInt(1, idEnvio);
-                stmt.setDate(2, java.sql.Date.valueOf(dataRecebimento));
-                stmt.setString(3, responsavel);
-                stmt.setString(4, condicaoGeral);
-                stmt.executeUpdate();
-            }
+	        // Insere ti datos a kadwa ti caminhoComprovante
+	        try (PreparedStatement stmt = conn.prepareStatement(sqlRecebimento)) {
+	            stmt.setInt(1, idEnvio);
+	            stmt.setDate(2, java.sql.Date.valueOf(dataRecebimento));
+	            stmt.setString(3, responsavel);
+	            stmt.setString(4, condicaoGeral);
+	            stmt.setString(5, caminhoComprovante); // Naikabil ditoy ti dalan ti ladawan
+	            stmt.executeUpdate();
+	        }
 
-            // 3. Atualiza o status do envio para Recebido (3)
-            try (PreparedStatement stmt = conn.prepareStatement(sqlAtualizaEnvio)) {
-                stmt.setInt(1, idEnvio);
-                stmt.executeUpdate();
-            }
+	        try (PreparedStatement stmt = conn.prepareStatement(sqlAtualizaEnvio)) {
+	            stmt.setInt(1, idEnvio);
+	            stmt.executeUpdate();
+	        }
 
-            // 4. Insere no histórico
-            try (PreparedStatement stmt = conn.prepareStatement(sqlHistorico)) {
-                stmt.setInt(1, idEnvio);
-                stmt.setString(2, "Recebido na filial por " + responsavel + ". Condição: " + condicaoGeral);
-                stmt.executeUpdate();
-            }
+	        try (PreparedStatement stmt = conn.prepareStatement(sqlHistorico)) {
+	            stmt.setInt(1, idEnvio);
+	            stmt.setString(2, "Recebido na filial por " + responsavel + ". Condição: " + condicaoGeral);
+	            stmt.executeUpdate();
+	        }
 
-            // 5. Atualiza o equipamento com o origem_codigo correto da filial
-            try (PreparedStatement stmtBusca = conn.prepareStatement(sqlBuscaItens);
-                 PreparedStatement stmtEq = conn.prepareStatement(sqlAtualizaEquip)) {
-                
-                stmtBusca.setInt(1, idEnvio);
-                try (ResultSet rs = stmtBusca.executeQuery()) {
-                    while (rs.next()) {
-                        int idEq = rs.getInt("id_equipamento");
-                        stmtEq.setInt(1, origemCodigoDestino);
-                        stmtEq.setInt(2, idEq);
-                        stmtEq.executeUpdate();
-                    }
-                }
-            }
+	        try (PreparedStatement stmtBusca = conn.prepareStatement(sqlBuscaItens);
+	             PreparedStatement stmtEq = conn.prepareStatement(sqlAtualizaEquip)) {
+	            
+	            stmtBusca.setInt(1, idEnvio);
+	            try (ResultSet rs = stmtBusca.executeQuery()) {
+	                while (rs.next()) {
+	                    int idEq = rs.getInt("id_equipamento");
+	                    stmtEq.setInt(1, origemCodigoDestino);
+	                    stmtEq.setInt(2, idEq);
+	                    stmtEq.executeUpdate();
+	                }
+	            }
+	        }
 
-            conn.commit();
-            return true;
-        } catch (Exception e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
-            }
-            // Propaga a mensagem de erro amigável para o Servlet capturar
-            throw new RuntimeException(e.getMessage(), e);
-        } finally {
-            if (conn != null) {
-                try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) { ex.printStackTrace(); }
-            }
-        }
-    }
+	        conn.commit();
+	        return true;
+	    } catch (Exception e) {
+	        if (conn != null) {
+	            try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+	        }
+	        throw new RuntimeException(e.getMessage(), e);
+	    } finally {
+	        if (conn != null) {
+	            try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ex) { ex.printStackTrace(); }
+	        }
+	    }
+	}
     // ==========================================
     // MÉTODOS PARA DEVOLUÇÕES
     // ==========================================
@@ -312,19 +296,18 @@ public class MovimentacaoRecebimentoDAO {
         return resultado;
     }
 
- // 6. Registra o recebimento de Devolução (Com trava de segurança contra cancelamento)
-    public boolean registrarRecebimentoDevolucao(int idDevolucao, String dataRecebimento, String responsavel, String condicaoGeral) {
+    // 6. Registra o recebimento de Devolução (Com trava de segurança contra cancelamento)
+    public boolean registrarRecebimentoDevolucao(int idDevolucao, String dataRecebimento, String responsavel, String condicaoGeral, String caminhoComprovante) {
         String sqlVerificaStatus = "SELECT status_id FROM movimentacao_envio WHERE id_envio = ?";
-        String sqlRecebimento = "INSERT INTO movimentacao_recebimento (id_envio, data_recebimento, responsavel_recebimento, condicao_geral) VALUES (?, ?, ?, ?)";
+        // Naingetan ti query ti INSERT tapno masaea ti dalan ti ladawan/comprovante
+        String sqlRecebimento = "INSERT INTO movimentacao_recebimento (id_envio, data_recebimento, responsavel_recebimento, condicao_geral, comprovante) VALUES (?, ?, ?, ?, ?)";
         String sqlAtualizaDev = "UPDATE movimentacao_envio SET status_id = 3 WHERE id_envio = ?";
         
         String sqlBuscaDestino = "SELECT f.origem_codigo FROM movimentacao_envio e " +
                                  "JOIN filiais f ON e.destino_id = f.id_filial " +
                                  "WHERE e.id_envio = ?";
-        //String sqlBuscaDestino = "SELECT destino_id FROM movimentacao_envio WHERE id_envio = ?";
-                                 
+                                     
         String sqlBuscaItens = "SELECT id_equipamento FROM movimentacao_envio_itens WHERE id_envio = ?";
-        //Stri ng sqlAtualizaEquip = "UPDATE equipamentos SET status_id = 1, situacao_id = 1, origem_codigo = ? WHERE id_equipamento = ?";
         String sqlAtualizaEquip = "UPDATE equipamentos SET status_id = ?, origem_codigo = ?, situacao_id = 1 WHERE id_equipamento = ?";
         
         Connection conn = null;
@@ -332,7 +315,6 @@ public class MovimentacaoRecebimentoDAO {
             conn = Conexao.conectar();
             conn.setAutoCommit(false);
 
-            // 0. TRAVA DE SEGURANÇA CONTRA CACHE/DUPLA ABA
             try (PreparedStatement stmtStatus = conn.prepareStatement(sqlVerificaStatus)) {
                 stmtStatus.setInt(1, idDevolucao);
                 try (ResultSet rs = stmtStatus.executeQuery()) {
@@ -347,7 +329,6 @@ public class MovimentacaoRecebimentoDAO {
                 }
             }
 
-            // A. Busca o origem_codigo real da filial de destino onde a devolução está sendo recebida
             int origemCodigoDestino = 0;
             try (PreparedStatement stmtDestino = conn.prepareStatement(sqlBuscaDestino)) {
                 stmtDestino.setInt(1, idDevolucao);
@@ -357,46 +338,36 @@ public class MovimentacaoRecebimentoDAO {
                     }
                 }
             }
-            /*int origemCodigoDestino = 0;
-            try (PreparedStatement stmtDestino = conn.prepareStatement(sqlBuscaDestino)) {
-                stmtDestino.setInt(1, idDevolucao);
-                try (ResultSet rsDestino = stmtDestino.executeQuery()) {
-                    if (rsDestino.next()) {
-                        origemCodigoDestino = rsDestino.getInt("destino_id"); // Pega o ID correto do destino da devolução
-                    }
-                }
-            }*/
 
-            // B. Insere o recebimento da devolução
+            // Insere ti datos a kadwa ti caminhoComprovante
             try (PreparedStatement stmt = conn.prepareStatement(sqlRecebimento)) {
                 stmt.setInt(1, idDevolucao);
                 stmt.setDate(2, java.sql.Date.valueOf(dataRecebimento));
                 stmt.setString(3, responsavel);
                 stmt.setString(4, condicaoGeral);
+                stmt.setString(5, caminhoComprovante); // Naikabil ditoy ti dalan ti ladawan
                 stmt.executeUpdate();
             }
 
-            // C. Atualiza o status da devolução para Recebido (3)
             try (PreparedStatement stmt = conn.prepareStatement(sqlAtualizaDev)) {
                 stmt.setInt(1, idDevolucao);
                 stmt.executeUpdate();
             }
 
-            // D. Atualiza os equipamentos de volta para Disponível (1) e aplica o origem_codigo correto
             try (PreparedStatement stmtBusca = conn.prepareStatement(sqlBuscaItens);
-                    PreparedStatement stmtEq = conn.prepareStatement(sqlAtualizaEquip)) {
-                   
-                   stmtBusca.setInt(1, idDevolucao);
-                   try (ResultSet rs = stmtBusca.executeQuery()) {
-                       while (rs.next()) {
-                           int idEq = rs.getInt("id_equipamento");
-                           stmtEq.setInt(1, 1);                  // 1º ? -> status_id (Ativo)
-                           stmtEq.setInt(2, origemCodigoDestino); // 2º ? -> origem_codigo (Filial de destino)
-                           stmtEq.setInt(3, idEq);                // 3º ? -> id_equipamento
-                           stmtEq.executeUpdate();
-                       }
-                   }
-               }
+                 PreparedStatement stmtEq = conn.prepareStatement(sqlAtualizaEquip)) {
+               
+                stmtBusca.setInt(1, idDevolucao);
+                try (ResultSet rs = stmtBusca.executeQuery()) {
+                    while (rs.next()) {
+                        int idEq = rs.getInt("id_equipamento");
+                        stmtEq.setInt(1, 1);                  
+                        stmtEq.setInt(2, origemCodigoDestino); 
+                        stmtEq.setInt(3, idEq);                
+                        stmtEq.executeUpdate();
+                    }
+                }
+            }
 
             conn.commit();
             return true;
@@ -411,7 +382,6 @@ public class MovimentacaoRecebimentoDAO {
             }
         }
     }
-    
     //07. Método para descobrir o destino_id de uma movimentação (envio ou devolução)
     public int buscarDestinoIdPorMovimentacao(int idMovimentacao) {
         String sql = "SELECT destino_id FROM movimentacao_envio WHERE id_envio = ?";
@@ -427,5 +397,34 @@ public class MovimentacaoRecebimentoDAO {
             e.printStackTrace();
         }
         return -1;
+    }
+    
+ // 8. Conta os itens aguardando recebimento filtrando pelas unidades permitidas (status 1 ou 2)
+    public int contarAguardandoRecebimentoPorUnidades(List<Integer> unidadesPermitidas) {
+        if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+            return 0;
+        }
+
+        // Utiliza a classe utilitária para gerar a cláusula IN de forma limpa para as unidades
+        String inClause = util.FiltroUnidadeUtil.gerarClausulaIn(unidadesPermitidas);
+        
+        // CORRIGIDO: Uso de status_id IN (1, 2) para abranger "Aguardando Envio" e "Em Trânsito"
+        String sql = "SELECT COUNT(*) FROM movimentacao_envio WHERE status_id IN (1, 2) AND destino_id IN " + inClause;
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            // Preenche os parâmetros dinâmicos das unidades permitidas
+            util.FiltroUnidadeUtil.preencherParametros(stmt, 1, unidadesPermitidas);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
     }
 }

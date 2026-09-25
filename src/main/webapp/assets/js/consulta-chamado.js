@@ -4,7 +4,7 @@ let listaChamadosGlobal = [];
 document.addEventListener("DOMContentLoaded", function() {
     // Define a data de hoje nos inputs de data ao carregar a tela
     definirDataAtualNosFiltros();
-    
+
     carregarChamados();
 
     const formFiltro = document.getElementById('formFiltroChamados');
@@ -47,14 +47,23 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 
-// Coloca a data atual (ano-mês-dia) nos filtros de período
+// Coloca o primeiro dia do mês atual na data início e a data de hoje na data fim
 function definirDataAtualNosFiltros() {
-    const hoje = new Date().toISOString().split('T')[0];
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0'); // Mês atual com 2 dígitos
+    const diaAtual = String(hoje.getDate()).padStart(2, '0');   // Dia atual com 2 dígitos
+
+    // Define o primeiro dia do mês atual (ex: 2026-09-01)
+    const primeiroDiaMes = `${ano}-${mes}-01`;
+    // Define a data de hoje (ex: 2026-09-24)
+    const dataHojeStr = `${ano}-${mes}-${diaAtual}`;
+
     const inputInicio = document.getElementById('filtroDataInicio');
     const inputFim = document.getElementById('filtroDataFim');
     
-    if (inputInicio && !inputInicio.value) inputInicio.value = hoje;
-    if (inputFim && !inputFim.value) inputFim.value = hoje;
+    if (inputInicio) inputInicio.value = primeiroDiaMes;
+    if (inputFim) inputFim.value = dataHojeStr;
 }
 
 function carregarChamados() {
@@ -326,9 +335,17 @@ function abrirModalGerenciar(chamado, modoVisualizacao = false) {
 function salvarAtualizacaoChamado() {
     const statusId = document.getElementById('modalStatusChamado').value;
     const solucao = document.getElementById('modalSolucao').value.trim();
+    const checkReparo = document.getElementById('modalFoiReparado'); // Pega o elemento do checkbox
 
+    // Validação 1: Se for finalizar, a solução é obrigatória
     if (statusId === '6' && !solucao) {
         ModalService.error("Atenção", "O campo 'Solução Realizada' é obrigatório para finalizar o chamado.");
+        return;
+    }
+
+    // Validação 2 (RECOMENDADA): Se for finalizar, o checkbox de reparado é obrigatório
+    if (statusId === '6' && !checkReparo.checked) {
+        ModalService.error("Atenção", "Para finalizar o chamado, é obrigatório confirmar que o equipamento foi reparado.");
         return;
     }
 
@@ -338,8 +355,7 @@ function salvarAtualizacaoChamado() {
         responsavelTecnico: document.getElementById('modalResponsavelTecnico').value,
         diagnostico: document.getElementById('modalDiagnostico').value,
         solucaoRealizada: solucao,
-		// Garante que só envia true se o status for 6 E o checkbox estiver marcado
-		reparado: statusId === '6' ? document.getElementById('modalFoiReparado').checked : false
+        reparado: statusId === '6' ? checkReparo.checked : false
     };
 
     fetch(contextPath + '/api/manutencoes/atualizar', {
@@ -365,8 +381,15 @@ function salvarAtualizacaoChamado() {
 function limparFiltros() {
     const formFiltro = document.getElementById('formFiltroChamados');
     if (formFiltro) formFiltro.reset();
-    definirDataAtualNosFiltros();
-    aplicarFiltrosNaTabela();
+	
+	// Redefine as datas para o dia 01 do mês até hoje
+	definirDataAtualNosFiltros();
+	
+	// Se o seu select de status tiver algum valor padrão ao limpar, defina aqui (ex: vazio ou 'ativos')
+    const filtroStatus = document.getElementById('filtroStatus');
+    if (filtroStatus) filtroStatus.value = '';
+
+	aplicarFiltrosNaTabela();
 }
 
 function editarChamado(idChamado) {

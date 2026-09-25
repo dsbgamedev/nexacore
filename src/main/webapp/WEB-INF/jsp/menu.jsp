@@ -220,7 +220,6 @@
 				                </div>
             </div>
         </header>
-
         <!-- DASHBOARD CONTAINER -->
         <div class="dashboard-container container-fluid p-4">
             <div class="row mb-4">
@@ -258,36 +257,39 @@
 			            </div>
 			        </div>
 			    </div>
+               <div class="col-md">
+				<div class="stat-card">
+					<div class="stat-icon bg-yellow-light text-warning"><i class="bi bi-tools"></i></div>
+						<div class="stat-info">
+						<span class="stat-label">Em Manutenção</span>
+						<!-- Exibe a quantidade dinâmica enviada pelo Servlet -->
+						<h3 class="stat-value">${empty totalEmManutencao ? 0 : totalEmManutencao}</h3>
+						<!-- Redireciona ao clicar para a tela de Consulta de Chamados -->
+						<a href="<%=ctx%>/ConsultaChamadosServlet" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
+						</div>
+					</div>
+				</div>
                 <div class="col-md">
-                    <div class="stat-card">
-                        <div class="stat-icon bg-yellow-light text-warning"><i class="bi bi-tools"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Em Manutenção</span>
-                            <h3 class="stat-value">28</h3>
-                            <a href="#" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
+					<div class="stat-card">
+						<div class="stat-icon bg-purple-light text-info"><i class="bi bi-truck"></i></div>
+							<div class="stat-info">
+							<span class="stat-label">Total Em Trânsito</span>
+							<h3 class="stat-value">${empty totalEmTransito ? 0 : totalEmTransito}</h3>
+							<!-- Redireciona ao clicar para a tela de Consulta de Envio -->
+							<a href="<%=ctx%>/ConsultaEnvioServlet" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
                         </div>
                     </div>
                 </div>
                 <div class="col-md">
-                    <div class="stat-card">
-                        <div class="stat-icon bg-purple-light text-info"><i class="bi bi-truck"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Em Trânsito</span>
-                            <h3 class="stat-value">14</h3>
-                            <a href="#" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md">
-                    <div class="stat-card">
-                        <div class="stat-icon bg-red-light text-danger"><i class="bi bi-box-arrow-in-down"></i></div>
-                        <div class="stat-info">
-                            <span class="stat-label">Aguardando Recebimento</span>
-                            <h3 class="stat-value">9</h3>
-                            <a href="#" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
-                        </div>
-                    </div>
-                </div>
+				    <div class="stat-card">
+				        <div class="stat-icon bg-red-light text-danger"><i class="bi bi-box-arrow-in-down"></i></div>
+				        <div class="stat-info">
+				            <span class="stat-label">Aguardando Recebimento</span>
+				            <h3 class="stat-value">${empty totalAguardandoRecebimento ? 0 : totalAguardandoRecebimento}</h3>
+				            <a href="<%=ctx%>/RecebimentoServlet" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
+				        </div>
+				    </div>
+				</div>
             </div>
 
             <!-- ACESSO RÁPIDO E AVISOS -->
@@ -658,3 +660,5 @@
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 </body>
 </html>
+
+        

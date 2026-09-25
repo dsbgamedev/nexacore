@@ -9,6 +9,8 @@ public class MovimentacaoRecebimento {
     private String responsavelRecebimento;
     private String condicaoGeral;
     private Date dataCadastro;
+    // 👇 ADICIONE ESTE CAMPO AQUI TAMBÉM 👇
+    private String comprovante;
 
     public MovimentacaoRecebimento() {}
 
@@ -30,4 +32,8 @@ public class MovimentacaoRecebimento {
 
     public Date getDataCadastro() { return dataCadastro; }
     public void setDataCadastro(Date dataCadastro) { this.dataCadastro = dataCadastro; }
+    
+    // 👇 ADICIONE OS GETTER E SETTER DO COMPROVANTE AQUI 👇
+    public String getComprovante() { return comprovante; }
+    public void setComprovante(String comprovante) { this.comprovante = comprovante; }
 }

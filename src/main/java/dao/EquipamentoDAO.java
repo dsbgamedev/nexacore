@@ -764,7 +764,7 @@ public class EquipamentoDAO {
         return idFilialOuCodigo;
     }
     
- // Conta o total geral considerando a lista de unidades permitidas
+   // Conta o total geral considerando a lista de unidades permitidas
     public int contarTotalEquipamentos(List<Integer> unidadesPermitidas) throws SQLException {
         if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
             return 0;

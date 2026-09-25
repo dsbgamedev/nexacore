@@ -9,6 +9,12 @@ document.addEventListener("DOMContentLoaded", function() {
         inputDataEnvio.value = hoje;
     }
 	
+	// --- NOVO: Preenche a Data Prevista de Entrega com o dia atual ---
+    const inputDataPrevisao = document.getElementById("dataPrevisao");
+    if (inputDataPrevisao && !inputDataPrevisao.value) {
+        inputDataPrevisao.value = hoje;
+    }
+	
     // Detecta se é o fluxo de devolução com segurança
     const urlParams = new URLSearchParams(window.location.search);
     const tipoParam = (window.isDevolucaoForcada) ? 'devolucao' : urlParams.get('tipo');

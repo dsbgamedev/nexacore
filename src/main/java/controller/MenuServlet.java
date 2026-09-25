@@ -8,6 +8,7 @@ import dao.EquipamentoDAO;
 import dao.FilialDAO;
 import dao.ManutencaoDAO;
 import dao.MovimentacaoEnvioDAO;
+import dao.MovimentacaoRecebimentoDAO;
 import dto.UnidadeDTO;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -63,23 +64,42 @@ public class MenuServlet extends HttpServlet {
             session.setAttribute("usuarioLogado", usuario);
         }
         
-        // --- 3. CARREGAMENTO DOS DADOS DO DASHBOARD ---
+         // --- 3. CARREGAMENTO DOS DADOS DO DASHBOARD ---
+        
+        // Movimentações de Envio (Em Trânsito)
         try {
             MovimentacaoEnvioDAO movDao = new MovimentacaoEnvioDAO();
             request.setAttribute("listaMovimentacoesRecentes", movDao.listarRecentesPendentes(5));
+            // Contagem apenas para o card (Sem Modal)
+            request.setAttribute("totalEmTransito", movDao.contarEmTransitoPorUnidades(unidadesPermitidas));
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("erroDashboard", "Não foi possível carregar as movimentações recentes.");
+            request.setAttribute("totalEmTransito", 0);
         }
         
+        // Movimentações de Recebimento (Aguardando Recebimento)
+        try {
+            MovimentacaoRecebimentoDAO recebimentoDao = new MovimentacaoRecebimentoDAO();
+            // Contagem apenas para o card (Sem Modal)
+            request.setAttribute("totalAguardandoRecebimento", recebimentoDao.contarAguardandoRecebimentoPorUnidades(unidadesPermitidas));
+        } catch (Exception e) {
+            e.printStackTrace();
+            request.setAttribute("totalAguardandoRecebimento", 0);
+        }
+        
+        // Manutenção / Chamados
         try {
             ManutencaoDAO manutencaoDao = new ManutencaoDAO();
             request.setAttribute("listaChamadosRecentes", manutencaoDao.listarRecentesAbertos(5));
+            request.setAttribute("totalEmManutencao", manutencaoDao.contarChamadosEmAndamento(unidadesPermitidas));
         } catch (Exception e) {
             e.printStackTrace();
             request.setAttribute("erroDashboardManutencao", "Não foi possível carregar os chamados recentes.");
+            request.setAttribute("totalEmManutencao", 0);
         }
         
+        // Equipamentos
         try {
             EquipamentoDAO eqDao = new EquipamentoDAO();
             request.setAttribute("listaEquipamentosEmManutencao", eqDao.listarPorStatusEUnidades(5, unidadesPermitidas));

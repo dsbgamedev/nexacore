@@ -3,6 +3,7 @@ package dao;
 import conexao.Conexao;
 import model.MovimentacaoEnvio;
 import model.Usuario;
+import util.FiltroUnidadeUtil;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -219,18 +220,20 @@ public class MovimentacaoEnvioDAO {
 
 	//Lista tabela na tela Consulta Envio
 	public List<MovimentacaoEnvio> listarTodos() throws SQLException {
-	    String sql = "SELECT e.*, " +
+		String sql = "SELECT e.*, " +
 	             "orig.nome_empresa AS nome_origem, " +
 	             "orig.origem_codigo AS origem_codigo, " +
 	             "orig.sufixo AS origem_sufixo, " +
 	             "dest.nome_empresa AS nome_destino, " +
 	             "dest.origem_codigo AS destino_codigo, " +
 	             "dest.sufixo AS destino_sufixo, " +
-	             "ms.nome AS status_nome, ms.cor AS status_cor " +
+	             "ms.nome AS status_nome, ms.cor AS status_cor, " +
+	             "rec.comprovante AS comprovante " + // 👈 ESPAÇO ADICIONADO AQUI
 	             "FROM movimentacao_envio e " +
 	             "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
 	             "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
-	             "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id ...";
+	             "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
+	             "LEFT JOIN movimentacao_recebimento rec ON e.id_envio = rec.envio_id";
 
 	    String sqlItens = "SELECT iei.id_equipamento, eq.id_sistema, eq.patrimonio, eq.numero_serie, " +
 	                      "p.modelo AS nome_produto, m.nome_marca AS marca " +
@@ -240,10 +243,10 @@ public class MovimentacaoEnvioDAO {
 	                      "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
 	                      "WHERE iei.id_envio = ?";
 
-        String sqlHistoricoEnvio = "SELECT h.*, ms.nome AS status_nome, ms.cor AS status_cor " +
-                                   "FROM movimentacao_historico h " +
-                                   "LEFT JOIN movimentacao_status ms ON h.status_id = ms.id " +
-                                   "WHERE h.id_envio = ? ORDER BY h.data_hora ASC";
+       String sqlHistoricoEnvio = "SELECT h.*, ms.nome AS status_nome, ms.cor AS status_cor " +
+                                  "FROM movimentacao_historico h " +
+                                  "LEFT JOIN movimentacao_status ms ON h.status_id = ms.id " +
+                                  "WHERE h.id_envio = ? ORDER BY h.data_hora ASC";
 
 	    List<MovimentacaoEnvio> lista = new java.util.ArrayList<>();
 
@@ -273,7 +276,8 @@ public class MovimentacaoEnvioDAO {
                 env.setCodigoRastreio(rs.getString("codigo_rastreio"));
                 env.setNumeroNota(rs.getString("numero_nota"));
                 env.setResponsavelEnvio(rs.getString("responsavel_envio"));
-	            
+                env.setComprovante(rs.getString("comprovante")); // 👈 ADICIONE ESTA LINHA
+               
 	            if (rs.getDate("data_previsa_entrega") != null) {
 	                env.setDataPrevisaoEntrega(rs.getDate("data_previsa_entrega").toLocalDate());
 	            }
@@ -327,117 +331,7 @@ public class MovimentacaoEnvioDAO {
 	    return lista;
 	}
 	
-	// Novo método exclusivo para telas que devem ocultar o Rascunho (ID 5)
-	/*public List<MovimentacaoEnvio> listarTodosExcetoRascunho() throws SQLException {
-	    String sql = "SELECT e.*, " +
-	                 "orig.nome_empresa AS nome_origem, " +
-	                 "orig.origem_codigo AS origem_codigo, " +
-	                 "orig.sufixo AS origem_sufixo, " +
-	                 "dest.nome_empresa AS nome_destino, " +
-	                 "dest.origem_codigo AS destino_codigo, " +
-	                 "dest.sufixo AS destino_sufixo, " +
-	                 "ms.nome AS status_nome, ms.cor AS status_cor " +
-	                 "FROM movimentacao_envio e " +
-	                 "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
-	                 "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
-	                 "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
-	                 "WHERE e.status_id != 5 " + 
-	                 "ORDER BY e.data_envio DESC, e.id_envio DESC";
-
-	    String sqlItens = "SELECT iei.id_equipamento, eq.id_sistema, eq.patrimonio, eq.numero_serie, " +
-	                      "p.modelo AS nome_produto, m.nome_marca AS marca " +
-	                      "FROM movimentacao_envio_itens iei " +
-	                      "INNER JOIN equipamentos eq ON iei.id_equipamento = eq.id_equipamento " +
-	                      "INNER JOIN produtos p ON eq.id_produto = p.id " +
-	                      "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
-	                      "WHERE iei.id_envio = ?";
-
-	    String sqlHistoricoEnvio = "SELECT h.*, ms.nome AS status_nome, ms.cor AS status_cor " +
-	                               "FROM movimentacao_historico h " +
-	                               "LEFT JOIN movimentacao_status ms ON h.status_id = ms.id " +
-	                               "WHERE h.id_envio = ? ORDER BY h.data_hora ASC";
-
-	    List<MovimentacaoEnvio> lista = new java.util.ArrayList<>();
-
-	    try (Connection conn = Conexao.conectar();
-	         PreparedStatement stmt = conn.prepareStatement(sql);
-	         ResultSet rs = stmt.executeQuery()) {
-
-	        while (rs.next()) {
-	            MovimentacaoEnvio env = new MovimentacaoEnvio();
-	            env.setIdEnvio(rs.getLong("id_envio"));
-	            env.setDataEnvio(rs.getDate("data_envio").toLocalDate());
-	            env.setOrigemId(rs.getLong("origem_id"));
-	            env.setDestinoId(rs.getLong("destino_id"));
-	            
-	            // --- DADOS DA ORIGEM E DESTINO COM CÓDIGO E SUFIXO ---
-	            env.setNomeOrigem(rs.getString("nome_origem"));
-	            env.setOrigemCodigo(rs.getLong("origem_codigo"));
-	            env.setOrigemSufixo(rs.getString("origem_sufixo"));
-	            
-	            env.setNomeDestino(rs.getString("nome_destino"));
-	            env.setDestinoCodigo(rs.getLong("destino_codigo"));
-	            env.setDestinoSufixo(rs.getString("destino_sufixo"));
-	            // -----------------------------------------------------
-
-	            env.setResponsavel(rs.getString("responsavel"));
-	            env.setTransportadora(rs.getString("transportadora"));
-	            env.setCodigoRastreio(rs.getString("codigo_rastreio"));
-	            env.setNumeroNota(rs.getString("numero_nota"));
-	            env.setResponsavelEnvio(rs.getString("responsavel_envio"));
-	            
-	            if (rs.getDate("data_previsa_entrega") != null) {
-	                env.setDataPrevisaoEntrega(rs.getDate("data_previsa_entrega").toLocalDate());
-	            }
-	            env.setObservacoes(rs.getString("observacoes"));
-	            env.setStatusId(rs.getLong("status_id"));
-	            env.setStatusNome(rs.getString("status_nome") != null ? rs.getString("status_nome") : "Desconhecido");
-	            env.setStatusCor(rs.getString("status_cor") != null ? rs.getString("status_cor") : "#6c757d");
-	            
-	            // Busca os produtos/itens vinculados
-	            List<Map<String, Object>> produtosEnvio = new java.util.ArrayList<>();
-	            try (PreparedStatement stmtItens = conn.prepareStatement(sqlItens)) {
-	                stmtItens.setLong(1, env.getIdEnvio());
-	                try (ResultSet rsItens = stmtItens.executeQuery()) {
-	                    while (rsItens.next()) {
-	                        Map<String, Object> prod = new HashMap<>();
-	                        prod.put("idSistema", rsItens.getString("id_sistema"));
-	                        prod.put("patrimonio", rsItens.getString("patrimonio"));
-	                        prod.put("produtoNome", (rsItens.getString("marca") != null ? rsItens.getString("marca") + " - " : "") + rsItens.getString("nome_produto"));
-	                        prod.put("numeroSerie", rsItens.getString("numero_serie"));
-	                        produtosEnvio.add(prod);
-	                    }
-	                }
-	            }
-	            env.setProdutos(produtosEnvio);
-
-	            // Busca o histórico do envio
-	            List<model.MovimentacaoHistorico> listaHistorico = new java.util.ArrayList<>();
-	            try (PreparedStatement stmtHist = conn.prepareStatement(sqlHistoricoEnvio)) {
-	                stmtHist.setLong(1, env.getIdEnvio());
-	                try (ResultSet rsHist = stmtHist.executeQuery()) {
-	                    while (rsHist.next()) {
-	                        model.MovimentacaoHistorico hist = new model.MovimentacaoHistorico();
-	                        hist.setIdHistorico(rsHist.getLong("id_historico"));
-	                        hist.setIdEnvio(rsHist.getLong("id_envio"));
-	                        hist.setStatusId(rsHist.getLong("status_id"));
-	                        hist.setStatusNome(rsHist.getString("status_nome"));
-	                        
-	                        if (rsHist.getTimestamp("data_hora") != null) {
-	                            hist.setDataHora(rsHist.getTimestamp("data_hora").toLocalDateTime());
-	                        }
-	                        
-	                        hist.setObservacao(rsHist.getString("observacao"));
-	                        listaHistorico.add(hist);
-	                    }
-	                }
-	            }
-	            env.setHistorico(listaHistorico);
-	            lista.add(env);
-	        }
-	    }
-	    return lista;
-	}*/
+	
 	//Metodo utilizado para o MenuServlet movimentacao envio no Dashboard
 	public List<MovimentacaoEnvio> listarRecentesPendentes(int limite) throws SQLException {
 	    List<MovimentacaoEnvio> lista = new java.util.ArrayList<>();
@@ -488,37 +382,28 @@ public class MovimentacaoEnvioDAO {
 	    return lista;
 	}
 	
-	 /*Busca no banco de dados todas movimentações envio e devolução
-	 * Construção Dinâmica da Query: Monta uma consulta SQL base fazendo junções (LEFT JOIN) com as 
-	 * tabelas de filiais (origem e destino) e de status, permitindo adicionar filtros sob demanda com a cláusula 
-	 * WHERE 1=1
-	 * Filtro por Status: Aplica restrições inteligentes dependendo do parâmetro recebido, como o agrupamento padrão 
-	 * ('Aguardando Envio', 'Em Trânsito', 'Enviado') para a opção ativos_padrao, ou buscas exatas por status 
-	 * específicos ignorando letras maiúsculas/minúsculas.
-	 * Filtro por Período (Datas): Restringe os resultados com base em uma faixa de datas de envio 
-	 * (data_envio maior ou igual à data inicial e menor ou igual à data final, quando informadas).
-     * Hidratação do Objeto: Percorre o resultado do banco (ResultSet) mapeando cada coluna para os atributos
-     *  do modelo MovimentacaoEnvio (incluindo dados gerais, notas fiscais, o responsável pela efetivação e os
-     *   nomes legíveis de origem e destino).
+	 /*
      * Busca de Itens e Histórico Relacionados: Para cada envio encontrado na listagem principal, 
      * executa subconsultas para preencher a lista de produtos/equipamentos vinculados e o histórico de
      *  movimentações/status, retornando a estrutura completa pronta para exibição ou conversão em JSON na API.
 	 */
 		public List<MovimentacaoEnvio> listarComFiltros(String statusFiltro, String dataInicioStr, String dataFimStr) throws SQLException {
 		    StringBuilder sql = new StringBuilder(
-		        "SELECT e.*, " +
-		        "orig.nome_empresa AS nome_origem, " +
-		        "orig.origem_codigo AS origem_codigo, " +
-		        "orig.sufixo AS origem_sufixo, " +
-		        "dest.nome_empresa AS nome_destino, " +
-		        "dest.origem_codigo AS destino_codigo, " +
-		        "dest.sufixo AS destino_sufixo, " +
-		        "ms.nome AS status_nome, ms.cor AS status_cor " +
-		        "FROM movimentacao_envio e " +
-		        "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
-		        "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
-		        "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
-		        "WHERE 1=1 "
+		    		"SELECT e.*, " +
+    		        "orig.nome_empresa AS nome_origem, " +
+    		        "orig.origem_codigo AS origem_codigo, " +
+    		        "orig.sufixo AS origem_sufixo, " +
+    		        "dest.nome_empresa AS nome_destino, " +
+    		        "dest.origem_codigo AS destino_codigo, " +
+    		        "dest.sufixo AS destino_sufixo, " +
+    		        "ms.nome AS status_nome, ms.cor AS status_cor, " +
+    		        "rec.comprovante AS comprovante " +
+    		        "FROM movimentacao_envio e " +
+    		        "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
+    		        "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
+    		        "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
+    		        "LEFT JOIN movimentacao_recebimento rec ON e.id_envio = rec.id_envio " + 
+    		        "WHERE 1=1 "
 		    );
 
         java.util.List<Object> parametros = new java.util.ArrayList<>();
@@ -592,7 +477,8 @@ public class MovimentacaoEnvioDAO {
                     env.setCodigoRastreio(rs.getString("codigo_rastreio"));
                     env.setNumeroNota(rs.getString("numero_nota"));
                     env.setResponsavelEnvio(rs.getString("responsavel_envio"));
-                    
+                    env.setComprovante(rs.getString("comprovante"));
+                                        
                     if (rs.getDate("data_previsa_entrega") != null) {
                         env.setDataPrevisaoEntrega(rs.getDate("data_previsa_entrega").toLocalDate());
                     }
@@ -1039,4 +925,31 @@ public class MovimentacaoEnvioDAO {
 	        }
 	    }
 	}
+	
+	// Conta os envios em trânsito (status_id = 2) considerando origem ou destino nas unidades permitidas
+	// Tela do Dashboard Total em Transito
+    public int contarEmTransitoPorUnidades(List<Integer> unidadesPermitidas) {
+        if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+            return 0;
+        }
+
+        String inClause = FiltroUnidadeUtil.gerarClausulaIn(unidadesPermitidas);
+        String sql = "SELECT COUNT(*) FROM movimentacao_envio WHERE status_id = 2 AND (origem_id IN " + inClause + " OR destino_id IN " + inClause + ")";
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            int proximoIndice = FiltroUnidadeUtil.preencherParametros(stmt, 1, unidadesPermitidas);
+            FiltroUnidadeUtil.preencherParametros(stmt, proximoIndice, unidadesPermitidas);
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
 }

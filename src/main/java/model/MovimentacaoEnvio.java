@@ -19,6 +19,9 @@ public class MovimentacaoEnvio {
     // Campo para o Número da Nota Fiscal
     private String numeroNota;
     
+    // 👇 ADICIONE ESTE CAMPO PARA O COMPROVANTE 👇
+    private String comprovante;
+    
     // Campos para exibir os nomes na tela de consulta
     private String nomeOrigem;
     private String nomeDestino;
@@ -101,6 +104,10 @@ public class MovimentacaoEnvio {
     
     public String getNumeroNota() { return numeroNota; }
     public void setNumeroNota(String numeroNota) { this.numeroNota = numeroNota; }
+    
+    // 👇 ADICIONE OS GETTER E SETTER DO COMPROVANTE 👇
+    public String getComprovante() { return comprovante; }
+    public void setComprovante(String comprovante) { this.comprovante = comprovante; }
 
     public List<Map<String, Object>> getProdutos() { return produtos; }
     public void setProdutos(List<Map<String, Object>> produtos) { this.produtos = produtos; }

@@ -230,6 +230,8 @@
                         <!-- Preenchido via JS -->
                     </ul>
                 </div>
+                <!-- 👇 ADICIONE ESTE CONTAINER DO COMPROVANTE AQUI 👇 -->
+                <div id="containerComprovanteDetalhes" style="display: none;" class="mt-3 p-3 bg-light rounded border"></div>
             </div>
             <div class="modal-footer bg-light">
                 <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Fechar</button>

@@ -56,9 +56,9 @@
                     <!-- Status do Chamado -->
                     <div class="col-md-3">
                         <label class="form-label small fw-bold">Status do Chamado</label>
-                        <select class="form-select form-select-sm" id="filtroStatus">
-                            <option value="">Todos</option>
+                        <select class="form-select form-select-sm" id="filtroStatus">                          
                             <option value="1">Aberto / Pendente</option>
+                             <option value="">Todos</option>
                             <option value="2">Em Análise</option>
                             <option value="3">Em Atendimento</option>
                             <option value="4">Aguardando Peça</option>

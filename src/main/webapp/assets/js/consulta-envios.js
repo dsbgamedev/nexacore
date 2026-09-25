@@ -3,23 +3,31 @@ let paginaAtual = 1;
 const itensPorPagina = 20;
 
 document.addEventListener("DOMContentLoaded", function () {
-// Define a data atual (YYYY-MM-DD)
-    const hoje = new Date().toISOString().split('T')[0];
+	// Pega a data e o momento atual
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0'); // Mês atual com 2 dígitos
+    const diaAtual = String(hoje.getDate()).padStart(2, '0');   // Dia atual com 2 dígitos
+
+    // Define o primeiro dia do mês atual (ex: 2026-09-01)
+    const primeiroDiaMes = `${ano}-${mes}-01`;
+    // Define a data de hoje (ex: 2026-09-23)
+    const dataHojeStr = `${ano}-${mes}-${diaAtual}`;
     
     const filtroDataInicio = document.getElementById("filtroDataInicio");
     const filtroDataFim = document.getElementById("filtroDataFim");
 
-    // Preenche Data Início com hoje se estiver vazia
+    // Preenche Data Início com o dia 01 do mês se estiver vazia
     if (filtroDataInicio && !filtroDataInicio.value) {
-        filtroDataInicio.value = hoje;
+        filtroDataInicio.value = primeiroDiaMes;
     }
 
     // Preenche Data Fim com hoje se estiver vazia
     if (filtroDataFim && !filtroDataFim.value) {
-        filtroDataFim.value = hoje;
+        filtroDataFim.value = dataHojeStr;
     }
 
-    // Carrega os envios respeitando os filtros iniciais da tela
+    // Carrega os envios respeitando o período do mês atual
     carregarEnvios();
 
     const inputPesquisa = document.getElementById("inputPesquisaGlobal");
@@ -61,8 +69,16 @@ document.getElementById('btnAtualizarTela').addEventListener('click', function()
 // Listener para o botão de limpar filtros
     const btnLimpar = document.getElementById("btnLimparFiltros");
     if (btnLimpar) {
-        btnLimpar.addEventListener("click", function () {
-            const hoje = new Date().toISOString().split('T')[0];
+		btnLimpar.addEventListener("click", function () {
+            const dataAtualObj = new Date();
+            const ano = dataAtualObj.getFullYear();
+            const mes = String(dataAtualObj.getMonth() + 1).padStart(2, '0');
+            
+            // Primeiro dia do mês atual (ex: "2026-09-01")
+            const primeiroDiaMes = `${ano}-${mes}-01`;
+            
+            // Data de hoje para a data fim (ou se preferir manter o padrão atual)
+            const hoje = dataAtualObj.toISOString().split('T')[0];
 
             const inputPesquisa = document.getElementById("inputPesquisaGlobal");
             const filtroStatus = document.getElementById("filtroStatus");
@@ -71,7 +87,7 @@ document.getElementById('btnAtualizarTela').addEventListener('click', function()
 
             if (inputPesquisa) inputPesquisa.value = '';
             if (filtroStatus) filtroStatus.value = 'ativos_padrao';
-            if (filtroDataInicio) filtroDataInicio.value = hoje;
+            if (filtroDataInicio) filtroDataInicio.value = primeiroDiaMes; // 👈 Agora usa o dia 01 do mês
             if (filtroDataFim) filtroDataFim.value = hoje;
 
             paginaAtual = 1;
@@ -326,7 +342,8 @@ function filtrarEnvios(termo) {
 
 function visualizarEnvio(idEnvio) {
     const envio = listaGlobalEnvios.find(e => e.idEnvio === idEnvio || e.id === idEnvio);
-
+	console.log("Dados do envio selecionado:", envio); // Aperte F12 no navegador e veja se 'comprovante' aparece aqui
+	
     document.getElementById("tituloModalDetalhes").innerHTML = `<i class="fa fa-info-circle me-2"></i>Detalhes do Envio #${idEnvio}`;
     
     // --- EXIBIÇÃO NO MODAL FORMATADA ---
@@ -420,8 +437,90 @@ function visualizarEnvio(idEnvio) {
             </li>
         `;
     }
+
+    // =========================================================================
+    // EXIBIÇÃO DO COMPROVANTE USANDO O SEU ImagemServlet (@WebServlet("/api/imagens/*"))
+    // =========================================================================
+    let containerComprovante = document.getElementById("containerComprovanteDetalhes");
+    if (!containerComprovante) {
+        const modalBody = document.querySelector("#modalDetalhesEnvio .modal-body");
+        if (modalBody) {
+            containerComprovante = document.createElement("div");
+            containerComprovante.id = "containerComprovanteDetalhes";
+            containerComprovante.className = "mt-4 p-3 bg-light rounded border";
+            modalBody.appendChild(containerComprovante);
+        }
+    }
+
+    if (envio && (envio.comprovante || envio.caminhoComprovante)) {
+        let caminhoArquivo = envio.comprovante || envio.caminhoComprovante;
+        
+        // Garante que o caminho comece com barra se não começar, para formar /api/imagens/recebimentos/foto.jpg
+        if (!caminhoArquivo.startsWith("/")) {
+            caminhoArquivo = "/" + caminhoArquivo;
+        }
+
+        let extensao = caminhoArquivo.split('.').pop().toLowerCase();
+        let ehVideo = ['mp4', 'webm', 'ogg', 'mov'].includes(extensao);
+        
+        // Monta a URL consumindo o path info do seu ImagemServlet
+        let urlArquivo = `${contextPath}/api/imagens${caminhoArquivo}`;
+        
+        let conteudoAnexo = '';
+        if (ehVideo) {
+            conteudoAnexo = `
+                <video controls class="w-100 rounded" style="max-height: 250px;">
+                    <source src="${urlArquivo}" type="video/${extensao}">
+                    Seu navegador não suporta a exibição de vídeos.
+                </video>
+            `;
+        } else {
+            conteudoAnexo = `
+                <div class="text-center">
+                    <a href="${urlArquivo}" target="_blank" title="Clique para ampliar">
+                        <img src="${urlArquivo}" alt="Comprovante de Recebimento" class="img-fluid rounded border" style="max-height: 200px; object-fit: contain;">
+                    </a>
+                    <div class="small text-muted mt-1">Clique na imagem para abrir em tamanho real.</div>
+                </div>
+            `;
+        }
+
+        containerComprovante.innerHTML = `
+            <h6 class="fw-bold text-primary mb-2"><i class="fa fa-paperclip me-1"></i> Comprovante de Recebimento / Avaria</h6>
+            ${conteudoAnexo}
+        `;
+        containerComprovante.style.display = 'block';
+    } else {
+        if (containerComprovante) {
+            containerComprovante.style.display = 'none';
+        }
+    }
 }
 
+function preencherTabelaProdutosDetalhe(lista) {
+    const tbodyProdutos = document.getElementById("tabelaProdutosDetalhe");
+    if (!tbodyProdutos) return;
+
+    if (lista && lista.length > 0) {
+        tbodyProdutos.innerHTML = "";
+        lista.forEach(eq => {
+            let produto = eq.produtoNome || eq.nomeProduto || eq.descricaoProduto || eq.nome 
+                        || (eq.produto ? (eq.produto.nome || eq.produto.descricao || eq.produto.nomeProduto) : null) 
+                        || (eq.idProduto ? "Produto #" + eq.idProduto : '-');
+
+            tbodyProdutos.innerHTML += `
+                <tr>
+                    <td class="ps-3 fw-bold">${eq.idSistema || '-'}</td>
+                    <td>${eq.patrimonio || '-'}</td>
+                    <td>${produto}</td>
+                    <td>${eq.numeroSerie || eq.serie || '-'}</td>
+                </tr>
+            `;
+        });
+    } else {
+        tbodyProdutos.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Nenhum produto vinculado a este envio.</td></tr>`;
+    }
+}
 function preencherTabelaProdutosDetalhe(lista) {
     const tbodyProdutos = document.getElementById("tabelaProdutosDetalhe");
     if (!tbodyProdutos) return;

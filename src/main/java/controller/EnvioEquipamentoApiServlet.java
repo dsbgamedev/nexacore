@@ -155,7 +155,8 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             String statusFiltro = req.getParameter("status");
             String dataInicioStr = req.getParameter("dataInicio");
             String dataFimStr = req.getParameter("dataFim");
-
+           
+            // O DAO restringe os dados com base no usuário e aplica os filtros de forma segura no banco
             List<MovimentacaoEnvio> listaFiltrada = dao.listarComFiltrosPorUsuario(statusFiltro, dataInicioStr, dataFimStr, usuarioLogado);
 
             if (ehDevolucao) {

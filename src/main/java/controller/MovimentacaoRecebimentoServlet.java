@@ -3,6 +3,7 @@ package controller;
 import com.google.gson.Gson;
 import dao.MovimentacaoRecebimentoDAO;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +25,11 @@ import java.util.stream.Collectors;
     "/api/devolucoes/detalhes",
     "/api/devolucoes/receber"
 })
+@MultipartConfig(
+	    fileSizeThreshold = 1024 * 1024 * 2,  // 2MB
+	    maxFileSize = 1024 * 1024 * 50,       // 50MB (para iti video wenno dakes a ladawan)
+	    maxRequestSize = 1024 * 1024 * 100    // 100MB
+	)
 public class MovimentacaoRecebimentoServlet extends HttpServlet {
 
     private final MovimentacaoRecebimentoDAO dao = new MovimentacaoRecebimentoDAO();
@@ -176,13 +182,43 @@ public class MovimentacaoRecebimentoServlet extends HttpServlet {
                 String dataRecebimento = request.getParameter("dataRecebimento");
                 String responsavel = request.getParameter("responsavel");
                 String condicaoGeral = request.getParameter("condicaoGeral");
+                
+                // =========================================================================
+                // TRATAMENTO DO UPLOAD DE COMPROVANTE (Alinhado com a pasta do ImagemServlet)
+                // =========================================================================
+                String caminhoArquivoSalvo = null;
+                try {
+                    jakarta.servlet.http.Part filePart = request.getPart("comprovanteRecebimento");
+                    if (filePart != null && filePart.getSize() > 0) {
+                        String fileName = java.nio.file.Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
+                        String uniqueFileName = System.currentTimeMillis() + "_" + fileName;
+                        
+                        // Caminho unificado com o do ImagemServlet       
+                     // Diretório base unificado com o ImagemServlet
+                        String uploadPath = "C:\\uploads_nexacore\\recebimentos"; 
+                        
+                        java.io.File uploadDir = new java.io.File(uploadPath);
+                        if (!uploadDir.exists()) {
+                            uploadDir.mkdirs();
+                        }
+                        
+                        String filePath = uploadPath + java.io.File.separator + uniqueFileName;
+                        filePart.write(filePath);
+                        
+                        // O caminho relativo que será salvo no banco (ex: recebimentos/1711123_foto.jpg)
+                        caminhoArquivoSalvo = "recebimentos/" + uniqueFileName;
+                    }
+                } catch (Exception e) {
+                    System.err.println("Aviso: Nenhum arquivo enviado ou erro ao processar o anexo: " + e.getMessage());
+                }
+                // =========================================================================
 
                 boolean sucesso = false;
-
+               // Passando o caminhoArquivoSalvo para os métodos DAO (certifique-se de que os métodos no DAO aceitam essa String)
                 if ("devolucao".equals(tipoOperacao)) {
-                    sucesso = dao.registrarRecebimentoDevolucao(idMovimentacao, dataRecebimento, responsavel, condicaoGeral);
+                    sucesso = dao.registrarRecebimentoDevolucao(idMovimentacao, dataRecebimento, responsavel, condicaoGeral, caminhoArquivoSalvo);
                 } else {
-                    sucesso = dao.registrarRecebimento(idMovimentacao, dataRecebimento, responsavel, condicaoGeral);
+                    sucesso = dao.registrarRecebimento(idMovimentacao, dataRecebimento, responsavel, condicaoGeral, caminhoArquivoSalvo);
                 }
 
                 if (sucesso) {

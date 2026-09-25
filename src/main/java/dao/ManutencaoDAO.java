@@ -390,6 +390,11 @@ public class ManutencaoDAO {
     }
     
     public void atualizar(ManutencaoChamado chamado, boolean reparado) throws SQLException {
+    	// SEGURANÇA NO DAO: Validação estrita por segurança de backend
+        if (chamado.getIdStatusChamado() != null && chamado.getIdStatusChamado() == 6 && !reparado) {
+            throw new SQLException("Operação negada: Não é permitido atualizar o status para 'Finalizado' sem a confirmação de que o equipamento foi reparado.");
+        }
+
         String sqlChamado = "UPDATE manutencao_chamados SET " +
                      "id_status_chamado = ?, " +
                      "responsavel_tecnico = ?, " +
@@ -421,7 +426,7 @@ public class ManutencaoDAO {
             stmtChamado.setLong(5, chamado.getIdChamado());
             stmtChamado.executeUpdate();
 
-         // 2. Libera o equipamento se for Finalizado (6 E reparado) OU se for Cancelado (7 direto)
+            // 2. Libera o equipamento estritamente se for Finalizado (6 E reparado) OU Cancelado (7)
             boolean isFinalizadoComReparo = (chamado.getIdStatusChamado() != null && chamado.getIdStatusChamado() == 6 && reparado);
             boolean isCancelado = (chamado.getIdStatusChamado() != null && chamado.getIdStatusChamado() == 7);
 
@@ -438,6 +443,9 @@ public class ManutencaoDAO {
                         }
                     }
                 }
+            } else if (chamado.getIdStatusChamado() != null && chamado.getIdStatusChamado() == 6 && !reparado) {
+                // Dupla blindagem de segurança caso passe direto do Servlet
+                throw new SQLException("Erro de integridade: Tentativa de finalizar chamado sem confirmação de reparo.");
             }
 
             conn.commit();
@@ -501,4 +509,41 @@ public class ManutencaoDAO {
             Conexao.fechar(null, null, conn);
         }
     }
+   
+    //Classe para contar quantidade de equipamentos em manutenção no Dashboard
+    public int contarChamadosEmAndamento(List<Integer> unidadesPermitidas) {
+        if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+            return 0;
+        }
+
+        // Cria dinamicamente os parâmetros (?) para a cláusula IN
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < unidadesPermitidas.size(); i++) {
+            placeholders.append(i == 0 ? "?" : ", ?");
+        }
+
+        // A mágica acontece aqui: fazemos JOIN com 'filiais' para cruzar 
+        // o id_filial do chamado com o origem_codigo que a segurança enviou.
+        String sql = "SELECT COUNT(*) FROM manutencao_chamados m " +
+                     "JOIN filiais f ON m.filial_origem_id = f.id_filial " +
+                     "WHERE m.id_status_chamado NOT IN (6, 7) " +
+                     "AND f.origem_codigo IN (" + placeholders.toString() + ")";
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            for (int i = 0; i < unidadesPermitidas.size(); i++) {
+                stmt.setInt(i + 1, unidadesPermitidas.get(i));
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    } 
 }

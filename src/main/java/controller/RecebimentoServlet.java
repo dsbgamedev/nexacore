@@ -41,15 +41,21 @@ public class RecebimentoServlet extends HttpServlet {
             return;
         }
 
-        // 2. Validação de Filial Ativa (Opcional por página, caso queira garantir que o usuário 
-        // só abra a tela de recebimentos se estiver com uma filial válida selecionada no menu superior)
+        // 2. Validação de Filial Ativa
         Integer filialAtivaId = usuario.getUnidadeAtivaId();
         if (!isAdmin && filialAtivaId == null) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Acesso negado: Nenhuma filial ativa selecionada no menu superior.");
             return;
         }
 
-        // Se passou por todas as barreiras, encaminha para a tela JSP de recebimento/devolução
+        // 3. Captura o nome/responsável seguindo o mesmo padrão do EnvioEquipamentoServlet
+        String nomeResponsavel = (usuario.getNomeCompleto() != null && !usuario.getNomeCompleto().isEmpty()) 
+                                 ? usuario.getNomeCompleto() 
+                                 : usuario.getUsername(); // ou getLogin()
+        
+        request.setAttribute("loginUsuarioLogado", nomeResponsavel);
+
+        // Encaminha para a tela JSP de recebimento/devolução
         request.getRequestDispatcher("/WEB-INF/jsp/recebimento-equipamento.jsp").forward(request, response);
     }
 }

@@ -205,6 +205,7 @@
     
     // Passa o nome do usuário logado para uso no JS se necessário
     window.usuarioLogadoNome = "${nomeUsuarioLogado}";
+    const usuarioLogadoSessao = "${loginUsuarioLogado}";
 </script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/envio-equipamento.js"></script>

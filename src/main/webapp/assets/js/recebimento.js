@@ -5,6 +5,16 @@ document.addEventListener("DOMContentLoaded", function () {
     const inputData = document.getElementById('dataRecebimento');
     if (inputData) inputData.value = hoje;
 
+    // Preenche automaticamente e trava o Responsável pelo Recebimento com o usuário da sessão
+    const responsavelInput = document.getElementById('responsavel');
+    if (responsavelInput) {
+        if (typeof usuarioLogadoSessao !== 'undefined' && usuarioLogadoSessao) {
+            responsavelInput.value = usuarioLogadoSessao;
+        }
+        responsavelInput.setAttribute('readonly', true);
+        responsavelInput.classList.add('bg-light');
+    }
+
     // Verifica se a página foi aberta via parâmetro de devolução (ex: ?tipo=devolucao)
     const urlParams = new URLSearchParams(window.location.search);
     const tipoUrl = urlParams.get('tipo');
@@ -43,7 +53,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    const formRecebimento = document.getElementById('formRecebimento');
+	const formRecebimento = document.getElementById('formRecebimento');
     if (formRecebimento) {
         formRecebimento.addEventListener('submit', function (e) {
             e.preventDefault();
@@ -62,8 +72,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 return; 
             }
 
-            const formData = new URLSearchParams(new FormData(this));
+            // CORREÇÃO AQUI: Usa FormData puro para suportar o arquivo/imagem
+            const formData = new FormData(this);
             formData.append('tipoOperacao', tipoOperacaoAtual);
+
+            // Garante que o ID selecionado seja enviado com o nome esperado no Servlet
+            const selectEnvio = document.getElementById('selectEnvio');
+            if (selectEnvio && selectEnvio.value) {
+                formData.append('idMovimentacao', selectEnvio.value);
+            }
 
             const endpointRecebimento = tipoOperacaoAtual === 'devolucao' 
                 ? '/api/devolucoes/receber' 
@@ -71,7 +88,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             fetch(contextPath + endpointRecebimento, {
                 method: 'POST',
-                body: formData
+                body: formData // O navegador define automaticamente o Content-Type como multipart/form-data
             })
             .then(async response => {
                 const data = await response.json();
@@ -257,11 +274,14 @@ function marcarItensComoRecebidosNaTabela() {
 function limparCampos() {
     const select = document.getElementById('selectEnvio');
     if (select) select.value = ''; 
+	
+	const inputArquivo = document.getElementById('comprovanteRecebimento');
+	    if (inputArquivo) inputArquivo.value = '';
 
     const origemInput = document.getElementById('origem');
     if (origemInput) {
         origemInput.value = '';
-        origemInput.removeAttribute('readonly'); // Libera temporariamente para limpeza limpa
+        origemInput.removeAttribute('readonly'); 
         origemInput.classList.remove('bg-light');
     }
 
@@ -279,8 +299,15 @@ function limparCampos() {
         rastreioInput.classList.remove('bg-light');
     }
 	
+    // Mantém o Responsável preenchido com o usuário logado e travado
     const responsavelInput = document.getElementById('responsavel');
-    if (responsavelInput) responsavelInput.value = '';
+    if (responsavelInput) {
+        if (typeof usuarioLogadoSessao !== 'undefined' && usuarioLogadoSessao) {
+            responsavelInput.value = usuarioLogadoSessao;
+        }
+        responsavelInput.setAttribute('readonly', true);
+        responsavelInput.classList.add('bg-light');
+    }
 
     const condicaoGeralInput = document.getElementById('condicaoGeral');
     if (condicaoGeralInput) condicaoGeralInput.value = 'Todos os itens em perfeito estado';

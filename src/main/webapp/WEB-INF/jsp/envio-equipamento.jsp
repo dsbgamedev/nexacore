@@ -74,8 +74,8 @@
                     <input type="text" class="form-control form-control-sm" id="codigoRastreio" placeholder="Ex: AA123456789BR" required>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label fw-bold small">Data Prevista de Entrega</label>
-                    <input type="date" class="form-control form-control-sm" id="dataPrevisao">
+                    <label class="form-label fw-bold small">Data Prevista de Entrega *</label>
+                    <input type="date" class="form-control form-control-sm" id="dataPrevisao" required>
                 </div>
             </div>
 
