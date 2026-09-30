@@ -1,6 +1,7 @@
 package dao;
 
 import conexao.Conexao;
+import dto.DashboardManutencaoDTO;
 import model.ManutencaoChamado;
 
 import java.sql.*;
@@ -510,6 +511,7 @@ public class ManutencaoDAO {
         }
     }
    
+    /*
     //Classe para contar quantidade de equipamentos em manutenção no Dashboard
     public int contarChamadosEmAndamento(List<Integer> unidadesPermitidas) {
         if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
@@ -546,4 +548,184 @@ public class ManutencaoDAO {
         }
         return 0;
     } 
+    
+    // 10. Conta os chamados de manutenção vencidos (previsão anterior a hoje e não finalizados/cancelados) por unidades
+    public int contarChamadosVencidosPorUnidades(List<Integer> unidadesPermitidas) {
+        if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+            return 0;
+        }
+
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < unidadesPermitidas.size(); i++) {
+            placeholders.append(i == 0 ? "?" : ", ?");
+        }
+
+        // Compara se a previsão de atendimento é menor que a data atual (CURRENT_DATE) 
+        // e garante que o chamado não está finalizado (6) nem cancelado (7)
+        String sql = "SELECT COUNT(*) FROM manutencao_chamados m " +
+                     "JOIN filiais f ON m.filial_origem_id = f.id_filial " +
+                     "WHERE m.id_status_chamado NOT IN (6, 7) " +
+                     "AND m.previsao_atendimento < CURRENT_DATE " +
+                     "AND f.origem_codigo IN (" + placeholders.toString() + ")";
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            for (int i = 0; i < unidadesPermitidas.size(); i++) {
+                stmt.setInt(i + 1, unidadesPermitidas.get(i));
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }*/
+    
+    
+
+    // 11. Lista os chamados de manutenção vencidos para exibição em relatórios ou painéis de alerta
+    public List<ManutencaoChamado> listarChamadosVencidosPorUnidades(List<Integer> unidadesPermitidas) throws SQLException {
+        List<ManutencaoChamado> lista = new ArrayList<>();
+        if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+            return lista;
+        }
+
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < unidadesPermitidas.size(); i++) {
+            placeholders.append(i == 0 ? "?" : ", ?");
+        }
+
+        String sql = "SELECT c.*, s.nome_status, e.nome_identificador, e.patrimonio " +
+                     "FROM manutencao_chamados c " +
+                     "JOIN filiais f ON c.filial_origem_id = f.id_filial " +
+                     "LEFT JOIN status_chamado s ON c.id_status_chamado = s.id_status_chamado " +
+                     "LEFT JOIN equipamentos e ON c.id_equipamento = e.id_equipamento " +
+                     "WHERE c.id_status_chamado NOT IN (6, 7) " +
+                     "AND c.previsao_atendimento < CURRENT_DATE " +
+                     "AND f.origem_codigo IN (" + placeholders.toString() + ") " +
+                     "ORDER BY c.previsao_atendimento ASC, c.id_chamado DESC";
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            for (int i = 0; i < unidadesPermitidas.size(); i++) {
+                stmt.setInt(i + 1, unidadesPermitidas.get(i));
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    ManutencaoChamado m = new ManutencaoChamado();
+                    m.setIdChamado(rs.getLong("id_chamado"));
+                    m.setIdEquipamento(rs.getLong("id_equipamento"));
+                    
+                    String nomeEquip = rs.getString("nome_identificador");
+                    String patrimonio = rs.getString("patrimonio");
+                    m.setNomeEquipamento(nomeEquip != null ? nomeEquip + " (Pat: " + patrimonio + ")" : "EQ-" + m.getIdEquipamento());
+
+                    if (rs.getDate("data_abertura") != null) {
+                        m.setDataAbertura(rs.getDate("data_abertura").toLocalDate());
+                    }
+                    m.setSolicitante(rs.getString("solicitante"));
+                    m.setTipoProblema(rs.getString("tipo_problema"));
+                    m.setPrioridade(rs.getString("prioridade"));
+                    m.setDescricaoProblema(rs.getString("descricao_problema"));
+                    m.setResponsavelTecnico(rs.getString("responsavel_tecnico"));
+                    
+                    if (rs.getDate("previsao_atendimento") != null) {
+                        m.setPrevisaoAtendimento(rs.getDate("previsao_atendimento").toLocalDate());
+                    }
+                    
+                    String nomeStatus = rs.getString("nome_status");
+                    m.setNomeStatus(nomeStatus != null ? nomeStatus : "Aberto");
+                    m.setIdStatusChamado(rs.getLong("id_status_chamado"));
+                    
+                    lista.add(m);
+                }
+            }
+        }
+        return lista;
+    }
+    
+ // Método em lote otimizado para o Dashboard do MenuServlet
+    public void carregarDadosDashboard(List<Integer> unidadesPermitidas, DashboardManutencaoDTO resultado) throws SQLException {
+        if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+            return;
+        }
+
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < unidadesPermitidas.size(); i++) {
+            placeholders.append(i == 0 ? "?" : ", ?");
+        }
+
+        // 1. Lista Recentes Abertos
+        String sqlRecentes = "SELECT c.*, s.nome_status, e.nome_identificador, e.patrimonio " +
+                             "FROM manutencao_chamados c " +
+                             "JOIN filiais f ON c.filial_origem_id = f.id_filial " +
+                             "LEFT JOIN status_chamado s ON c.id_status_chamado = s.id_status_chamado " +
+                             "LEFT JOIN equipamentos e ON c.id_equipamento = e.id_equipamento " +
+                             "WHERE LOWER(s.nome_status) NOT IN ('finalizado', 'cancelado', 'concluído') " +
+                             "AND f.origem_codigo IN (" + placeholders.toString() + ") " +
+                             "ORDER BY c.data_abertura DESC, c.id_chamado DESC LIMIT ?";
+
+        // 2. Contagens (Em andamento e Vencidos) em uma query única combinada
+        String sqlContagens = "SELECT " +
+                              "SUM(CASE WHEN m.id_status_chamado NOT IN (6, 7) THEN 1 ELSE 0 END) AS em_andamento, " +
+                              "SUM(CASE WHEN m.id_status_chamado NOT IN (6, 7) AND m.previsao_atendimento < CURRENT_DATE THEN 1 ELSE 0 END) AS vencidos " +
+                              "FROM manutencao_chamados m " +
+                              "JOIN filiais f ON m.filial_origem_id = f.id_filial " +
+                              "WHERE f.origem_codigo IN (" + placeholders.toString() + ")";
+
+        try (Connection conn = Conexao.conectar()) {
+            
+            // Executa Recentes
+            try (PreparedStatement stmt = conn.prepareStatement(sqlRecentes)) {
+                int idx = 1;
+                for (Integer u : unidadesPermitidas) stmt.setInt(idx++, u);
+                stmt.setInt(idx, 5); // limite 5
+                
+                try (ResultSet rs = stmt.executeQuery()) {
+                    List<ManutencaoChamado> lista = new ArrayList<>();
+                    while (rs.next()) {
+                        ManutencaoChamado m = new ManutencaoChamado();
+                        m.setIdChamado(rs.getLong("id_chamado"));
+                        m.setIdEquipamento(rs.getLong("id_equipamento"));
+                        String nomeEquip = rs.getString("nome_identificador");
+                        String patrimonio = rs.getString("patrimonio");
+                        m.setNomeEquipamento(nomeEquip != null ? nomeEquip + " (Pat: " + patrimonio + ")" : "EQ-" + m.getIdEquipamento());
+                        if (rs.getDate("data_abertura") != null) {
+                            m.setDataAbertura(rs.getDate("data_abertura").toLocalDate());
+                        }
+                        m.setSolicitante(rs.getString("solicitante"));
+                        m.setTipoProblema(rs.getString("tipo_problema"));
+                        m.setPrioridade(rs.getString("prioridade"));
+                        m.setDescricaoProblema(rs.getString("descricao_problema"));
+                        m.setResponsavelTecnico(rs.getString("responsavel_tecnico"));
+                        String nomeStatus = rs.getString("nome_status");
+                        m.setNomeStatus(nomeStatus != null ? nomeStatus : "Aberto");
+                        m.setIdStatusChamado(rs.getLong("id_status_chamado"));
+                        lista.add(m);
+                    }
+                    resultado.listaChamadosRecentes = lista;
+                }
+            }
+
+            // Executa Contagens combinadas
+            try (PreparedStatement stmt = conn.prepareStatement(sqlContagens)) {
+                for (int i = 0; i < unidadesPermitidas.size(); i++) {
+                    stmt.setInt(i + 1, unidadesPermitidas.get(i));
+                }
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        resultado.totalEmManutencao = rs.getInt("em_andamento");
+                        resultado.totalChamadosVencidos = rs.getInt("vencidos");
+                    }
+                }
+            }
+        }
+    }
 }

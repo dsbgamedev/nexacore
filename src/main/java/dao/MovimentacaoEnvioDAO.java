@@ -928,28 +928,44 @@ public class MovimentacaoEnvioDAO {
 	
 	// Conta os envios em trânsito (status_id = 2) considerando origem ou destino nas unidades permitidas
 	// Tela do Dashboard Total em Transito
-    public int contarEmTransitoPorUnidades(List<Integer> unidadesPermitidas) {
-        if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
-            return 0;
-        }
+	// Conta os envios em trânsito (status_id = 2) considerando a ORIGEM baseada no código ou id da filial
+	public int contarEmTransitoPorUnidades(List<Integer> unidadesPermitidas) {
+	    if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
+	        return 0;
+	    }
 
-        String inClause = FiltroUnidadeUtil.gerarClausulaIn(unidadesPermitidas);
-        String sql = "SELECT COUNT(*) FROM movimentacao_envio WHERE status_id = 2 AND (origem_id IN " + inClause + " OR destino_id IN " + inClause + ")";
+	    // Passo de segurança: Traduz os códigos de origem (ex: 161) para os id_filial reais (ex: 7) 
+	    // caso a lista recebida contenha os códigos de origem.
+	    List<Integer> idsReaisFiliais = new ArrayList<>();
+	    FilialDAO filialDao = new FilialDAO();
+	    
+	    for (Integer codigo : unidadesPermitidas) {
+	        Long idReal = filialDao.buscarIdFilialPorOrigemCodigo(codigo);
+	        if (idReal != null) {
+	            idsReaisFiliais.add(idReal.intValue());
+	        } else {
+	            idsReaisFiliais.add(codigo); // Fallback caso já seja o ID
+	        }
+	    }
 
-        try (Connection conn = Conexao.conectar();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            int proximoIndice = FiltroUnidadeUtil.preencherParametros(stmt, 1, unidadesPermitidas);
-            FiltroUnidadeUtil.preencherParametros(stmt, proximoIndice, unidadesPermitidas);
-            
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1);
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return 0;
-    }
+	    String inClause = FiltroUnidadeUtil.gerarClausulaIn(idsReaisFiliais);
+	    
+	    // ATENÇÃO: Focado estritamente na ORIGEM (o que está saindo da unidade ativa em trânsito)
+	    String sql = "SELECT COUNT(*) FROM movimentacao_envio WHERE status_id = 2 AND origem_id IN " + inClause;
+
+	    try (Connection conn = Conexao.conectar();
+	         PreparedStatement stmt = conn.prepareStatement(sql)) {
+	        
+	        FiltroUnidadeUtil.preencherParametros(stmt, 1, idsReaisFiliais);
+	        
+	        try (ResultSet rs = stmt.executeQuery()) {
+	            if (rs.next()) {
+	                return rs.getInt(1);
+	            }
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    }
+	    return 0;
+	}
 }

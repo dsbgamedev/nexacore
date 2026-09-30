@@ -53,7 +53,8 @@ public class AuthFilter implements Filter {
             "/WEB-INF/jsp/gerenciar-usuarios.jsp",
             "/WEB-INF/jsp/manutencao-abertura.jsp",
             "/WEB-INF/jsp/marcas.jsp",
-            "/WEB-INF/jsp/recebimento-equipamento.jsp"
+            "/WEB-INF/jsp/recebimento-equipamento.jsp",
+            "/WEB-INF/jsp/cadastro-transportadora.jsp"
             
             
     	     // Protegendo o acesso direto		
@@ -168,6 +169,10 @@ public class AuthFilter implements Filter {
         // 12. auditoria
         PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/auditoria.jsp", "auditoria");
         PROTECTED_RESOURCES_MODULES.put("/AuditoriaServlet", "auditoria");
+        
+       // 13. transportadora
+        PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/cadastro-transportadora.jsp", "transportadoras");
+        PROTECTED_RESOURCES_MODULES.put("/TransportadoraServlet", "transportadoras");
 
     }
 

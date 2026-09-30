@@ -250,29 +250,52 @@ document.addEventListener("DOMContentLoaded", function() {
 	                }
 	            }
                 
-                // 2. Define o status correto com base nos dados recebidos
+				// 2. Define o status correto com base nos dados recebidos respeitando a regra da filial
+                const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : 161;
+                const ehMatriz161 = (codigoOrigemAtual === 161);
+
                 if (selectStatus) {
-                    selectStatus.value = eq.statusId || '';
-                    window.statusOriginalEquipamentoId = eq.statusId;
+                    if (!ehMatriz161) {
+                        selectStatus.value = '1'; 
+                    } else {
+                        selectStatus.value = eq.statusId || '';
+                    }
+                    window.statusOriginalEquipamentoId = selectStatus.value;
                 }
                 
-                // 3. REGRA: SE JÁ FOI ATIVADO ANTERIORMENTE, REMOVE O STATUS "BAIXADO" DA OPÇÃO
-                const STATUS_BAIXADO_ID = 4; // Ajuste para o ID numérico correto do "Baixado" no seu banco
-                if (window.statusOriginalEquipamentoId && Number(window.statusOriginalEquipamentoId) !== STATUS_BAIXADO_ID) {
-                    if (selectStatus) {
-                        Array.from(selectStatus.options).forEach(opt => {
-                            if (opt.value == STATUS_BAIXADO_ID) {
-                                opt.remove(); // Remove o "Baixado" para que não apareça na lista de seleção
+                // 3. VARREDURA DE SEGURANÇA PARA FILIAIS E STATUS BAIXADO:
+                if (selectStatus) {
+                    const STATUS_BAIXADO_ID = 4; 
+                    
+                    Array.from(selectStatus.options).forEach(opt => {
+                        if (!opt.value) return; // Mantém a opção vazia/placeholder se houver
+                        
+                        const valorOpt = Number(opt.value);
+
+                        if (!ehMatriz161) {
+                            // Se NÃO for a matriz (161), REMOVE TUDO que for diferente de 1 (Ativo)
+                            if (valorOpt !== 1) {
+                                opt.remove();
                             }
-                        });
+                        } else {
+                            // Se for a Matriz (161), aplica apenas a regra do Baixado
+                            if (window.statusOriginalEquipamentoId && Number(window.statusOriginalEquipamentoId) !== STATUS_BAIXADO_ID) {
+                                if (valorOpt === STATUS_BAIXADO_ID) {
+                                    opt.remove(); 
+                                }
+                            }
+                        }
+                    });
+
+                    // Força o valor correto após a limpeza
+                    if (!ehMatriz161) {
+                        selectStatus.value = '1';
                     }
                 }
                 
                 ajustarSituacaoPorStatus(eq.statusId, eq.situacaoId);
 
-                const codigoOrigemAtual = eq.origemCodigo ? parseInt(eq.origemCodigo) : null;
-                const ehMatriz161 = (codigoOrigemAtual === 161);
-
+                // (O restante do seu código continua igual daqui para baixo)
                 if (!ehMatriz161 && (eq.idEquipamento == 1 || eq.id == 1 || eq.bloquearOrigem === true || eq.origemBloqueada === true || eq.permiteDisponivel === false)) {
                     if (selectSituacao) {
                         Array.from(selectSituacao.options).forEach(opt => {
@@ -358,39 +381,53 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // Carrega as opções para o select de Status do Equipamento
 	async function carregarStatusEquipamento() {
-	try {
-            const contextPath = window.location.pathname.substring(0, window.location.pathname.indexOf("/", 1));
-            const response = await fetch(`${contextPath}/api/status-equipamento`);
-            if (response.ok) {
-                const listaStatus = await response.json();
-                if (selectStatus) {
-                    const valorAtual = selectStatus.value;
-                    selectStatus.innerHTML = '<option value="">Selecione o status...</option>';
-                    
-                    if (Array.isArray(listaStatus)) {
-                        listaStatus.forEach(s => {
-                            if (s.id !== undefined && s.nome) {
-                                // RESTRITO UNIVERSAL: Exibe APENAS "Ativo" (ID 1) e "Encaminhado p/ Chamado" (ID 5)
-                                if (s.id !== 1 && s.id !== 5) {
-                                    return; 
-                                }
+	    try {
+	        const contextPath = window.location.pathname.substring(0, window.location.pathname.indexOf("/", 1));
+	        const response = await fetch(`${contextPath}/api/status-equipamento`);
+	        if (response.ok) {
+	            const listaStatus = await response.json();
+	            if (selectStatus) {
+	                const valorAtual = selectStatus.value;
+	                selectStatus.innerHTML = '<option value="">Selecione o status...</option>';
+	                
+	                // Identifica a origem atual de forma robusta
+	                const selectOrigem = document.getElementById("input-origem") || document.getElementById("origemId");
+	                const codigoOrigemAtual = selectOrigem && selectOrigem.value ? parseInt(selectOrigem.value) : 161;
+	                const ehMatriz161 = (codigoOrigemAtual === 161);
 
-                                const option = document.createElement("option");
-                                option.value = s.id;
-                                option.textContent = s.nome;
-                                selectStatus.appendChild(option);
-                            }
-                        });
-                    }
-                    if (valorAtual) {
-                        selectStatus.value = valorAtual;
-                    }
-                }
-            }
-        } catch (error) {
-            console.error("Erro ao carregar status do equipamento:", error);
-        }
-    }
+	                if (Array.isArray(listaStatus)) {
+	                    listaStatus.forEach(s => {
+	                        if (s.id !== undefined && s.nome) {
+	                            
+	                            // REGRA DE OURO RIGOROSA PARA O SELECT:
+	                            if (ehMatriz161) {
+	                                // Matriz (161): Permite Ativo (1) e Encaminhado p/ Chamado (5)
+	                                if (s.id !== 1 && s.id !== 5) return; 
+	                            } else {
+	                                // Filiais (Diferentes de 161): APENAS Ativo (1). O ID 5 é barrado aqui!
+	                                if (s.id !== 1) return; 
+	                            }
+
+	                            const option = document.createElement("option");
+	                            option.value = s.id;
+	                            option.textContent = s.nome;
+	                            selectStatus.appendChild(option);
+	                        }
+	                    });
+	                }
+	                
+	                // Restaura o valor atual se ele ainda for válido nas opções geradas
+	                if (valorAtual && Array.from(selectStatus.options).some(opt => opt.value == valorAtual)) {
+	                    selectStatus.value = valorAtual;
+	                } else if (!ehMatriz161) {
+	                    selectStatus.value = '1'; // Se filial e o valor sumiu, força Ativo
+	                }
+	            }
+	        }
+	    } catch (error) {
+	        console.error("Erro ao carregar status do equipamento:", error);
+	    }
+	}
 
 	// Atualiza o select de status caso a origem seja alterada na tela
 	    const selectOrigemEl = document.getElementById("input-origem");

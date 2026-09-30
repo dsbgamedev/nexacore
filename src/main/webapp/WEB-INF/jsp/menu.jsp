@@ -63,6 +63,7 @@
     <%-- Controle granular flexível (ajustado para corresponder exatamente às chaves) --%>
     <c:set var="canSeeEquipamentos" value="${hasFullAccess or fn:contains(modulosStr, ',equipamento,') or fn:contains(modulosStr, ',equipamentos,')}" />
     <c:set var="canSeeProdutos" value="${hasFullAccess or fn:contains(modulosStr, ',produto,') or fn:contains(modulosStr, ',produtos,')}" />
+    <c:set var="canSeeTransportadoras" value="${hasFullAccess or fn:contains(modulosStr, ',transportadora,') or fn:contains(modulosStr, ',transportadoras,')}" />
     <%--<c:set var="canSeeMovimentacao" value="${hasFullAccess or fn:contains(modulosStr, ',movimentacao,')}" /> --%>
     <%-- MOVIMENTAÇÕES (Aceita tanto envio quanto recebimento) --%>
     <c:set var="canSeeMovimentacao" value="${hasFullAccess or fn:contains(modulosStr, ',movimentacao,') or fn:contains(modulosStr, ',movimentacoes,') or fn:contains(modulosStr, ',movimentacao_envio,') or fn:contains(modulosStr, ',movimentacao_recebimento,')}" />
@@ -144,6 +145,10 @@
             <c:if test="${canSeeFabricantes or canSeeMarcas or canSeeEmpresas or canSeeAtributos or canSeeUsuarios or canSeeGerenciarUsuarios}">
                 <span class="menu-category">CADASTROS</span>
                 <ul class="sidebar-menu">
+                	<%-- NOVO LINK DE TRANSPORTADORAS --%>
+		            <c:if test="${canSeeTransportadoras}">
+		                <li><a href="<%=ctx%>/TransportadoraServlet"><i class="bi bi-truck"></i> Transportadoras</a></li>
+		            </c:if>
                     <c:if test="${canSeeFabricantes}">
                         <li><a href="<%=ctx%>/FabricanteServlet"><i class="bi bi-building"></i> Fabricantes</a></li>
                     </c:if>
@@ -282,11 +287,12 @@
                 </div>
                 <div class="col-md">
 				    <div class="stat-card">
-				        <div class="stat-icon bg-red-light text-danger"><i class="bi bi-box-arrow-in-down"></i></div>
+				        <div class="stat-icon bg-success-light text-success"><i class="bi bi-box-seam"></i></div>
 				        <div class="stat-info">
-				            <span class="stat-label">Aguardando Recebimento</span>
-				            <h3 class="stat-value">${empty totalAguardandoRecebimento ? 0 : totalAguardandoRecebimento}</h3>
-				            <a href="<%=ctx%>/RecebimentoServlet" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
+				            <span class="stat-label">Recebidos Hoje</span>
+				            <h3 class="stat-value">${empty totalRecebidosHoje ? 0 : totalRecebidosHoje}</h3>
+				            <!-- Redireciona para a tela de recebimento/consulta -->
+				            <a href="<%=ctx%>/ConsultaEnvioServlet" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
 				        </div>
 				    </div>
 				</div>
@@ -358,47 +364,55 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Avisos e Pendências -->
-                <div class="col-lg-4">
-                    <div class="card-section p-4 h-100">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold mb-0">Avisos e Pendências</h5>
-                            <a href="#" class="small text-decoration-none">Ver todos</a>
-                        </div>
-                        <ul class="list-unstyled notification-list mb-0">
-                            <li class="notification-item">
-                                <i class="bi bi-tools text-warning"></i>
-                                <div>
-                                    <strong>28 equipamentos em manutenção</strong>
-                                    <span>Aguardando atendimento ou finalização</span>
-                                </div>
-                            </li>
-                            <li class="notification-item">
-                                <i class="bi bi-truck text-info"></i>
-                                <div>
-                                    <strong>9 movimentações aguardando recebimento</strong>
-                                    <span>Verifique e confirme os recebimentos pendentes</span>
-                                </div>
-                            </li>
-                            <li class="notification-item">
-                                <i class="bi bi-info-circle text-primary"></i>
-                                <div>
-                                    <strong>14 equipamentos em trânsito</strong>
-                                    <span>Acompanhe os envios em andamento</span>
-                                </div>
-                            </li>
-                            <li class="notification-item">
-                                <i class="bi bi-calendar-x text-danger"></i>
-                                <div>
-                                    <strong>3 manutenções vencidas</strong>
-                                    <span>Chamados com prazo ultrapassado</span>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
+					
+			<!-- Avisos e Pendências Dinâmicos -->
+			<div class="col-lg-4">
+			    <div class="card-section p-4 h-100">
+			        <div class="d-flex justify-content-between align-items-center mb-3">
+			            <h5 class="fw-bold mb-0">Avisos e Pendências</h5>
+			            <a href="#" class="small text-decoration-none">Ver todos</a>
+			        </div>
+			        <ul class="list-unstyled notification-list mb-0">
+			            
+			            <!-- Item 1: Equipamentos em Manutenção -->
+			            <li class="notification-item">
+			                <i class="bi bi-tools text-warning"></i>
+			                <div>
+			                    <strong>${empty totalEquipamentosManutencao ? 0 : totalEquipamentosManutencao} equipamentos em manutenção</strong>
+			                    <span>Aguardando atendimento ou finalização</span>
+			                </div>
+			            </li>
+			            
+			            <!-- Item 2: Aguardando Recebimento -->
+			            <li class="notification-item">
+			                <i class="bi bi-truck text-info"></i>
+			                <div>
+			                    <strong>${empty totalAguardandoRecebimento ? 0 : totalAguardandoRecebimento} movimentações aguardando recebimento</strong>
+			                    <span>Verifique e confirme os recebimentos pendentes</span>
+			                </div>
+			            </li>
+			            
+			            <!-- Item 3: Em Trânsito -->
+			            <li class="notification-item">
+			                <i class="bi bi-info-circle text-primary"></i>
+			                <div>
+			                    <strong>${empty totalEmTransito ? 0 : totalEmTransito} equipamentos em trânsito</strong>
+			                    <span>Acompanhe os envios em andamento</span>
+			                </div>
+			            </li>
+			            
+			            <!-- Item 4: Manutenções Vencidas -->
+			            <li class="notification-item">
+			                <i class="bi bi-calendar-x text-danger"></i>
+			                <div>
+			                    <strong>${empty totalChamadosVencidos ? 0 :totalChamadosVencidos} manutenções vencidas</strong>
+			                    <span>Chamados com prazo ultrapassado</span>
+			                </div>
+			            </li>
+			            
+			        </ul>
+			    </div>
+			</div>	
 
             <!-- TABELAS RECENTES -->
             <div class="row g-4">

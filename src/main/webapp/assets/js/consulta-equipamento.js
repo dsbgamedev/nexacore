@@ -600,7 +600,6 @@ async function pesquisarEquipamentos() {
 }
 
 // Função dedicada a montar as linhas e aplicar todas as regras de negócio visuais
-// Função dedicada a montar as linhas e aplicar todas as regras de negócio visuais
 function renderizarTabelaEquipamentos(data) {
     const tbody = document.getElementById('tabelaEquipamentosBody');
     if (!tbody) return;

@@ -214,3 +214,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+// --- Carregamento Assíncrono do Dashboard via API (Evita travamento no MenuServlet) ---
+document.addEventListener('DOMContentLoaded', () => {
+    const APP_CONTEXT_PATH = document.body.dataset.appContextPath || '';
+    
+    // Faz a requisição em segundo plano para o endpoint otimizado
+    fetch(`${APP_CONTEXT_PATH}/api/dashboard`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro ao carregar dados do dashboard');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // 1. Atualiza contadores do dashboard se os elementos existirem na tela
+            const elTransito = document.getElementById('totalEmTransito');
+            if (elTransito) elTransito.textContent = data.totalEmTransito ?? 0;
+
+            const elHoje = document.getElementById('totalRecebidosHoje');
+            if (elHoje) elHoje.textContent = data.totalRecebidosHoje ?? 0;
+
+            const elAguardando = document.getElementById('totalAguardandoRecebimento');
+            if (elAguardando) elAguardando.textContent = data.totalAguardandoRecebimento ?? 0;
+
+            // 2. Se houver tabela ou lista de movimentações recentes, você pode preenchê-la aqui dinamicamente
+            if (Array.isArray(data.listaMovimentacoesRecentes) && data.listaMovimentacoesRecentes.length > 0) {
+                // Exemplo de gancho caso queira popular uma tabela no menu.jsp via JS
+                window.listaMovimentacoesGlobal = data.listaMovimentacoesRecentes;
+            }
+        })
+        .catch(error => {
+            console.error('Aviso de performance/API:', error);
+        });
+});

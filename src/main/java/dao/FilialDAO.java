@@ -183,27 +183,50 @@ public class FilialDAO {
             return unidadesPermitidas;
         }
 
-        String sql = "SELECT origem_codigo FROM filiais WHERE id_filial = ? OR origem_codigo = ?";
-        
+        // Converte a lista de strings para uma lista de inteiros válidos
+        List<Integer> valoresBusca = new ArrayList<>();
+        for (String s : unidadesStr) {
+            try {
+                valoresBusca.add(Integer.parseInt(s.trim()));
+            } catch (NumberFormatException e) {
+                // Ignora valores inválidos
+            }
+        }
+
+        if (valoresBusca.isEmpty()) {
+            return unidadesPermitidas;
+        }
+
+        // Cria dinamicamente os placeholders usando a sua classe utilitária (ou montagem direta)
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < valoresBusca.size(); i++) {
+            placeholders.append(i == 0 ? "?" : ", ?");
+        }
+
+        // Busca todas as filiais correspondentes de uma só vez com ID ou Código
+        String sql = "SELECT DISTINCT origem_codigo FROM filiais " +
+                     "WHERE id_filial IN (" + placeholders.toString() + ") " +
+                     "OR origem_codigo IN (" + placeholders.toString() + ")";
+
         try (Connection conn = Conexao.conectar();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            for (String s : unidadesStr) {
-                try {
-                    int idOuCodigo = Integer.parseInt(s.trim());
-                    stmt.setInt(1, idOuCodigo);
-                    stmt.setInt(2, idOuCodigo);
-                    
-                    try (ResultSet rs = stmt.executeQuery()) {
-                        if (rs.next()) {
-                            int origemCodigoReal = rs.getInt("origem_codigo");
-                            if (!unidadesPermitidas.contains(origemCodigoReal)) {
-                                unidadesPermitidas.add(origemCodigoReal);
-                            }
-                        }
+            int index = 1;
+            // Preenche o primeiro IN (id_filial)
+            for (Integer val : valoresBusca) {
+                stmt.setInt(index++, val);
+            }
+            // Preenche o segundo IN (origem_codigo)
+            for (Integer val : valoresBusca) {
+                stmt.setInt(index++, val);
+            }
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    int origemCodigoReal = rs.getInt("origem_codigo");
+                    if (!unidadesPermitidas.contains(origemCodigoReal)) {
+                        unidadesPermitidas.add(origemCodigoReal);
                     }
-                } catch (NumberFormatException e) {
-                    // Ignora valores não numéricos
                 }
             }
         } catch (SQLException e) {
@@ -211,5 +234,48 @@ public class FilialDAO {
         }
         
         return unidadesPermitidas;
+    }
+    
+ // --- NOVO: Traduz uma lista de códigos de origem para seus respectivos IDs reais em lote (Evita N+1) ---
+    public List<Integer> buscarIdsReaisEmLote(List<Integer> codigosOrigem) {
+        List<Integer> idsReais = new ArrayList<>();
+        if (codigosOrigem == null || codigosOrigem.isEmpty()) {
+            return idsReais;
+        }
+
+        // Cria os placeholders dinâmicos para a cláusula IN
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < codigosOrigem.size(); i++) {
+            placeholders.append(i == 0 ? "?" : ", ?");
+        }
+
+        String sql = "SELECT id_filial, origem_codigo FROM filiais WHERE origem_codigo IN (" + placeholders.toString() + ")";
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            // Preenche os parâmetros da cláusula IN
+            for (int i = 0; i < codigosOrigem.size(); i++) {
+                stmt.setInt(i + 1, codigosOrigem.get(i));
+            }
+            
+            try (ResultSet rs = stmt.executeQuery()) {
+                java.util.Map<Integer, Integer> mapaConversao = new java.util.HashMap<>();
+                while (rs.next()) {
+                    mapaConversao.put(rs.getInt("origem_codigo"), rs.getInt("id_filial"));
+                }
+
+                // Mantém a ordem original e aplica fallback para o próprio código se não encontrar na base
+                for (Integer codigo : codigosOrigem) {
+                    idsReais.add(mapaConversao.getOrDefault(codigo, codigo));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Fallback defensivo: se houver erro, retorna a lista original para não quebrar a aplicação
+            return new ArrayList<>(codigosOrigem);
+        }
+        
+        return idsReais;
     }
 }
