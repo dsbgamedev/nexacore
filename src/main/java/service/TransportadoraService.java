@@ -6,6 +6,7 @@ import dao.TransportadoraDAO;
 import jakarta.servlet.http.HttpServletRequest;
 import model.Transportadora;
 import model.TransportadoraEndereco;
+import model.TransportadoraFilial; // <-- Novo Import
 
 import java.lang.reflect.Type;
 import java.util.List;
@@ -33,18 +34,27 @@ public class TransportadoraService {
         t.setStatus(request.getParameter("status"));
         t.setObservacao(request.getParameter("observacao"));
 
-        // 2. Converte o JSON dos endereços usando o Gson
-        String jsonEnderecos = request.getParameter("enderecosJson");
         Gson gson = new Gson();
-        Type listType = new TypeToken<List<TransportadoraEndereco>>(){}.getType();
-        List<TransportadoraEndereco> enderecos = gson.fromJson(jsonEnderecos, listType);
 
-        // 3. Validações de regra de negócio (ex: garantir que tem endereços)
+        // 2. Converte o JSON dos endereços
+        String jsonEnderecos = request.getParameter("enderecosJson");
+        Type listEnderecoType = new TypeToken<List<TransportadoraEndereco>>(){}.getType();
+        List<TransportadoraEndereco> enderecos = gson.fromJson(jsonEnderecos, listEnderecoType);
+
         if (enderecos == null || enderecos.isEmpty()) {
             throw new IllegalArgumentException("A transportadora deve possuir pelo menos um endereço.");
         }
 
-        // 4. Delega para o DAO realizar a persistência no banco de dados
-        return transportadoraDAO.salvarComEnderecos(t, enderecos);
+        // 3. Converte o JSON das filiais atendidas
+        String jsonFiliais = request.getParameter("filiaisJson");
+        Type listFilialType = new TypeToken<List<TransportadoraFilial>>(){}.getType();
+        List<TransportadoraFilial> filiais = gson.fromJson(jsonFiliais, listFilialType);
+
+        if (filiais == null || filiais.isEmpty()) {
+            throw new IllegalArgumentException("Selecione pelo menos uma filial atendida.");
+        }
+
+        // 4. Delega para o DAO realizar a persistência completa (Transportadora + Endereços + Filiais)
+        return transportadoraDAO.salvarComEnderecosEFiliais(t, enderecos, filiais);// *Ajuste o nome do método no seu DAO se necessário
     }
 }

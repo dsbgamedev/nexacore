@@ -1,4 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -29,7 +30,7 @@
             </div>
         </div>
 
-        <form id="formTransportadora">
+       <form id="formTransportadora">
             <div class="row">
                 <!-- DADOS DA TRANSPORTADORA -->
                 <div class="col-lg-7">
@@ -89,69 +90,92 @@
                     </div>
                 </div>
 
-                <!-- ENDEREÇO INDIVIDUAL PARA ADICIONAR -->
+                <!-- FILIAIS ATENDIDAS (Substitui o bloco de Adicionar Endereço na 2ª coluna, ou criamos nova linha) -->
                 <div class="col-lg-5">
-                    <div class="card card-custom p-4">
-                        <h5 class="fw-bold mb-3 text-secondary" style="font-size: 1rem;"><i class="fa-solid fa-location-dot me-2"></i> Adicionar Endereço</h5>
+                    <div class="card card-custom p-4 mb-4">
+                        <h5 class="fw-bold mb-3 text-secondary" style="font-size: 1rem;">
+                            <i class="fa-solid fa-building-shield me-2"></i> Filiais Atendidas
+                        </h5>
                         <hr class="mt-0 mb-3">
-                        <div class="mb-3">
+                        <p class="text-muted small">Selecione as filiais atendidas e o endereço de atendimento correspondente:</p>
+                        
+                        <div class="d-flex flex-column gap-3" style="max-height: 420px; overflow-y: auto;">
+						    <c:forEach var="filial" items="${listaFiliais}">
+						        <div class="p-3 border rounded bg-light">
+						            <!-- Checkbox da Filial -->
+						            <div class="form-check mb-2">
+						                <input class="form-check-input filial-checkbox" type="checkbox" value="${filial.idFilial}" id="filial_${filial.idFilial}">
+						                <label class="form-check-label fw-bold text-dark" for="filial_${filial.idFilial}">
+						                    ${filial.sufixo} - ${filial.nomeEmpresa}
+						                </label>
+						            </div>
+						            
+						            <!-- Select do Endereço para esta filial -->
+						            <div class="ms-4">
+						                <label class="form-label small text-muted mb-1">Endereço usado nesta filial:</label>
+						                <select class="form-select form-select-sm filial-endereco-select" id="end_filial_${filial.idFilial}" disabled>
+						                    <option value="" selected disabled>Adicione um endereço abaixo primeiro...</option>
+						                </select>
+						            </div>
+						        </div>
+						    </c:forEach>
+						</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SEÇÃO DE ENDEREÇOS INDIVIDUAIS (Logo abaixo) -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card card-custom p-4">
+                        <h5 class="fw-bold mb-3 text-secondary" style="font-size: 1rem;"><i class="fa-solid fa-location-dot me-2"></i> Adicionar Endereço à Transportadora</h5>
+                        <hr class="mt-0 mb-3">
+                        <!-- Campos de endereço que já estavam no seu código -->
+                        <div class="row g-3">
+                            <div class="col-md-3">
 						    <label class="form-label">Tipo de endereço *</label>
-						    <select class="form-select" id="input-tipo-endereco" required>
+						    <select class="form-select" id="input-tipo-endereco">
 						        <option value="" disabled selected>Selecione o tipo...</option>
 						        <c:forEach var="tipo" items="${listaTiposEndereco}">
 						            <option value="${tipo.id}">${tipo.nome}</option>
 						        </c:forEach>
 						    </select>
 						</div>
-                        <div class="row g-3">
-                            <div class="col-md-7">
+                            <div class="col-md-3">
                                 <label class="form-label">CEP *</label>
-                                <input type="text" class="form-control" id="input-cep">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="input-cep">
+                                    <button type="button" class="btn btn-outline-secondary" id="btn-buscar-cep"><i class="fa fa-search"></i></button>
+                                </div>
                             </div>
-                            <div class="col-md-5 d-flex align-items-end">
-                                <button type="button" class="btn btn-outline-secondary btn-sm w-100" id="btn-buscar-cep">Buscar CEP</button>
-                            </div>
-                            <div class="col-md-9">
+                            <div class="col-md-5">
                                 <label class="form-label">Logradouro *</label>
                                 <input type="text" class="form-control" id="input-logradouro">
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Número *</label>
+                            <div class="col-md-1">
+                                <label class="form-label">Nº *</label>
                                 <input type="text" class="form-control" id="input-numero">
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Complemento</label>
-                                <input type="text" class="form-control" id="input-complemento">
-                            </div>
-                            <div class="col-md-6">
+                            <!-- Restante dos campos de endereço (bairro, cidade, uf, etc.) mantêm-se iguais -->
+                            <div class="col-md-3">
                                 <label class="form-label">Bairro *</label>
                                 <input type="text" class="form-control" id="input-bairro">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <label class="form-label">Cidade *</label>
                                 <input type="text" class="form-control" id="input-cidade">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label">UF *</label>
                                 <input type="text" class="form-control" id="input-uf" maxlength="2">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label">País *</label>
                                 <input type="text" class="form-control" id="input-pais" value="Brasil">
                             </div>
-                            <div class="col-12">
-                                <label class="form-label">Referência</label>
-                                <input type="text" class="form-control" id="input-referencia">
-                            </div>
-                            <div class="col-12">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="check-principal">
-                                    <label class="form-check-label fw-bold" for="check-principal" style="font-size: 0.875rem;">Endereço principal</label>
-                                </div>
-                            </div>
-                            <div class="col-12 mt-2">
+                            <div class="col-md-2 d-flex align-items-end">
                                 <button type="button" class="btn btn-secondary w-100 btn-sm" id="btn-adicionar-endereco">
-                                    <i class="fa fa-plus me-1"></i> Incluir este endereço na lista
+                                    <i class="fa fa-plus me-1"></i> Incluir Endereço
                                 </button>
                             </div>
                         </div>
@@ -185,6 +209,33 @@
                 <button type="submit" class="btn btn-primary px-4"><i class="fa fa-save me-1"></i> Salvar transportadora</button>
             </div>
         </form>
+    </div>
+    <!-- Modais do Sistema (Padrão ModalService) -->
+    <div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content-custom" id="alertBox">
+                <h3 id="alertTitle"></h3>
+                <p id="alertMessage"></p>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-confirmar" id="alertOkBtn">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: transparent; border: none; box-shadow: none;">
+                <div class="modal-content-custom" id="confirmBox">
+                    <h3 id="confirmTitle"></h3>
+                    <p id="confirmMessage"></p>
+                    <div class="modal-buttons">
+                        <button type="button" class="btn-cancelar" id="confirmCancelBtn">Cancelar</button>
+                        <button type="button" class="btn-confirmar" id="confirmOkBtn">Confirmar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     <!-- JavaScript para manipulação da tabela e envio AJAX -->
     <script>

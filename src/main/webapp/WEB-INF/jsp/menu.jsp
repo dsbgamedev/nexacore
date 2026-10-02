@@ -81,6 +81,7 @@
     <c:set var="canWriteEquipamentos" value="${hasFullAccess or usuarioLogado.temPermissao('equipamentos', 'INSERIR') or usuarioLogado.temPermissao('equipamentos', 'EDITAR')}" />
     <c:set var="canWriteProdutos" value="${hasFullAccess or usuarioLogado.temPermissao('produtos', 'INSERIR') or usuarioLogado.temPermissao('produtos', 'EDITAR')}" />
     <c:set var="canWriteManutencao" value="${hasFullAccess or usuarioLogado.temPermissao('manutencao_chamados', 'INSERIR') or usuarioLogado.temPermissao('manutencao_chamados', 'EDITAR')}" />
+     <c:set var="canWriteTransportadoras" value="${hasFullAccess or usuarioLogado.temPermissao('transportadoras', 'INSERIR') or usuarioLogado.temPermissao('transportadoras', 'EDITAR')}" />
     
    
     <!-- SIDEBAR LATERAL ESQUERDA -->
@@ -118,6 +119,18 @@
                     </c:if>
                 </ul>
             </c:if>
+            
+            <%-- TRANSPORTADORAS --%>
+            <c:if test="${canSeeTransportadoras}">
+                <span class="menu-category">TRASNPORTADORA</span>
+                <ul class="sidebar-menu">
+                    <%-- NOVO LINK DE TRANSPORTADORAS --%>
+		            <c:if test="${canSeeTransportadoras}">
+		                <li><a href="<%=ctx%>/TransportadoraServlet"><i class="bi bi-truck"></i> Transportadoras</a></li>
+		            </c:if>
+                    <li><a href="<%=ctx%>/ConsultaTransportadoraServlet"><i class="bi bi-list-check"></i> Consultar Transportadoras </a></li>
+                </ul>
+            </c:if>
 
             <%-- MOVIMENTAÇÕES --%>
             <c:if test="${canSeeMovimentacao}">
@@ -144,11 +157,7 @@
             <%-- CADASTROS E GERENCIAMENTOS--%>
             <c:if test="${canSeeFabricantes or canSeeMarcas or canSeeEmpresas or canSeeAtributos or canSeeUsuarios or canSeeGerenciarUsuarios}">
                 <span class="menu-category">CADASTROS</span>
-                <ul class="sidebar-menu">
-                	<%-- NOVO LINK DE TRANSPORTADORAS --%>
-		            <c:if test="${canSeeTransportadoras}">
-		                <li><a href="<%=ctx%>/TransportadoraServlet"><i class="bi bi-truck"></i> Transportadoras</a></li>
-		            </c:if>
+                <ul class="sidebar-menu">           	
                     <c:if test="${canSeeFabricantes}">
                         <li><a href="<%=ctx%>/FabricanteServlet"><i class="bi bi-building"></i> Fabricantes</a></li>
                     </c:if>

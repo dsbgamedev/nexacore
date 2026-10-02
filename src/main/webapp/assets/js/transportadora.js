@@ -1,15 +1,12 @@
 let listaEnderecos = [];
 
 // ==========================================================================
-// MÁSCARAS E LIMITAÇÕES (CNPJ e Inscrição Estadual)
+// MÁSCARAS E LIMITAÇÕES (CNPJ, Inscrição Estadual, Telefone e Celular)
 // ==========================================================================
 document.getElementById("cnpj")?.addEventListener("input", function(e) {
-    let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não for dígito
-    if (value.length > 14) {
-        value = value.substring(0, 14); // Limita estritamente a 14 números do CNPJ real
-    }
+    let value = e.target.value.replace(/\D/g, ''); 
+    if (value.length > 14) value = value.substring(0, 14); 
     
-    // Aplica a máscara do CNPJ: 00.000.000/0000-00
     if (value.length > 12) {
         value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2}).*$/, "$1.$2.$3/$4-$5");
     } else if (value.length > 8) {
@@ -23,9 +20,37 @@ document.getElementById("cnpj")?.addEventListener("input", function(e) {
 });
 
 document.getElementById("inscricaoEstadual")?.addEventListener("input", function(e) {
-    let value = e.target.value.replace(/\D/g, ''); // Inscrição Estadual costuma ser apenas numérica
-    if (value.length > 14) {
-        value = value.substring(0, 14); // Limite padrão seguro para IE no Brasil
+    let value = e.target.value.replace(/\D/g, ''); 
+    if (value.length > 14) value = value.substring(0, 14); 
+    e.target.value = value;
+});
+
+// Máscara e limite para Telefone Fixo (Até 10 dígitos: (00) 0000-0000)
+document.getElementById("telefone")?.addEventListener("input", function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 10) value = value.substring(0, 10);
+
+    if (value.length > 6) {
+        value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*$/, "($1) $2-$3");
+    } else if (value.length > 2) {
+        value = value.replace(/^(\d{2})(\d{0,4}).*$/, "($1) $2");
+    } else if (value.length > 0) {
+        value = value.replace(/^(\d{0,2})/, "($1");
+    }
+    e.target.value = value;
+});
+
+// Máscara e limite para Celular (Até 11 dígitos, ex: 11962332015 -> (11) 96233-2015)
+document.getElementById("celular")?.addEventListener("input", function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 11) value = value.substring(0, 11);
+
+    if (value.length > 7) {
+        value = value.replace(/^(\d{2})(\d{5})(\d{0,4}).*$/, "($1) $2-$3");
+    } else if (value.length > 2) {
+        value = value.replace(/^(\d{2})(\d{0,5}).*$/, "($1) $2");
+    } else if (value.length > 0) {
+        value = value.replace(/^(\d{0,2})/, "($1");
     }
     e.target.value = value;
 });
@@ -36,14 +61,14 @@ document.getElementById("inscricaoEstadual")?.addEventListener("input", function
 document.getElementById("btn-buscar-cep")?.addEventListener("click", async function() {
     let cep = document.getElementById("input-cep").value.replace(/\D/g, '');
     if (cep.length !== 8) {
-        alert("CEP inválido. Digite 8 dígitos.");
+        await ModalService.warning("Atenção", "CEP inválido. Digite 8 dígitos.");
         return;
     }
     try {
         const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
         const data = await response.json();
         if (data.erro) {
-            alert("CEP não encontrado.");
+            await ModalService.warning("Atenção", "CEP não encontrado.");
             return;
         }
         document.getElementById("input-logradouro").value = data.logradouro || "";
@@ -53,14 +78,53 @@ document.getElementById("btn-buscar-cep")?.addEventListener("click", async funct
         document.getElementById("input-numero").focus();
     } catch (error) {
         console.error("Erro ao buscar CEP:", error);
-        alert("Erro ao consultar o CEP.");
+        await ModalService.error("Erro", "Erro ao consultar o CEP.");
     }
 });
 
 // ==========================================================================
+// CONTROLE DE FILIAIS ATENDIDAS E SEUS ENDEREÇOS
+// ==========================================================================
+document.querySelectorAll('.filial-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function () {
+        const filialId = this.value;
+        const selectEndereco = document.getElementById(`end_filial_${filialId}`);
+        
+        if (this.checked) {
+            selectEndereco.removeAttribute('disabled');
+            selectEndereco.required = true;
+            atualizarOpcoesEnderecosFiliais();
+        } else {
+            selectEndereco.setAttribute('disabled', 'true');
+            selectEndereco.value = "";
+            selectEndereco.required = false;
+        }
+    });
+});
+
+function atualizarOpcoesEnderecosFiliais() {
+    document.querySelectorAll('.filial-endereco-select').forEach(select => {
+        const valorAtual = select.value;
+        select.innerHTML = '<option value="" disabled selected>Selecione o endereço...</option>';
+        
+        listaEnderecos.forEach((end, idx) => {
+            const option = document.createElement('option');
+            option.value = idx; // Usamos o índice do array como referência temporária
+            option.textContent = `[${end.tipoNome}] ${end.logradouro}, ${end.numero} - ${end.cidade}/${end.uf}`;
+            select.appendChild(option);
+        });
+
+        // Restaura a seleção anterior se ainda existir
+        if (valorAtual && select.querySelector(`option[value="${valorAtual}"]`)) {
+            select.value = valorAtual;
+        }
+    });
+}
+
+// ==========================================================================
 // ADICIONAR ENDEREÇO À LISTA TEMPORÁRIA
 // ==========================================================================
-document.getElementById("btn-adicionar-endereco")?.addEventListener("click", function() {
+document.getElementById("btn-adicionar-endereco")?.addEventListener("click", async function() {
     const tipoSelect = document.getElementById("input-tipo-endereco");
     const cep = document.getElementById("input-cep").value;
     const logradouro = document.getElementById("input-logradouro").value;
@@ -69,12 +133,13 @@ document.getElementById("btn-adicionar-endereco")?.addEventListener("click", fun
     const cidade = document.getElementById("input-cidade").value;
     const uf = document.getElementById("input-uf").value;
 
-    if (!tipoSelect.value || !cep || !logradouro || !numero || !cidade || !uf) {
-        alert("Selecione o tipo de endereço e preencha todos os campos obrigatórios (*).");
+    if (!tipoSelect.value || !cep || !logradouro || !numero || !bairro || !cidade || !uf) {
+        await ModalService.warning("Campos Obrigatórios", "Selecione o tipo de endereço e preencha todos os campos obrigatórios (*).");
         return;
     }
 
-    const principal = document.getElementById("check-principal").checked;
+    // Se for o primeiro endereço ou não houver principal, define este como principal automaticamente
+    const principal = listaEnderecos.length === 0;
     if (principal) {
         listaEnderecos.forEach(e => e.principal = false);
     }
@@ -85,16 +150,17 @@ document.getElementById("btn-adicionar-endereco")?.addEventListener("click", fun
         cep, 
         logradouro, 
         numero,
-        complemento: document.getElementById("input-complemento").value,
+        complemento: "", 
         bairro, 
         cidade, 
         uf,
         pais: document.getElementById("input-pais").value || "Brasil",
-        referencia: document.getElementById("input-referencia").value,
+        referencia: "",
         principal
     });
 
     renderizarTabela();
+    atualizarOpcoesEnderecosFiliais();
     limparCamposEndereco();
 });
 
@@ -120,6 +186,7 @@ function renderizarTabela() {
 function removerEndereco(idx) {
     listaEnderecos.splice(idx, 1);
     renderizarTabela();
+    atualizarOpcoesEnderecosFiliais();
 }
 
 function limparCamposEndereco() {
@@ -127,29 +194,91 @@ function limparCamposEndereco() {
     document.getElementById("input-cep").value = "";
     document.getElementById("input-logradouro").value = "";
     document.getElementById("input-numero").value = "";
-    document.getElementById("input-complemento").value = "";
     document.getElementById("input-bairro").value = "";
     document.getElementById("input-cidade").value = "";
     document.getElementById("input-uf").value = "";
-    document.getElementById("input-referencia").value = "";
-    document.getElementById("check-principal").checked = false;
+    document.getElementById("input-pais").value = "Brasil";
 }
-
 // ==========================================================================
-// ENVIO DO FORMULÁRIO PRINCIPAL VIA AJAX
+// ENVIO DO FORMULÁRIO PRINCIPAL VIA AJAX COM FILIAIS E ENDEREÇOS
 // ==========================================================================
 document.getElementById("formTransportadora")?.addEventListener("submit", async function(e) {
     e.preventDefault();
     
     const cnpjLimpo = document.getElementById("cnpj").value.replace(/\D/g, '');
     if (cnpjLimpo.length !== 14) {
-        alert("O CNPJ deve conter exatamente 14 dígitos válidos.");
+        await ModalService.warning("CNPJ Inválido", "O CNPJ deve conter exatamente 14 dígitos válidos.");
         document.getElementById("cnpj").focus();
         return;
     }
 
-    if (listaEnderecos.length === 0) {
-        alert("Adicione pelo menos um endereço para a transportadora.");
+    const emailInput = document.getElementById("email").value.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailInput)) {
+        await ModalService.warning("E-mail Inválido", "Por favor, insira um endereço de e-mail válido contendo '@'.");
+        document.getElementById("email").focus();
+        return;
+    }
+
+    // Se a tabela estiver vazia mas preencheu os campos individuais embaixo
+    const tipoSelect = document.getElementById("input-tipo-endereco");
+    const cepVal = document.getElementById("input-cep").value.trim();
+    const logradouroVal = document.getElementById("input-logradouro").value.trim();
+    const numeroVal = document.getElementById("input-numero").value.trim();
+    const cidadeVal = document.getElementById("input-cidade").value.trim();
+    const ufVal = document.getElementById("input-uf").value.trim();
+
+	if (listaEnderecos.length === 0) {
+        if (tipoSelect.value && cepVal && logradouroVal && numeroVal && cidadeVal && ufVal) {
+            listaEnderecos.push({
+                tipoEnderecoId: parseInt(tipoSelect.value),
+                tipoNome: tipoSelect.options[tipoSelect.selectedIndex].text,
+                cep: cepVal, 
+                logradouro: logradouroVal, 
+                numero: numeroVal,
+                complemento: "",
+                bairro: document.getElementById("input-bairro").value, 
+                cidade: cidadeVal, 
+                uf: ufVal,
+                pais: document.getElementById("input-pais").value || "Brasil",
+                referencia: "",
+                principal: true
+            });
+            renderizarTabela();
+            atualizarOpcoesEnderecosFiliais();
+            limparCamposEndereco();
+        } else {
+            await ModalService.warning("Endereço Obrigatório", "Adicione pelo menos um endereço para a transportadora.");
+            return;
+        }
+    }
+
+    // Coleta as filiais selecionadas e o índice do endereço escolhido para cada uma
+    const filiaisAtendidas = [];
+    let erroFilialSemEndereco = false;
+
+    document.querySelectorAll('.filial-checkbox:checked').forEach(checkbox => {
+        const filialId = checkbox.value;
+        const selectEndereco = document.getElementById(`end_filial_${filialId}`);
+        const enderecoIdx = selectEndereco.value;
+
+        if (enderecoIdx === "") {
+            erroFilialSemEndereco = true;
+        } else {
+            filiaisAtendidas.push({
+                idFilial: parseInt(filialId),
+                enderecoIndice: parseInt(enderecoIdx) // O backend usará isso para associar ao endereço correto cadastrado
+            });
+        }
+    });
+
+    if (erroFilialSemEndereco) {
+        await ModalService.warning("Filial sem Endereço", "Por favor, selecione o endereço correspondente para todas as filiais marcadas.");
+        return;
+    }
+
+    if (filiaisAtendidas.length === 0) {
+        await ModalService.warning("Filial Obrigatória", "Selecione pelo menos uma filial atendida por esta transportadora.");
         return;
     }
 
@@ -162,11 +291,12 @@ document.getElementById("formTransportadora")?.addEventListener("submit", async 
     formData.append("rntrc", document.getElementById("rntrc").value);
     formData.append("telefone", document.getElementById("telefone").value);
     formData.append("celular", document.getElementById("celular").value);
-    formData.append("email", document.getElementById("email").value);
+    formData.append("email", emailInput);
     formData.append("site", document.getElementById("site").value);
     formData.append("status", document.getElementById("status").value);
     formData.append("observacao", document.getElementById("observacao").value);
     formData.append("enderecosJson", JSON.stringify(listaEnderecos));
+    formData.append("filiaisJson", JSON.stringify(filiaisAtendidas)); // <-- Envia as filiais associadas em formato JSON
 
     try {
         const response = await fetch('TransportadoraServlet', {
@@ -174,15 +304,23 @@ document.getElementById("formTransportadora")?.addEventListener("submit", async 
             headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
             body: formData.toString()
         });
+
+        if (response.status === 403) {
+            const errJson = await response.json().catch(() => ({}));
+            await ModalService.error("Acesso Negado", errJson.error || "Você não possui permissão para realizar esta operação.");
+            return;
+        }
+
         const res = await response.json();
+        
         if (res.sucesso) {
-            alert(res.mensagem);
+            await ModalService.success("Sucesso", res.mensagem);
             window.location.href = 'TransportadoraServlet'; 
         } else {
-            alert("Erro: " + res.mensagem);
+            await ModalService.error("Erro", res.mensagem);
         }
     } catch (err) {
         console.error(err);
-        alert("Erro ao comunicar com o servidor.");
+        await ModalService.error("Erro de Comunicação", "Erro ao comunicar com o servidor.");
     }
 });
