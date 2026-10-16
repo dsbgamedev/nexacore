@@ -5,19 +5,20 @@
 <head>
     <meta charset="UTF-8">
     <title>Nexacore - Cadastro de Transportadora</title>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/transportadora.css">
-   </head>
-<body>
+</head>
+<body data-app-context-path="${pageContext.request.contextPath}">
 
     <div class="container-fluid py-4 px-4">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb mb-1" style="font-size: 0.85rem;">
                 <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaTransportadoraServlet">Consulta Transportadora</a></li>
+                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/TransportadoraServlet">Consulta Transportadora</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Transportadoras</li>
             </ol>
         </nav>
@@ -25,12 +26,20 @@
         <div class="d-flex align-items-center mb-4">
             <div class="page-header-icon me-3"><i class="fa-solid fa-truck-fast"></i></div>
             <div>
-                <h4 class="mb-0 fw-bold text-dark">Cadastro de Transportadora</h4>
+                <h4 class="mb-0 fw-bold text-dark">
+                    <c:choose>
+                        <c:when test="${not empty transportadora}">Editar Transportadora (ID: ${transportadora.idTransportadora})</c:when>
+                        <c:otherwise>Cadastro de Transportadora</c:otherwise>
+                    </c:choose>
+                </h4>
                 <small class="text-muted">Dados cadastrais e múltiplos endereços</small>
             </div>
         </div>
 
        <form id="formTransportadora">
+            <!-- Campo oculto opcional para armazenar o ID caso esteja editando -->
+            <input type="hidden" id="idTransportadora" value="${transportadora.idTransportadora}">
+
             <div class="row">
                 <!-- DADOS DA TRANSPORTADORA -->
                 <div class="col-lg-7">
@@ -40,57 +49,57 @@
                         <div class="row g-3">
                             <div class="col-md-7">
                                 <label class="form-label">Razão Social *</label>
-                                <input type="text" class="form-control" id="razaoSocial" required>
+                                <input type="text" class="form-control" id="razaoSocial" value="${transportadora.razaoSocial}" required>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">Nome Fantasia</label>
-                                <input type="text" class="form-control" id="nomeFantasia">
+                                <input type="text" class="form-control" id="nomeFantasia" value="${transportadora.nomeFantasia}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">CNPJ *</label>
-                                <input type="text" class="form-control" id="cnpj" placeholder="00.000.000/0000-00" required>
+                                <input type="text" class="form-control" id="cnpj" placeholder="00.000.000/0000-00" value="${transportadora.cnpj}" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Inscrição Estadual</label>
-                                <input type="text" class="form-control" id="inscricaoEstadual">
+                                <input type="text" class="form-control" id="inscricaoEstadual" value="${transportadora.inscricaoEstadual}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">RNTRC</label>
-                                <input type="text" class="form-control" id="rntrc">
+                                <input type="text" class="form-control" id="rntrc" value="${transportadora.rntrc}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Telefone</label>
-                                <input type="text" class="form-control" id="telefone">
+                                <input type="text" class="form-control" id="telefone" value="${transportadora.telefone}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Celular</label>
-                                <input type="text" class="form-control" id="celular">
+                                <input type="text" class="form-control" id="celular" value="${transportadora.celular}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">E-mail *</label>
-                                <input type="email" class="form-control" id="email" required>
+                                <input type="email" class="form-control" id="email" value="${transportadora.email}" required>
                             </div>
                             <div class="col-md-8">
                                 <label class="form-label">Site</label>
-                                <input type="text" class="form-control" id="site">
+                                <input type="text" class="form-control" id="site" value="${transportadora.site}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Status *</label>
                                 <select class="form-select" id="status">
-                                    <option value="ATIVA" selected>Ativa</option>
-                                    <option value="INATIVA">Inativa</option>
-                                    <option value="BLOQUEADA">Bloqueada</option>
+                                    <option value="ATIVA" ${transportadora.status == 'ATIVA' ? 'selected' : ''}>Ativa</option>
+                                    <option value="INATIVA" ${transportadora.status == 'INATIVA' ? 'selected' : ''}>Inativa</option>
+                                    <option value="BLOQUEADA" ${transportadora.status == 'BLOQUEADA' ? 'selected' : ''}>Bloqueada</option>
                                 </select>
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Observações</label>
-                                <textarea class="form-control" id="observacao" rows="3" maxlength="500"></textarea>
+                                <textarea class="form-control" id="observacao" rows="3" maxlength="500">${transportadora.observacao}</textarea>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- FILIAIS ATENDIDAS (Substitui o bloco de Adicionar Endereço na 2ª coluna, ou criamos nova linha) -->
+                <!-- FILIAIS ATENDIDAS -->
                 <div class="col-lg-5">
                     <div class="card card-custom p-4 mb-4">
                         <h5 class="fw-bold mb-3 text-secondary" style="font-size: 1rem;">
@@ -124,23 +133,22 @@
                 </div>
             </div>
 
-            <!-- SEÇÃO DE ENDEREÇOS INDIVIDUAIS (Logo abaixo) -->
+            <!-- SEÇÃO DE ENDEREÇOS INDIVIDUAIS -->
             <div class="row">
                 <div class="col-12">
                     <div class="card card-custom p-4">
                         <h5 class="fw-bold mb-3 text-secondary" style="font-size: 1rem;"><i class="fa-solid fa-location-dot me-2"></i> Adicionar Endereço à Transportadora</h5>
                         <hr class="mt-0 mb-3">
-                        <!-- Campos de endereço que já estavam no seu código -->
                         <div class="row g-3">
                             <div class="col-md-3">
-						    <label class="form-label">Tipo de endereço *</label>
-						    <select class="form-select" id="input-tipo-endereco">
-						        <option value="" disabled selected>Selecione o tipo...</option>
-						        <c:forEach var="tipo" items="${listaTiposEndereco}">
-						            <option value="${tipo.id}">${tipo.nome}</option>
-						        </c:forEach>
-						    </select>
-						</div>
+							    <label class="form-label">Tipo de endereço *</label>
+							    <select class="form-select" id="input-tipo-endereco">
+							        <option value="" disabled selected>Selecione o tipo...</option>
+							        <c:forEach var="tipo" items="${listaTiposEndereco}">
+							            <option value="${tipo.id}">${tipo.nome}</option>
+							        </c:forEach>
+							    </select>
+							</div>
                             <div class="col-md-3">
                                 <label class="form-label">CEP *</label>
                                 <div class="input-group">
@@ -156,7 +164,6 @@
                                 <label class="form-label">Nº *</label>
                                 <input type="text" class="form-control" id="input-numero">
                             </div>
-                            <!-- Restante dos campos de endereço (bairro, cidade, uf, etc.) mantêm-se iguais -->
                             <div class="col-md-3">
                                 <label class="form-label">Bairro *</label>
                                 <input type="text" class="form-control" id="input-bairro">
@@ -210,7 +217,8 @@
             </div>
         </form>
     </div>
-    <!-- Modais do Sistema (Padrão ModalService) -->
+
+    <!-- Modais do Sistema -->
     <div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content-custom" id="alertBox">
@@ -237,9 +245,39 @@
             </div>
         </div>
     </div>
-    <!-- JavaScript para manipulação da tabela e envio AJAX -->
+
+    <!-- Script para carregar endereços iniciais caso seja edição -->
     <script>
-   
+    // 1. Injeta os endereços cadastrados
+    window.enderecosIniciais = [
+        <c:forEach var="e" items="${enderecosCadastrados}" varStatus="statusEnd">
+        {
+            idEndereco: ${e.idEndereco},
+            tipoEnderecoId: ${e.tipoEnderecoId},
+            tipoNome: "${e.tipoNome}",
+            cep: "${e.cep}",
+            logradouro: "${e.logradouro}",
+            numero: "${e.numero}",
+            complemento: "${e.complemento != null ? e.complemento : ''}",
+            bairro: "${e.bairro}",
+            cidade: "${e.cidade}",
+            uf: "${e.uf}",
+            pais: "${e.pais != null ? e.pais : 'Brasil'}",
+            referencia: "${e.referencia != null ? e.referencia : ''}",
+            principal: ${e.principal}
+        }${!statusEnd.last ? ',' : ''}
+        </c:forEach>
+    ];
+
+    // 2. Injeta as filiais associadas enviando o idEndereco puro
+    window.filiaisIniciais = [
+        <c:forEach var="f" items="${filiaisAssociadas}" varStatus="statusFilial">
+        {
+            idFilial: ${f.idFilial},
+            idEndereco: ${f.idEndereco}
+        }${!statusFilial.last ? ',' : ''}
+        </c:forEach>
+    ];
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/transportadora.js"></script>   

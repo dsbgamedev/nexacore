@@ -24,7 +24,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
-@WebServlet(name = "ManutencaoServlet", urlPatterns = {"/ManutencaoServlet", "/ConsultaChamadosServlet", "/api/manutencoes/*", "/api/filiais", "/api/movimentacoes"})
+@WebServlet(name = "ManutencaoServlet", urlPatterns = {"/ManutencaoServlet", "/ConsultaChamadosServlet", "/api/manutencoes/*", "/api/movimentacoes"})
 public class ManutencaoServlet extends HttpServlet {
 
 private ManutencaoDAO dao = new ManutencaoDAO();

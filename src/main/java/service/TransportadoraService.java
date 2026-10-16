@@ -6,7 +6,7 @@ import dao.TransportadoraDAO;
 import jakarta.servlet.http.HttpServletRequest;
 import model.Transportadora;
 import model.TransportadoraEndereco;
-import model.TransportadoraFilial; // <-- Novo Import
+import model.TransportadoraFilial;
 
 import java.lang.reflect.Type;
 import java.util.List;
@@ -20,8 +20,13 @@ public class TransportadoraService {
     }
 
     public boolean salvarDaRequisicao(HttpServletRequest request) throws Exception {
+        // Captura o ID caso seja modo de edição
+        String idStr = request.getParameter("idTransportadora");
+        Long idTransportadora = (idStr != null && !idStr.trim().isEmpty() && !"null".equals(idStr)) ? Long.parseLong(idStr) : null;
+
         // 1. Mapeia os dados principais da transportadora
         Transportadora t = new Transportadora();
+        t.setIdTransportadora(idTransportadora); // Importante setar o ID aqui
         t.setRazaoSocial(request.getParameter("razaoSocial"));
         t.setNomeFantasia(request.getParameter("nomeFantasia"));
         t.setCnpj(request.getParameter("cnpj"));
@@ -54,7 +59,7 @@ public class TransportadoraService {
             throw new IllegalArgumentException("Selecione pelo menos uma filial atendida.");
         }
 
-        // 4. Delega para o DAO realizar a persistência completa (Transportadora + Endereços + Filiais)
-        return transportadoraDAO.salvarComEnderecosEFiliais(t, enderecos, filiais);// *Ajuste o nome do método no seu DAO se necessário
+        // 4. Delega para o DAO
+        return transportadoraDAO.salvarComEnderecosEFiliais(t, enderecos, filiais);
     }
 }

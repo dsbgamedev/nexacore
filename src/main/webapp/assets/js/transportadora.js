@@ -1,6 +1,41 @@
 let listaEnderecos = [];
 
 // ==========================================================================
+// INICIALIZAÇÃO DA PÁGINA (MODO EDIÇÃO / CADASTRO)
+// ==========================================================================
+document.addEventListener("DOMContentLoaded", function () {
+    // 1. Se houver endereços injetados pelo JSP (Modo Edição), carrega na lista global
+    if (typeof window.enderecosIniciais !== 'undefined' && Array.isArray(window.enderecosIniciais) && window.enderecosIniciais.length > 0) {
+        listaEnderecos = window.enderecosIniciais;
+        renderizarTabela();
+        atualizarOpcoesEnderecosFiliais(); 
+    }
+
+    // 2. Se houver filiais previamente associadas salvas no banco, marca os checkboxes e os selects
+    setTimeout(() => {
+        if (typeof window.filiaisIniciais !== 'undefined' && Array.isArray(window.filiaisIniciais)) {
+            window.filiaisIniciais.forEach(relacao => {
+                const checkbox = document.getElementById(`filial_${relacao.idFilial}`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                    const selectEndereco = document.getElementById(`end_filial_${relacao.idFilial}`);
+                    if (selectEndereco) {
+                        selectEndereco.removeAttribute('disabled');
+                        selectEndereco.required = true;
+                        
+                        // Encontra o índice na listaEnderecos comparando o idEndereco salvo com o da relação
+                        const indiceEncontrado = listaEnderecos.findIndex(end => String(end.idEndereco) === String(relacao.idEndereco));
+
+                        if (indiceEncontrado !== -1) {
+                            selectEndereco.value = indiceEncontrado; // Seleciona automaticamente o endereço correto!
+                        }
+                    }
+                }
+            });
+        }
+    }, 150);
+});
+// ==========================================================================
 // MÁSCARAS E LIMITAÇÕES (CNPJ, Inscrição Estadual, Telefone e Celular)
 // ==========================================================================
 document.getElementById("cnpj")?.addEventListener("input", function(e) {
@@ -284,6 +319,8 @@ document.getElementById("formTransportadora")?.addEventListener("submit", async 
 
     const formData = new URLSearchParams();
     formData.append("acao", "salvar");
+	// 👇 ADICIONE ESTA LINHA AQUI PARA ENVIAR O ID NO MODO DE EDIÇÃO 👇
+	formData.append("idTransportadora", document.getElementById("idTransportadora").value);
     formData.append("razaoSocial", document.getElementById("razaoSocial").value);
     formData.append("nomeFantasia", document.getElementById("nomeFantasia").value);
     formData.append("cnpj", document.getElementById("cnpj").value);

@@ -55,7 +55,9 @@ public class AuthFilter implements Filter {
             "/WEB-INF/jsp/marcas.jsp",
             "/WEB-INF/jsp/recebimento-equipamento.jsp",
             "/WEB-INF/jsp/cadastro-transportadora.jsp",
-            "/WEB-INF/jsp/consulta-transportadora.jsp"
+            "/WEB-INF/jsp/consulta-transportadora.jsp",
+            "/WEB-INF/jsp/cadastro-fornecedor.jsp",
+            "/WEB-INF/jsp/consulta-fornecedores.jsp"
             
             
     	     // Protegendo o acesso direto		
@@ -143,7 +145,7 @@ public class AuthFilter implements Filter {
         PROTECTED_RESOURCES_MODULES.put("/api/atributos", "atributos"); 
         
         // 9. marcas
-        PROTECTED_RESOURCES_MODULES.put("/WEB-INF/marcas.jsp", "marcas");
+        PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/marcas.jsp", "marcas");
         PROTECTED_RESOURCES_MODULES.put("/MarcaServlet", "marcas");
         PROTECTED_RESOURCES_MODULES.put("/api/marcas", "marcas"); 
         PROTECTED_RESOURCES_MODULES.put("/api/marcas/", "marcas"); 
@@ -176,6 +178,16 @@ public class AuthFilter implements Filter {
         PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/consulta-transportadora.jsp", "transportadoras");
         PROTECTED_RESOURCES_MODULES.put("/TransportadoraServlet", "transportadoras");
         PROTECTED_RESOURCES_MODULES.put("/ConsultaTransportadoraServlet", "transportadoras"); 
+        PROTECTED_RESOURCES_MODULES.put("/api/transportadoras", "transportadoras");
+        PROTECTED_RESOURCES_MODULES.put("/api/transportadoras/", "transportadoras");
+        
+        // 14. fornecedores
+        PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/cadastro-fornecedor.jsp", "fornecedores");
+        PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/consulta-fornecedores.jsp", "fornecedores");
+        PROTECTED_RESOURCES_MODULES.put("/FornecedorServlet", "fornecedores");
+        PROTECTED_RESOURCES_MODULES.put("/ConsultaFornecedorServlet", "fornecedores"); // Caso crie um servlet dedicado de consulta
+        PROTECTED_RESOURCES_MODULES.put("/api/fornecedores", "fornecedores");
+        PROTECTED_RESOURCES_MODULES.put("/api/fornecedores/", "fornecedores");
     }
 
     @Override

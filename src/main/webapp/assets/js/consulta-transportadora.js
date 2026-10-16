@@ -169,6 +169,15 @@ document.addEventListener("DOMContentLoaded", function () {
     if (formTransportadora) {
         formTransportadora.addEventListener("submit", async function (e) {
             e.preventDefault();
+			
+			// Validação preventiva de permissão de salvamento/edição
+            if (typeof permissaoEditarTransportadora !== 'undefined' && !permissaoEditarTransportadora) {
+                await ModalService.warning(
+                    "Acesso Negado", 
+                    "Você não possui permissão para cadastrar ou alterar dados de transportadoras."
+                );
+                return; // Interrompe a execução para não enviar nada
+            }
 
             if (listaEnderecos.length === 0) {
                 await ModalService.warning("Atenção", "Adicione pelo menos um endereço à transportadora antes de salvar.");

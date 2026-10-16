@@ -16,10 +16,15 @@ public class TransportadoraDAO {
     /**
      * Salva a transportadora, seus múltiplos endereços e as filiais atendidas usando transação (ACID) e batch.
      */
-    public boolean salvarComEnderecosEFiliais(Transportadora t, List<TransportadoraEndereco> enderecos, List<TransportadoraFilial> filiais) throws SQLException {
-        String sqlTransp = "INSERT INTO transportadoras (razao_social, nome_fantasia, cnpj, inscricao_estadual, rntrc, telefone, celular, email, site, status, observacao) " +
-                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_transportadora";
+	public boolean salvarComEnderecosEFiliais(Transportadora t, List<TransportadoraEndereco> enderecos, List<TransportadoraFilial> filiais) throws SQLException {
+        boolean isEdicao = (t.getIdTransportadora() != null && t.getIdTransportadora() > 0);
         
+        String sqlInsTransp = "INSERT INTO transportadoras (razao_social, nome_fantasia, cnpj, inscricao_estadual, rntrc, telefone, celular, email, site, status, observacao) " +
+                              "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_transportadora";
+        
+        String sqlUpdTransp = "UPDATE transportadoras SET razao_social = ?, nome_fantasia = ?, cnpj = ?, inscricao_estadual = ?, rntrc = ?, telefone = ?, celular = ?, email = ?, site = ?, status = ?, observacao = ? " +
+                              "WHERE id_transportadora = ?";
+
         String sqlEnd = "INSERT INTO transportadora_enderecos (id_transportadora, tipo_endereco_id, cep, logradouro, numero, complemento, bairro, cidade, uf, pais, referencia, principal) " +
                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_endereco";
 
@@ -37,37 +42,67 @@ public class TransportadoraDAO {
             conn = Conexao.conectar();
             conn.setAutoCommit(false); // Inicia a transação
 
-            // 1. Insere Transportadora
-            psTransp = conn.prepareStatement(sqlTransp);
-            psTransp.setString(1, t.getRazaoSocial());
-            psTransp.setString(2, t.getNomeFantasia());
-            psTransp.setString(3, t.getCnpj());
-            psTransp.setString(4, t.getInscricaoEstadual());
-            psTransp.setString(5, t.getRntrc());
-            psTransp.setString(6, t.getTelefone());
-            psTransp.setString(7, t.getCelular());
-            psTransp.setString(8, t.getEmail());
-            psTransp.setString(9, t.getSite());
-            psTransp.setString(10, t.getStatus());
-            psTransp.setString(11, t.getObservacao());
+            Long idTransportadora;
 
-            rs = psTransp.executeQuery();
-            Long idGerado = null;
-            if (rs.next()) {
-                idGerado = rs.getLong(1);
+            if (isEdicao) {
+                // 1A. Atualiza Transportadora Existente
+                psTransp = conn.prepareStatement(sqlUpdTransp);
+                psTransp.setString(1, t.getRazaoSocial());
+                psTransp.setString(2, t.getNomeFantasia());
+                psTransp.setString(3, t.getCnpj());
+                psTransp.setString(4, t.getInscricaoEstadual());
+                psTransp.setString(5, t.getRntrc());
+                psTransp.setString(6, t.getTelefone());
+                psTransp.setString(7, t.getCelular());
+                psTransp.setString(8, t.getEmail());
+                psTransp.setString(9, t.getSite());
+                psTransp.setString(10, t.getStatus());
+                psTransp.setString(11, t.getObservacao());
+                psTransp.setLong(12, t.getIdTransportadora());
+                
+                psTransp.executeUpdate();
+                idTransportadora = t.getIdTransportadora();
+
+                // Limpa os registros antigos de filiais e endereços para recriá-los com base no envio atual da tela
+                try (PreparedStatement psDelFiliais = conn.prepareStatement("DELETE FROM transportadora_filiais WHERE id_transportadora = ?")) {
+                    psDelFiliais.setLong(1, idTransportadora);
+                    psDelFiliais.executeUpdate();
+                }
+                try (PreparedStatement psDelEnd = conn.prepareStatement("DELETE FROM transportadora_enderecos WHERE id_transportadora = ?")) {
+                    psDelEnd.setLong(1, idTransportadora);
+                    psDelEnd.executeUpdate();
+                }
+
+            } else {
+                // 1B. Insere Nova Transportadora
+                psTransp = conn.prepareStatement(sqlInsTransp);
+                psTransp.setString(1, t.getRazaoSocial());
+                psTransp.setString(2, t.getNomeFantasia());
+                psTransp.setString(3, t.getCnpj());
+                psTransp.setString(4, t.getInscricaoEstadual());
+                psTransp.setString(5, t.getRntrc());
+                psTransp.setString(6, t.getTelefone());
+                psTransp.setString(7, t.getCelular());
+                psTransp.setString(8, t.getEmail());
+                psTransp.setString(9, t.getSite());
+                psTransp.setString(10, t.getStatus());
+                psTransp.setString(11, t.getObservacao());
+
+                rs = psTransp.executeQuery();
+                if (rs.next()) {
+                    idTransportadora = rs.getLong(1);
+                } else {
+                    conn.rollback();
+                    return false;
+                }
             }
 
-            if (idGerado == null) {
-                conn.rollback();
-                return false;
-            }
-
-            // 2. Insere os Endereços e guarda os IDs gerados para mapear nas filiais
+            // 2. Insere os Endereços (novos ou atualizados) e guarda os IDs gerados
             List<Long> idsEnderecosGerados = new ArrayList<>();
             if (enderecos != null && !enderecos.isEmpty()) {
                 psEnd = conn.prepareStatement(sqlEnd);
                 for (TransportadoraEndereco end : enderecos) {
-                    psEnd.setLong(1, idGerado);
+                    psEnd.setLong(1, idTransportadora);
                     psEnd.setInt(2, end.getTipoEnderecoId());
                     psEnd.setString(3, end.getCep());
                     psEnd.setString(4, end.getLogradouro());
@@ -94,14 +129,13 @@ public class TransportadoraDAO {
                 for (TransportadoraFilial filial : filiais) {
                     int indiceEndereco = filial.getEnderecoIndice(); // Índice selecionado no combo da tela
                     
-                    // Valida se o índice do endereço é seguro
                     if (indiceEndereco >= 0 && indiceEndereco < idsEnderecosGerados.size()) {
                         Long idEnderecoReal = idsEnderecosGerados.get(indiceEndereco);
 
-                        psFilial.setLong(1, idGerado);
+                        psFilial.setLong(1, idTransportadora);
                         psFilial.setInt(2, filial.getIdFilial());
                         psFilial.setLong(3, idEnderecoReal);
-                        psFilial.setBoolean(4, true); // ativo = true por padrão
+                        psFilial.setBoolean(4, true); 
                         psFilial.addBatch();
                     }
                 }
@@ -114,7 +148,7 @@ public class TransportadoraDAO {
         } catch (SQLException e) {
             if (conn != null) {
                 try {
-                    conn.rollback(); // Desfaz em caso de erro
+                    conn.rollback(); 
                 } catch (SQLException ex) {
                     ex.printStackTrace();
                 }
@@ -128,7 +162,7 @@ public class TransportadoraDAO {
 
         return sucesso;
     }
-
+	
     /**
      * Lista todas as transportadoras cadastradas para exibição na tela de consulta.
      */
@@ -261,11 +295,12 @@ public class TransportadoraDAO {
     }
     
     /**
-     * Lista as filiais vinculadas/atendidas por uma transportadora para exibição no modal de detalhes.
+     * Lista as filiais vinculadas/atendidas por uma transportadora para exibição e edição.
      */
     public List<Map<String, Object>> listarFiliaisPorTransportadora(Long idTransportadora) throws SQLException {
         List<Map<String, Object>> lista = new ArrayList<>();
-        String sql = "SELECT tf.id_filial, f.nome as nome_filial, te.logradouro, te.numero, te.cidade, te.uf " +
+        // Adicionado tf.id_endereco para que o front-end saiba qual endereço marcar no select da filial
+        String sql = "SELECT tf.id_filial, tf.id_endereco, f.nome_empresa as nome_filial, te.logradouro, te.numero, te.cidade, te.uf " +
                      "FROM transportadora_filiais tf " +
                      "INNER JOIN filiais f ON tf.id_filial = f.id_filial " +
                      "INNER JOIN transportadora_enderecos te ON tf.id_endereco = te.id_endereco " +
@@ -278,6 +313,7 @@ public class TransportadoraDAO {
                 while (rs.next()) {
                     Map<String, Object> map = new HashMap<>();
                     map.put("idFilial", rs.getInt("id_filial"));
+                    map.put("idEndereco", rs.getLong("id_endereco")); // <-- Chave essencial para o JS selecionar o endereço no combo
                     map.put("nomeFilial", rs.getString("nome_filial"));
                     map.put("endereco", rs.getString("logradouro") + ", " + rs.getString("numero") + " - " + rs.getString("cidade") + "/" + rs.getString("uf"));
                     lista.add(map);
@@ -286,14 +322,16 @@ public class TransportadoraDAO {
         }
         return lista;
     }
-
     /**
      * Lista os endereços vinculados a uma transportadora (usado na visualização do modal).
      */
+    /**
+     * Lista os endereços vinculados a uma transportadora (usado na visualização e edição).
+     */
     public List<TransportadoraEndereco> listarEnderecosPorTransportadora(Long idTransportadora) throws SQLException {
         List<TransportadoraEndereco> lista = new ArrayList<>();
-        String sql = "SELECT te.*, t.nome as nome_tipo_endereco FROM transportadora_enderecos te " +
-                     "LEFT JOIN tipos_endereco t ON te.tipo_endereco_id = t.id_tipo_endereco " +
+        String sql = "SELECT te.*, tp.nome as nome_tipo_endereco FROM transportadora_enderecos te " +
+                     "LEFT JOIN tipos_endereco tp ON te.tipo_endereco_id = tp.id_tipo_endereco " +
                      "WHERE te.id_transportadora = ?";
 
         try (Connection conn = Conexao.conectar();
@@ -304,7 +342,10 @@ public class TransportadoraDAO {
                     TransportadoraEndereco end = new TransportadoraEndereco();
                     end.setIdEndereco(rs.getLong("id_endereco"));
                     end.setTipoEnderecoId(rs.getInt("tipo_endereco_id"));
-                    // Se sua classe Model tiver um campo para o nome do tipo (ex: setNomeTipoEndereco), preencha aqui
+                    
+                    // CORREÇÃO: Preenche o tipoNome para exibir corretamente na tabela da JSP
+                    end.setTipoNome(rs.getString("nome_tipo_endereco"));
+                    
                     end.setCep(rs.getString("cep"));
                     end.setLogradouro(rs.getString("logradouro"));
                     end.setNumero(rs.getString("numero"));
@@ -318,10 +359,11 @@ public class TransportadoraDAO {
                     lista.add(end);
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return lista;
     }
-
     /**
      * Exclui uma transportadora (e por cascade ou dependência os endereços/filiais se configurado no banco).
      */

@@ -14,6 +14,8 @@ public class TransportadoraEndereco {
     private String pais;
     private String referencia;
     private boolean principal;
+    
+    private String tipoNome; // Adicione este atributo
 
     // Getters e Setters
     public Long getIdEndereco() { return idEndereco; }
@@ -42,4 +44,7 @@ public class TransportadoraEndereco {
     public void setReferencia(String referencia) { this.referencia = referencia; }
     public boolean isPrincipal() { return principal; }
     public void setPrincipal(boolean principal) { this.principal = principal; }
+    // Adicione o Getter e o Setter correspondentes:
+    public String getTipoNome() { return tipoNome; }
+    public void setTipoNome(String tipoNome) { this.tipoNome = tipoNome; }
 }

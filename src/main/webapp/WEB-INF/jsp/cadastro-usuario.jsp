@@ -36,7 +36,7 @@
             <li class="breadcrumb-item active" aria-current="page">${title != null ? title : "Cadastrar Usuarios"}</li>
         </ol>
         </nav>
-    </div>
+   <div class="mb-4">
 
     <!-- O formulário agora envia a ação via JS ou input hidden para diferenciar cadastro/edição -->
     <form id="formCadastroUsuario">
@@ -253,5 +253,6 @@
     const unidadesPermitidasUsuario = ${not empty usuarioUnidadesJson ? usuarioUnidadesJson : '[]'};
 </script>
 <script src="${pageContext.request.contextPath}/assets/js/cadastro-usuario.js"></script>
+<script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 </body>
 </html>

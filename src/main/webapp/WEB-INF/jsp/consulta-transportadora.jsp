@@ -1,11 +1,34 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%
+    // 1. Processa as permissões e o perfil do usuário logado no topo da página
+    model.Usuario uLogado = (model.Usuario) session.getAttribute("usuarioLogado");
+    
+    boolean isAdmin = uLogado != null && (
+        "SUPER_ADMINISTRADOR".equalsIgnoreCase(uLogado.getPerfil()) || 
+        "ADMINISTRADOR".equalsIgnoreCase(uLogado.getPerfil()) ||
+        (uLogado.getPerfil() != null && uLogado.getPerfil().toUpperCase().contains("SUPER"))
+    );
+
+    // Se for admin, tem acesso total. Senão, verifica a permissão granular para "transportadoras"
+    boolean podeEditarGlob = isAdmin || (uLogado != null && uLogado.temPermissao("transportadoras", "EDITAR"));
+    boolean podeExcluirGlob = isAdmin || (uLogado != null && uLogado.temPermissao("transportadoras", "EXCLUIR"));
+
+    // 2. Disponibiliza as variáveis para as tags JSTL (<c:if>)
+    request.setAttribute("podeEditar", podeEditarGlob);
+    request.setAttribute("podeExcluir", podeExcluirGlob);
+
+    String filialCod = "";
+    if (uLogado != null && uLogado.getUnidadesPermitidas() != null && !uLogado.getUnidadesPermitidas().isEmpty()) {
+        filialCod = uLogado.getUnidadesPermitidas().get(0);
+    }
+%>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <title>Nexacore - Consulta de Transportadoras</title>
-    
+      
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
@@ -29,11 +52,12 @@
         </div>
         
         <div>
-            <!-- Botão Nova Transportadora agora aponta para a renderização de cadastro via Servlet -->
-            <a href="${pageContext.request.contextPath}/TransportadoraServlet?acao=novo" class="btn btn-success">
-                <i class="fa fa-plus me-1"></i> Nova Transportadora
-            </a>
-        </div>
+		    <c:if test="${podeEditar}">
+		        <a href="${pageContext.request.contextPath}/TransportadoraServlet?acao=novo" class="btn btn-success">
+		            <i class="fa fa-plus me-1"></i> Nova Transportadora
+		        </a>
+		    </c:if>
+		</div>
     </div>
 
     <!-- Área de Filtros de Pesquisa -->
@@ -113,10 +137,19 @@
 									    <span class="badge ${t.statusBadgeClass}">${t.status}</span>
 									</td>
                                     <td class="text-center">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm border-0 btn-visualizar" data-id="${t.idTransportadora}" title="Visualizar"><i class="fa fa-eye"></i></button>
-                                        <button type="button" class="btn btn-outline-primary btn-sm border-0 btn-editar" data-id="${t.idTransportadora}" title="Editar"><i class="fa fa-pen"></i></button>
-                                        <button type="button" class="btn btn-outline-danger btn-sm border-0 btn-excluir" data-id="${t.idTransportadora}" title="Excluir"><i class="fa fa-trash"></i></button>
-                                    </td>
+									    <!-- Visualizar é liberado -->
+									    <button type="button" class="btn btn-outline-secondary btn-sm border-0 btn-visualizar" data-id="${t.idTransportadora}" title="Visualizar"><i class="fa fa-eye"></i></button>
+									    
+									    <!-- Editar protegido por JSTL -->
+									    <c:if test="${podeEditar}">
+									        <button type="button" class="btn btn-outline-primary btn-sm border-0 btn-editar" data-id="${t.idTransportadora}" title="Editar"><i class="fa fa-pen"></i></button>
+									    </c:if>
+									    
+									    <!-- Excluir protegido por JSTL -->
+									    <c:if test="${podeExcluir}">
+									        <button type="button" class="btn btn-outline-danger btn-sm border-0 btn-excluir" data-id="${t.idTransportadora}" title="Excluir"><i class="fa fa-trash"></i></button>
+									    </c:if>
+									</td>
                                 </tr>
                             </c:forEach>
                         </c:when>
@@ -155,6 +188,19 @@
 <script>
     // Única variável global de contexto necessária para os arquivos JS externos
     const contextPath = "${pageContext.request.contextPath}";
+</script>
+<script>
+    // Variável global de contexto padronizada para os arquivos JS externos
+    const contextPath = "${pageContext.request.contextPath}";
+
+ // Variável global de contexto padronizada
+    const contextPath = "${pageContext.request.contextPath}";
+
+    // Injeta as permissões e dados do usuário logado diretamente no JS (utilizando as variáveis calculadas no topo)
+    const permissaoEditarTransportadora = <%= podeEditarGlob %>;
+    const permissaoExcluirTransportadora = <%= podeExcluirGlob %>;
+    const usuarioAdmin = <%= isAdmin %>;
+    const filialUsuarioCodigo = "<%= filialCod %>";
 </script>
 <script src="${pageContext.request.contextPath}/assets/js/consulta-transportadora.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>

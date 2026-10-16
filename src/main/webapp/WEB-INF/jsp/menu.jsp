@@ -64,6 +64,7 @@
     <c:set var="canSeeEquipamentos" value="${hasFullAccess or fn:contains(modulosStr, ',equipamento,') or fn:contains(modulosStr, ',equipamentos,')}" />
     <c:set var="canSeeProdutos" value="${hasFullAccess or fn:contains(modulosStr, ',produto,') or fn:contains(modulosStr, ',produtos,')}" />
     <c:set var="canSeeTransportadoras" value="${hasFullAccess or fn:contains(modulosStr, ',transportadora,') or fn:contains(modulosStr, ',transportadoras,')}" />
+    <c:set var="canSeeFornecedores" value="${hasFullAccess or fn:contains(modulosStr, ',fornecedor,') or fn:contains(modulosStr, ',fornecedores,')}" />
     <%--<c:set var="canSeeMovimentacao" value="${hasFullAccess or fn:contains(modulosStr, ',movimentacao,')}" /> --%>
     <%-- MOVIMENTAÇÕES (Aceita tanto envio quanto recebimento) --%>
     <c:set var="canSeeMovimentacao" value="${hasFullAccess or fn:contains(modulosStr, ',movimentacao,') or fn:contains(modulosStr, ',movimentacoes,') or fn:contains(modulosStr, ',movimentacao_envio,') or fn:contains(modulosStr, ',movimentacao_recebimento,')}" />
@@ -129,6 +130,15 @@
 		                <li><a href="<%=ctx%>/TransportadoraServlet"><i class="bi bi-truck"></i> Transportadoras</a></li>
 		            </c:if>
                     <li><a href="<%=ctx%>/ConsultaTransportadoraServlet"><i class="bi bi-list-check"></i> Consultar Transportadoras </a></li>
+                </ul>
+            </c:if>
+            
+            <%-- FORNECEDORES --%>
+            <c:if test="${canSeeFornecedores}">
+                <span class="menu-category">FORNECEDORES</span>
+                <ul class="sidebar-menu">
+                    <li><a href="<%=ctx%>/ConsultaFornecedorServlet"><i class="bi bi-shop"></i> Consulta de Fornecedores</a></li>
+                    <li><a href="<%=ctx%>/FornecedorServlet"><i class="bi bi-plus-circle"></i> Cadastrar Fornecedor</a></li>
                 </ul>
             </c:if>
 
