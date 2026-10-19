@@ -18,7 +18,7 @@
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb mb-1" style="font-size: 0.85rem;">
                 <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/TransportadoraServlet">Consulta Transportadora</a></li>
+                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaTransportadoraServlet">Consulta Transportadora</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Transportadoras</li>
             </ol>
         </nav>
@@ -28,7 +28,7 @@
             <div>
                 <h4 class="mb-0 fw-bold text-dark">
                     <c:choose>
-                        <c:when test="${not empty transportadora}">Editar Transportadora (ID: ${transportadora.idTransportadora})</c:when>
+                        <c:when test="${not empty transportadora}">Editar Transportadora </c:when>
                         <c:otherwise>Cadastro de Transportadora</c:otherwise>
                     </c:choose>
                 </h4>

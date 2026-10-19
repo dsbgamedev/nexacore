@@ -72,7 +72,6 @@ public class FornecedorDAO {
         ps.setString(5, vazio(f.getInscricaoEstadual()));
         ps.setString(6, vazio(f.getInscricaoMunicipal()));
         
-        // Ajustado para tratar id_categoria como Integer
         if (f.getIdCategoria() != null) {
             ps.setInt(7, f.getIdCategoria());
         } else {
@@ -160,6 +159,7 @@ public class FornecedorDAO {
                 Fornecedor f = map(rs);
                 f.setEnderecos(listarEnderecos(c, id));
                 f.setFiliaisIds(listarFiliaisIds(c, id));
+                f.setListaFiliaisNomes(buscarFiliaisFormatadasPorFornecedor(c, id)); // <--- ADICIONADO AQUI
                 return f;
             }
         }
@@ -211,11 +211,31 @@ public class FornecedorDAO {
                     Fornecedor f = map(rs);
                     f.setQuantidadeEnderecos(rs.getInt("qtd_enderecos"));
                     f.setQuantidadeFiliais(rs.getInt("qtd_filiais"));
+                    f.setListaFiliaisNomes(buscarFiliaisFormatadasPorFornecedor(c, f.getIdFornecedor())); // <--- ADICIONADO AQUI
                     out.add(f);
                 }
             }
         }
         return out;
+    }
+
+    // --- NOVO MÉTODO AUXILIAR PARA FORMATAR AS FILIAIS (origem_codigo + sufixo) ---
+    public List<String> buscarFiliaisFormatadasPorFornecedor(Connection c, long idFornecedor) throws SQLException {
+        List<String> filiaisFormatadas = new ArrayList<>();
+        String sql = "SELECT f.origem_codigo || ' ' || f.sufixo AS filial_str " +
+                     "FROM public.fornecedor_filiais ff " +
+                     "JOIN public.filiais f ON ff.id_filial = f.id_filial " +
+                     "WHERE ff.id_fornecedor = ? AND ff.ativo = TRUE";
+                     
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, idFornecedor);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    filiaisFormatadas.add(rs.getString("filial_str"));
+                }
+            }
+        }
+        return filiaisFormatadas;
     }
 
     public List<Map<String, Object>> listarFiliais() throws SQLException {
@@ -296,7 +316,6 @@ public class FornecedorDAO {
         f.setInscricaoEstadual(rs.getString("inscricao_estadual"));
         f.setInscricaoMunicipal(rs.getString("inscricao_municipal"));
         
-        // Mapeia o id_categoria como Integer tratando possíveis valores nulos
         int idCat = rs.getInt("id_categoria");
         f.setIdCategoria(rs.wasNull() ? null : idCat);
 

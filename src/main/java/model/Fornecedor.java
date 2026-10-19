@@ -28,6 +28,7 @@ public class Fornecedor implements Serializable {
     private int quantidadeFiliais;
     private List<FornecedorEndereco> enderecos = new ArrayList<>();
     private List<Integer> filiaisIds = new ArrayList<>();
+    private List<String> listaFiliaisNomes = new ArrayList<>();
 
     public Long getIdFornecedor(){return idFornecedor;} public void setIdFornecedor(Long v){idFornecedor=v;}
     public String getTipoPessoa(){return tipoPessoa;} public void setTipoPessoa(String v){tipoPessoa=v;}
@@ -50,4 +51,10 @@ public class Fornecedor implements Serializable {
     public int getQuantidadeFiliais(){return quantidadeFiliais;} public void setQuantidadeFiliais(int v){quantidadeFiliais=v;}
     public List<FornecedorEndereco> getEnderecos(){return enderecos;} public void setEnderecos(List<FornecedorEndereco> v){enderecos=v==null?new ArrayList<>():v;}
     public List<Integer> getFiliaisIds(){return filiaisIds;} public void setFiliaisIds(List<Integer> v){filiaisIds=v==null?new ArrayList<>():v;}
+    public List<String> getListaFiliaisNomes() {
+        return listaFiliaisNomes;
+    }
+    public void setListaFiliaisNomes(List<String> listaFiliaisNomes) {
+        this.listaFiliaisNomes = listaFiliaisNomes != null ? listaFiliaisNomes : new ArrayList<>();
+    }
 }

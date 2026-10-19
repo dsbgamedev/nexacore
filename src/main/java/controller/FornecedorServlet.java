@@ -66,13 +66,48 @@ public class FornecedorServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         req.setCharacterEncoding("UTF-8");
+      
+        String acao = req.getParameter("acao");
 
-        // Valida se tem permissão de escrita para abrir a tela de cadastro/edição
+        // --- 1. TRATAMENTO PARA RETORNAR OS DETALHES EM JSON (MODAL DE VISUALIZAÇÃO) ---
+        if ("detalhesJson".equals(acao)) {
+            resp.setContentType("application/json;charset=UTF-8");
+            try {
+                HttpSession session = req.getSession(false);
+                Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
+
+                if (usuario == null) {
+                    json(resp, 401, Map.of("sucesso", false, "mensagem", "Sessão expirada."));
+                    return;
+                }
+
+                String idParam = req.getParameter("id");
+                if (idParam == null || idParam.isBlank()) {
+                    json(resp, 400, Map.of("sucesso", false, "mensagem", "ID do fornecedor não informado."));
+                    return;
+                }
+
+                long id = Long.parseLong(idParam);
+                Fornecedor f = dao.buscarPorId(id);
+                
+                if (f == null) {
+                    json(resp, 404, Map.of("sucesso", false, "mensagem", "Fornecedor não encontrado."));
+                    return;
+                }
+
+                json(resp, 200, Map.of("sucesso", true, "fornecedor", f));
+            } catch (Exception e) {
+                e.printStackTrace();
+                json(resp, 500, Map.of("sucesso", false, "mensagem", "Erro interno: " + e.getMessage()));
+            }
+            return;
+        }
+        
+   
+        // ----2. Valida se tem permissão de escrita para abrir a tela de cadastro/edição
         if (!validarPermissaoEscrita(req, resp)) {
             return;
         }
-
-        String acao = req.getParameter("acao");
 
         try {
             if (acao == null || acao.isBlank()) {
@@ -238,7 +273,7 @@ public class FornecedorServlet extends HttpServlet {
                 fornecedorAntigo = dao.buscarPorId(f.getIdFornecedor());
             }
             
-         // 1. Validação de obrigatoriedade dos dados cadastrais principais
+            // 1. Validação de obrigatoriedade dos dados cadastrais principais
             if (f.getRazaoSocial() == null || f.getRazaoSocial().trim().isEmpty() ||
                 f.getDocumento() == null || f.getDocumento().trim().isEmpty() ||
                 f.getStatus() == null || f.getStatus().trim().isEmpty()) {
@@ -246,7 +281,7 @@ public class FornecedorServlet extends HttpServlet {
                 return;
             }
 
-            // 2. Validação rigorosa de CPF/CNPJ e Inscrições Estaduais/Municipais
+         // 2. Validação rigorosa de CPF/CNPJ
             String docLimpo = f.getDocumento().replaceAll("\\D", "");
             boolean isPf = "PF".equalsIgnoreCase(f.getTipoPessoa());
 
@@ -262,12 +297,36 @@ public class FornecedorServlet extends HttpServlet {
                 }
             }
 
+            // 2.1 Validação rigorosa de Inscrição Estadual (Obrigatória e tamanho entre 9 e 14 dígitos)
+            String ie = f.getInscricaoEstadual();
+            if (ie == null || ie.trim().isEmpty()) {
+                json(resp, 400, Map.of("sucesso", false, "mensagem", "A Inscrição Estadual é obrigatória."));
+                return;
+            }
+            String ieLimpo = ie.replaceAll("\\D", "");
+            if (ieLimpo.length() < 9 || ieLimpo.length() > 14) {
+                json(resp, 400, Map.of("sucesso", false, "mensagem", "Inscrição Estadual inválida. Deve conter entre 9 e 14 dígitos numéricos."));
+                return;
+            }
+
+            // 2.2 Validação rigorosa de Inscrição Municipal (Obrigatória e tamanho até 11 dígitos)
+            String im = f.getInscricaoMunicipal();
+            if (im == null || im.trim().isEmpty()) {
+                json(resp, 400, Map.of("sucesso", false, "mensagem", "A Inscrição Municipal é obrigatória."));
+                return;
+            }
+            String imLimpo = im.replaceAll("\\D", "");
+            if (imLimpo.length() > 11) {
+                json(resp, 400, Map.of("sucesso", false, "mensagem", "Inscrição Municipal inválida. Deve conter no máximo 11 dígitos numéricos."));
+                return;
+            }
+
             // 3. Validação de obrigatoriedade de pelo menos uma filial selecionada
             if (f.getFiliaisIds() == null || f.getFiliaisIds().isEmpty()) {
                 json(resp, 400, Map.of("sucesso", false, "mensagem", "Selecione pelo menos uma filial ou matriz autorizada para este fornecedor."));
                 return;
             }
-
+            
             long salvo = dao.salvar(f);
 
             // Auditoria de Criação ou Atualização

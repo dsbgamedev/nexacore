@@ -1,5 +1,16 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ page import="model.Fornecedor,com.google.gson.Gson" %>
+<%
+    Fornecedor fornecedor = (Fornecedor) request.getAttribute("fornecedor");
+    if (fornecedor == null) fornecedor = new Fornecedor();
+
+    String enderecosJson = (String) request.getAttribute("enderecosJson");
+    if (enderecosJson == null) enderecosJson = "[]";
+
+    String filiaisIdsJson = (String) request.getAttribute("filiaisIdsJson");
+    if (filiaisIdsJson == null) filiaisIdsJson = "[]";
+%>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -8,6 +19,8 @@
     <title>NexaCore | Fornecedores</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
     <link href="${pageContext.request.contextPath}/assets/css/fornecedores.css" rel="stylesheet">
 </head>
 <body>
@@ -16,16 +29,6 @@
         <!-- Main Content -->
         <main class="nx-main">
         
-            <header class="nx-topbar">
-                <button class="btn-menu" type="button" aria-label="Menu">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <div class="topbar-actions ms-auto">
-                    <i class="fa-regular fa-bell"></i>
-                    <i class="fa-regular fa-circle-question"></i>
-                </div>
-            </header>
-
             <div class="nx-content">
                 <!-- Breadcrumb e Título Principal -->
                 <nav aria-label="breadcrumb" class="mb-3">
@@ -98,7 +101,7 @@
                             <p>Use os filtros para localizar um cadastro.</p>
                         </div>
                     </div>
-                    <form method="get" action="${pageContext.request.contextPath}/FornecedorServlet" class="filter-grid">
+                    <form method="get" action="${pageContext.request.contextPath}/ConsultaFornecedorServlet" class="filter-grid" id="formFiltros">
                         <div class="field">
                             <label>Nome / Razão social / Contato</label>
                             <input class="form-control" name="busca" value="${filtroBusca}" placeholder="Digite para pesquisar...">
@@ -131,7 +134,7 @@
                             <button class="btn btn-primary nx-btn">
                                 <i class="fa-solid fa-filter me-2"></i>Filtrar
                             </button>
-                            <a class="btn btn-light" href="${pageContext.request.contextPath}/FornecedorServlet">Limpar</a>
+                            <button type="button" class="btn btn-light" onclick="limparFiltrosFornecedores()">Limpar</button>
                         </div>
                     </form>
                 </section>
@@ -160,43 +163,72 @@
                             </thead>
                             <tbody>
                                 <c:forEach items="${fornecedores}" var="f">
-                                    <tr>
-                                        <td>
-                                            <div class="company-cell">
-                                                <span class="company-avatar"><i class="fa-solid fa-building"></i></span>
-                                                <div>
-                                                    <strong><c:out value="${f.razaoSocial}"/></strong>
-                                                    <small><c:out value="${f.nomeFantasia}"/></small>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="doc-value"><c:out value="${f.documento}"/></span>
-                                            <small class="d-block text-muted">${f.tipoPessoa == 'PF' ? 'Pessoa física' : 'Pessoa jurídica'}</small>
-                                        </td>
-                                        <td>
-                                            <strong><c:out value="${f.contatoPrincipal}"/></strong>
-                                            <small class="d-block text-muted"><c:out value="${f.email}"/></small>
-                                        </td>
-                                        <td>
-                                            <span class="mini-tag"><i class="fa-solid fa-code-branch me-1"></i>${f.quantidadeFiliais} filial(is)</span>
-                                        </td>
-                                        <td>${f.quantidadeEnderecos}</td>
-                                        <td>
-                                            <span class="status-badge ${f.status == 'ATIVO' ? 'status-active' : (f.status == 'BLOQUEADO' ? 'status-blocked' : 'status-inactive')}">
-                                                <c:out value="${f.status}"/>
-                                            </span>
-                                        </td>
-                                        <td class="text-end text-nowrap">
-                                            <a class="btn-icon" title="Editar" href="${pageContext.request.contextPath}/FornecedorServlet?acao=editar&id=${f.idFornecedor}">
-                                                <i class="fa-solid fa-pen"></i>
-                                            </a>
-                                            <button class="btn-icon danger" title="Excluir" onclick="excluirFornecedor(${f.idFornecedor}, '${pageContext.request.contextPath}')">
-                                                <i class="fa-regular fa-trash-can"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </c:forEach>
+    <tr class="${f.status == 'INATIVO' ? 'row-inactive' : ''}">
+        <!-- Coluna Fornecedor -->
+        <td title="Razão Social: ${f.razaoSocial} | Nome Fantasia: ${f.nomeFantasia}">
+            <div class="company-cell">
+                <span class="company-avatar"><i class="fa-solid fa-building"></i></span>
+                <div>
+                    <strong title="${f.razaoSocial}"><c:out value="${f.razaoSocial}"/></strong>
+                    <small title="${f.nomeFantasia}"><c:out value="${f.nomeFantasia}"/></small>
+                </div>
+            </div>
+        </td>
+
+        <!-- Coluna CPF / CNPJ -->
+        <td title="Documento: ${f.documento} (${f.tipoPessoa == 'PF' ? 'Pessoa física' : 'Pessoa jurídica'})">
+            <span class="doc-value" title="${f.documento}"><c:out value="${f.documento}"/></span>
+            <small class="d-block text-muted" title="${f.tipoPessoa == 'PF' ? 'Pessoa física' : 'Pessoa jurídica'}">${f.tipoPessoa == 'PF' ? 'Pessoa física' : 'Pessoa jurídica'}</small>
+        </td>
+
+        <!-- Coluna Contato -->
+        <td title="Contato: ${f.contatoPrincipal} | E-mail: ${f.email}">
+            <strong title="${f.contatoPrincipal}"><c:out value="${f.contatoPrincipal}"/></strong>
+            <small class="d-block text-muted" title="${f.email}"><c:out value="${f.email}"/></small>
+        </td>
+
+        <!-- Coluna Filiais liberadas -->
+        <td title="<c:forEach var='fn' items='${f.listaFiliaisNomes}' varStatus='vs'>${fn}${!vs.last ? ', ' : ''}</c:forEach>">
+            <c:choose>
+                <c:when test="${not empty f.listaFiliaisNomes}">
+                    <c:forEach var="filialNome" items="${f.listaFiliaisNomes}">
+                        <span class="badge bg-light text-dark border me-1 mb-1" title="${filialNome}">
+                            <i class="fa-solid fa-code-branch me-1"></i>${filialNome}
+                        </span>
+                    </c:forEach>
+                </c:when>
+                <c:otherwise>
+                    <span class="text-muted small">Nenhuma filial</span>
+                </c:otherwise>
+            </c:choose>
+        </td>
+
+        <!-- Coluna Endereços -->
+        <td title="Total de endereços cadastrados: ${f.quantidadeEnderecos}">
+            ${f.quantidadeEnderecos}
+        </td>
+
+        <!-- Coluna Status -->
+        <td title="Status atual: ${f.status}">
+            <span class="status-badge ${f.status == 'ATIVO' ? 'status-active' : (f.status == 'BLOQUEADO' ? 'status-blocked' : 'status-inactive')}" title="${f.status}">
+                <c:out value="${f.status}"/>
+            </span>
+        </td>
+
+        <!-- Coluna Ações -->
+        <td class="text-end text-nowrap" title="Ações disponíveis">
+            <button type="button" class="btn-icon" title="Visualizar" onclick="visualizarFornecedor(${f.idFornecedor}, '${pageContext.request.contextPath}')">
+                <i class="fa-solid fa-eye"></i>
+            </button>
+            <a class="btn-icon" title="Editar" href="${pageContext.request.contextPath}/FornecedorServlet?acao=editar&id=${f.idFornecedor}">
+                <i class="fa-solid fa-pen"></i>
+            </a>
+            <button class="btn-icon danger" title="Excluir" onclick="excluirFornecedor(${f.idFornecedor}, '${pageContext.request.contextPath}')">
+                <i class="fa-regular fa-trash-can"></i>
+            </button>
+        </td>
+    </tr>
+</c:forEach>
                                 <c:if test="${empty fornecedores}">
                                     <tr>
                                         <td colspan="7">
@@ -217,11 +249,61 @@
             </div>
         </main>
     </div>
+	<!-- Modais de Alerta e Confirmação Padronizados -->
+	<div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+	    <div class="modal-dialog modal-dialog-centered">
+	        <div class="modal-content modal-content-custom" id="alertBox">
+	            <h3 id="alertTitle" class="fw-bold mb-2"></h3>
+	            <p id="alertMessage" class="text-muted mb-4"></p>
+	            <div class="modal-buttons">
+	                <button type="button" class="btn btn-primary px-4" id="alertOkBtn" data-bs-dismiss="modal">OK</button>
+	            </div>
+	        </div>
+	    </div>
+	</div>
+	
+	<div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+	    <div class="modal-dialog modal-dialog-centered">
+	        <div class="modal-content modal-content-custom" id="confirmBox">
+	            <h3 id="confirmTitle" class="fw-bold mb-2"></h3>
+	            <p id="confirmMessage" class="text-muted mb-4"></p>
+	            <div class="modal-buttons">
+	                <button type="button" class="btn btn-secondary px-4" id="confirmCancelBtn" data-bs-dismiss="modal">Cancelar</button>
+	                <button type="button" class="btn btn-danger px-4" id="confirmOkBtn">Confirmar</button>
+	            </div>
+	        </div>
+	    </div>
+	</div>
+	
+	<!-- Modal de Visualização de Fornecedor -->
+	<div class="modal fade" id="viewModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+	    <div class="modal-dialog modal-dialog-centered modal-lg">
+	        <div class="modal-content" style="border-radius: 12px; border: none; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+	            <div class="modal-header border-0 pb-0">
+	                <h5 class="modal-title fw-bold"><i class="fa-solid fa-building me-2 text-primary"></i>Detalhes do Fornecedor</h5>
+	                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+	            </div>
+	            <div class="modal-body p-4" id="viewModalBody">
+	                <div class="text-center py-4">
+	                    <div class="spinner-border text-primary" role="status"></div>
+	                    <p class="text-muted mt-2 mb-0">Carregando informações...</p>
+	                </div>
+	            </div>
+	            <div class="modal-footer border-0 pt-0">
+	                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">Fechar</button>
+	            </div>
+	        </div>
+	    </div>
+	</div>
 
     <script>
         window.NEXACORE_CONTEXT = '${pageContext.request.contextPath}';
+        window.FORNECEDOR_ENDERECOS = <%= enderecosJson %>;
+        window.FORNECEDOR_FILIAIS = <%= filiaisIdsJson %>;
     </script>
-    <script src="${pageContext.request.contextPath}/assets/js/fornecedores.js"></script>
+    <!-- Adicione o script do Bootstrap JS aqui -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+    <script src="${pageContext.request.contextPath}/assets/js/fornecedores.js"></script>
 </body>
 </html>
