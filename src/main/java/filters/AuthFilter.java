@@ -57,7 +57,8 @@ public class AuthFilter implements Filter {
             "/WEB-INF/jsp/cadastro-transportadora.jsp",
             "/WEB-INF/jsp/consulta-transportadora.jsp",
             "/WEB-INF/jsp/cadastro-fornecedor.jsp",
-            "/WEB-INF/jsp/consulta-fornecedores.jsp"
+            "/WEB-INF/jsp/consulta-fornecedores.jsp",
+            "/WEB-INF/jsp/admin-sessoes.jsp"
             
             
     	     // Protegendo o acesso direto		
@@ -188,6 +189,12 @@ public class AuthFilter implements Filter {
         PROTECTED_RESOURCES_MODULES.put("/ConsultaFornecedorServlet", "fornecedores"); // Caso crie um servlet dedicado de consulta
         PROTECTED_RESOURCES_MODULES.put("/api/fornecedores", "fornecedores");
         PROTECTED_RESOURCES_MODULES.put("/api/fornecedores/", "fornecedores");
+        
+        // 15. sessoes ativas (Administração de conexões)
+        PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/admin-sessoes.jsp", "usuarios");
+        PROTECTED_RESOURCES_MODULES.put("/AdminSessoesServlet", "usuarios");
+        PROTECTED_RESOURCES_MODULES.put("/api/sessoes", "usuarios");
+        PROTECTED_RESOURCES_MODULES.put("/api/sessoes/", "usuarios");
     }
 
     @Override

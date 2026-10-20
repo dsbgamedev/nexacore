@@ -76,6 +76,7 @@
     <c:set var="canSeeEmpresas" value="${isSuperAdmin}" />
     <c:set var="canSeeAtributo" value="${isSuperAdmin}" /> 
     <c:set var="canSeeAuditoria" value="${isSuperAdmin}" />  
+    <c:set var="canSeeSessoes" value="${isSuperAdmin}" /> 
     <c:set var="canSeeUsuarios" value="${hasFullAccess or fn:contains(modulosStr, ',usuario,') or fn:contains(modulosStr, ',usuarios,')}" />
      <c:set var="canSeeGerenciarUsuarios" value="${hasFullAccess or fn:contains(modulosStr, ',usuario,') or fn:contains(modulosStr, ',usuarios,')}" />
      <%-- Variáveis granulares para ações de escrita (Inserir/Editar) --%>
@@ -198,8 +199,17 @@
                     </c:if>  
                 </ul>       
             </c:if>
+            
+            <%-- SEÇÃO DE GERENCIAMENTO DE SESSÕES (Visível apenas para Administradores) --%>
+             <c:if test="${canSeeSessoes}">
+             <span class="menu-category">GERENCIAR SESSÕES</span>
+              <ul class="sidebar-menu">
+                <c:if test="${canSeeSessoes}">
+                  <li><a href="<%=ctx%>/AdminSessoesServlet"><i class="bi bi-cpu"></i> GERENCIAR SESSÕES </a></li>
+                 </c:if>  
+              </ul>       
+            </c:if>
              
-
             <span class="menu-category">CONFIGURAÇÕES</span>
             <ul class="sidebar-menu">
                 <li><a href="<%=ctx%>/ConfiguracoesServlet"><i class="bi bi-gear"></i> Configurações</a></li>

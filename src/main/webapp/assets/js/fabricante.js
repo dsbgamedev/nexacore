@@ -42,6 +42,86 @@ document.addEventListener("DOMContentLoaded", function() {
     btnNovo.addEventListener("click", () => abrirFormulario());
     btnVoltar.addEventListener("click", (e) => { e.preventDefault(); fecharFormulario(); });
     linkVoltarBreadcrumb.addEventListener("click", (e) => { e.preventDefault(); fecharFormulario(); });
+	
+	// --- ORDENAÇÃO POR COLUNAS AO CLICAR NO CABEÇALHO ---
+    let colunaAtualOrdenacao = "";
+    let ordemAscendente = true;
+
+    document.querySelectorAll("th.sortable").forEach(th => {
+        th.addEventListener("click", function() {
+            const campo = this.getAttribute("data-sort");
+
+            if (colunaAtualOrdenacao === campo) {
+                ordemAscendente = !ordemAscendente; 
+            } else {
+                colunaAtualOrdenacao = campo;
+                ordemAscendente = true; 
+            }
+
+            document.querySelectorAll("th.sortable i").forEach(icon => {
+                icon.className = "fa fa-sort ms-1 text-muted";
+            });
+            const iconeAtual = this.querySelector("i");
+            iconeAtual.className = ordemAscendente ? "fa fa-sort-up ms-1 text-primary" : "fa fa-sort-down ms-1 text-primary";
+
+            executarOrdenacao(campo, ordemAscendente);
+        });
+    });
+
+    function executarOrdenacao(campo, asc) {
+        const termo = filtroNome.value.toLowerCase().trim();
+        const termoSituacao = filtroSituacao.value;
+
+        const filtrados = listaGlobalFabricantes.filter(f => {
+            const matchNome = termo === "" || f.razaoSocial.toLowerCase().includes(termo) || (f.cnpj && f.cnpj.toLowerCase().includes(termo));
+            let matchSit = true;
+            if (termoSituacao === "true") matchSit = f.ativo === true;
+            else if (termoSituacao === "false") matchSit = f.ativo === false;
+            return matchNome && matchSit;
+        });
+
+        filtrados.sort((a, b) => {
+            let valorA = a[campo];
+            let valorB = b[campo];
+
+            if (valorA === null || valorA === undefined) valorA = "";
+            if (valorB === null || valorB === undefined) valorB = "";
+
+            if (typeof valorA === "string") {
+                valorA = valorA.toLowerCase();
+                valorB = valorB.toLowerCase();
+            }
+
+            if (valorA < valorB) return asc ? -1 : 1;
+            if (valorA > valorB) return asc ? 1 : -1;
+            return 0;
+        });
+
+        renderizarTabela(filtrados);
+    }
+
+	// Habilitar a tecla Enter para navegar entre os campos (comportamento de Tab)
+    const inputsFormulario = viewFormulario.querySelectorAll("input, select, textarea");
+    
+    inputsFormulario.forEach((el, index) => {
+        el.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                // Previne o comportamento padrão (como submeter o formulário sem querer)
+                e.preventDefault(); 
+                
+                // Pega o próximo elemento focável no formulário
+                const proximoElemento = inputsFormulario[index + 1];
+                
+                if (proximoElemento) {
+                    proximoElemento.focus();
+                    // Se for um input de texto, seleciona o conteúdo para facilitar a digitação
+                    if (proximoElemento.tagName === "INPUT" && proximoElemento.type === "text") {
+                        proximoElemento.select();
+                    }
+                }
+            }
+        });
+    });
 
     // Máscara dinâmica para o CNPJ
     if (inputCnpj) {
@@ -58,43 +138,53 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-    if (inputIe) {
-        inputIe.addEventListener("input", function(e) {
-            let value = e.target.value.replace(/[^\d.\-\/]/g, ""); 
-            e.target.value = value;
-        });
-    }
+	// --- MÁSCARA E BUSCA AUTOMÁTICA DE CEP ---
+	    inputCep.addEventListener("input", function(e) {
+	        let valor = e.target.value.replace(/\D/g, '');
+	        
+	        if (valor.length > 8) {
+	            valor = valor.slice(0, 8);
+	        }
 
-    inputCep.addEventListener("input", function() {
-        let valor = inputCep.value.replace(/\D/g, '');
-        if (valor.length > 5) {
-            inputCep.value = valor.replace(/^(\d{5})(\d{1,3})?$/, "$1-$2");
-        } else {
-            inputCep.value = valor;
-        }
-    });
+	        // Aplica a máscara 00000-000
+	        if (valor.length > 5) {
+	            e.target.value = valor.replace(/^(\d{5})(\d{1,3})$/, "$1-$2");
+	        } else {
+	            e.target.value = valor;
+	        }
 
-    inputCep.addEventListener("blur", async function() {
-        let cep = inputCep.value.replace(/\D/g, '');
-        if (cep.length === 8) {
-            try {
-                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                const data = await response.json();
-                
-                if (!data.erro) {
-                    inputLogradouro.value = data.logradouro || "";
-                    inputBairro.value = data.bairro || "";
-                    inputCidade.value = data.localidade || "";
-                    inputEstado.value = data.uf || "";
-                    inputNumero.focus();
-                } else {
-                    await ModalService.error("CEP não encontrado", "O CEP informado não foi localizado na base nacional.");
-                }
-            } catch (error) {
-                console.error("Erro ao consultar CEP:", error);
-            }
-        }
-    });
+	        // Se completou os 8 dígitos, faz a consulta automaticamente na API do ViaCEP
+	        if (valor.length === 8) {
+	            buscarCepViaApi(valor);
+	        }
+	    });
+
+	    inputCep.addEventListener("blur", function() {
+	        let cep = inputCep.value.replace(/\D/g, '');
+	        if (cep.length === 8) {
+	            buscarCepViaApi(cep);
+	        }
+	    });
+
+	    async function buscarCepViaApi(cep) {
+	        try {
+	            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+	            const data = await response.json();
+	            
+	            if (!data.erro) {
+	                inputLogradouro.value = data.logradouro || "";
+	                inputBairro.value = data.bairro || "";
+	                inputCidade.value = data.localidade || "";
+	                inputEstado.value = data.uf || "";
+	                inputNumero.focus();
+	            } else {
+	                await ModalService.error("CEP não encontrado", "O CEP informado não foi localizado na base nacional.");
+	            }
+	        } catch (error) {
+	            console.error("Erro ao consultar CEP:", error);
+	            await ModalService.error("Erro de Conexão", "Não foi possível consultar o CEP no momento.");
+	        }
+	    }
 
     function abrirFormulario(fab = null) {
         viewListagem.style.display = "none";
@@ -154,8 +244,9 @@ document.addEventListener("DOMContentLoaded", function() {
             listaGlobalFabricantes = await response.json();
             
             // Inicia a tabela vazia aguardando o usuário pesquisar ou selecionar
-            tabelaCorpo.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Utilize os filtros acima para realizar uma pesquisa.</td></tr>`;
-            contadorRegistros.textContent = `0 registro(s) encontrado(s)`;
+            //tabelaCorpo.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Utilize os filtros acima para realizar uma pesquisa.</td></tr>`;
+            //contadorRegistros.textContent = `0 registro(s) encontrado(s)`;
+			realizarPesquisa();
         } catch (error) {
             console.error("Erro ao carregar fabricantes:", error);
             ModalService.error("Erro", "Não foi possível carregar a lista de fabricantes.");
@@ -171,11 +262,11 @@ document.addEventListener("DOMContentLoaded", function() {
             return;
         }
 
-        dados.forEach(f => {
+		dados.forEach(f => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td>${f.idFabricante}</td>
-                <td class="fw-bold">${f.razaoSocial}</td>
+                <td class="fw-bold" title="${f.razaoSocial}">${f.razaoSocial}</td>
                 <td>${f.cnpj || '-'}</td>
                 <td>${f.paisOrigem || '-'}</td>
                 <td><span class="badge ${f.ativo ? 'bg-success' : 'bg-secondary'}">${f.ativo ? 'Ativo' : 'Inativo'}</span></td>

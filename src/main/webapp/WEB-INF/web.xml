@@ -31,7 +31,10 @@
         <location>/error500.jsp</location>
     </error-page>
 	
-    
+    <!-- Configuração para evitar deslogue por inatividade (480 minutos = 8 horas) -->
+    <session-config>
+        <session-timeout>480</session-timeout>
+    </session-config>
     
     <!-- O elemento <taglib> não é necessário aqui para JSTL 2.0+ com Jakarta EE,
          pois o servidor deve descobrir o TLD automaticamente se as JARs estiverem em WEB-INF/lib. -->

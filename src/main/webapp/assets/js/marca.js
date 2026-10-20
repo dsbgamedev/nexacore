@@ -35,6 +35,29 @@ document.addEventListener("DOMContentLoaded", function() {
     btnNovo.addEventListener("click", () => abrirFormulario());
     btnVoltar.addEventListener("click", (e) => { e.preventDefault(); fecharFormulario(); });
     linkVoltarBreadcrumb.addEventListener("click", (e) => { e.preventDefault(); fecharFormulario(); });
+	
+	// Habilitar a tecla Enter para navegar entre os campos (comportamento de Tab)
+    const inputsFormulario = viewFormulario.querySelectorAll("input, select, textarea");
+    
+    inputsFormulario.forEach((el, index) => {
+        el.addEventListener("keydown", function(e) {
+            if (e.key === "Enter") {
+                // Previne o comportamento padrão (como submeter o formulário sem querer)
+                e.preventDefault(); 
+                
+                // Pega o próximo elemento focável no formulário
+                const proximoElemento = inputsFormulario[index + 1];
+                
+                if (proximoElemento) {
+                    proximoElemento.focus();
+                    // Se for um input de texto, seleciona o conteúdo para facilitar a digitação
+                    if (proximoElemento.tagName === "INPUT" && proximoElemento.type === "text") {
+                        proximoElemento.select();
+                    }
+                }
+            }
+        });
+    });
 
     async function carregarFabricantesSelect() {
         try {

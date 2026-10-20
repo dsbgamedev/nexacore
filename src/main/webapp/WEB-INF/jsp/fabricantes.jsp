@@ -45,9 +45,9 @@
                     <div class="col-md-3">
                         <label class="form-label">Situação</label>
                         <select id="filtro-situacao" class="form-select">
+                        	<option value="true">Ativo</option>
 					        <option value="">Selecione...</option>
-					        <option value="todos">Todos</option>
-					        <option value="true">Ativo</option>
+					        <option value="todos">Todos</option>					        
 					        <option value="false">Inativo</option>
 					    </select>
                     </div>
@@ -73,14 +73,14 @@
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 80px;">ID</th>
-                                <th>Razão Social</th>
-                                <th>CNPJ</th>
-                                <th>País de Origem</th>
-                                <th style="width: 120px;">Situação</th>
-                                <th style="width: 160px;">Data de Cadastro</th>
-                                <th style="width: 130px;" class="text-center">Ações</th>
-                            </tr>
+						        <th style="width: 80px; cursor: pointer;" class="sortable" data-sort="idFabricante">ID <i class="fa fa-sort ms-1 text-muted"></i></th>
+						        <th style="cursor: pointer;" class="sortable" data-sort="razaoSocial">Razão Social <i class="fa fa-sort ms-1 text-muted"></i></th>
+						        <th style="cursor: pointer;" class="sortable" data-sort="cnpj">CNPJ <i class="fa fa-sort ms-1 text-muted"></i></th>
+						        <th style="cursor: pointer;" class="sortable" data-sort="paisOrigem">País de Origem <i class="fa fa-sort ms-1 text-muted"></i></th>
+						        <th style="width: 120px; cursor: pointer;" class="sortable" data-sort="ativo">Situação <i class="fa fa-sort ms-1 text-muted"></i></th>
+						        <th style="width: 160px; cursor: pointer;" class="sortable" data-sort="dataCadastro">Data de Cadastro <i class="fa fa-sort ms-1 text-muted"></i></th>
+						        <th style="width: 130px;" class="text-center">Ações</th>
+						    </tr>
                         </thead>
                         <tbody id="tabela-corpo">
                             <!-- Preenchido via JavaScript -->
