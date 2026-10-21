@@ -498,6 +498,26 @@ public class ProdutoDAO {
         return "001";
     }
     
+    /**
+     * Busca o nome do tipo de produto pelo ID para fins de diretório ou exibição.
+     */
+    public String buscarNomeTipoPorId(int tipoId) {
+        String sql = "SELECT nome FROM tipos_produto WHERE id = ?";
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setInt(1, tipoId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("nome");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
     public void salvarProdutoCompleto(ProdutoDTO p) throws SQLException {
         String prefixoBase = p.getSku(); 
         String sequencial = buscarProximoSequencial(prefixoBase);

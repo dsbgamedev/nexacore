@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import model.Usuario;
 import util.SessaoListener;
+import dto.SessaoInfoDTO;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -48,6 +49,15 @@ public class AdminSessoesServlet extends HttpServlet {
                         info.setEmailUsuario(usuario.getEmail());
                         info.setDataCriacao(String.valueOf(session.getCreationTime()));
                         info.setUltimoAcesso(String.valueOf(session.getLastAccessedTime()));
+                        
+                        long tempoAtivoMin = (System.currentTimeMillis() - session.getCreationTime()) / (1000 * 60);
+                        info.setTempoAtivo(tempoAtivoMin + " min");
+
+                        // Estimativa de consumo de memória da sessão corrigida (* 2)
+                        int qtdModulos = (usuario.getModulosPermitidos() != null) ? usuario.getModulosPermitidos().size() : 0;
+                        long memoriaEstimadaKB = 4 + (qtdModulos * 2); 
+                        info.setConsumoMemoria(memoriaEstimadaKB + " KB");
+
                         listaUsuariosOnline.add(info);
                     }
                 }
@@ -85,11 +95,13 @@ public class AdminSessoesServlet extends HttpServlet {
         for (int i = 0; i < lista.size(); i++) {
             SessaoInfoDTO u = lista.get(i);
             sb.append("{")
-              .append("\"sessionId\":\"").append(u.getSessionId()).append("\",")
-              .append("\"nomeUsuario\":\"").append(u.getNomeUsuario()).append("\",")
-              .append("\"emailUsuario\":\"").append(u.getEmailUsuario() != null ? u.getEmailUsuario() : "").append("\",")
-              .append("\"dataCriacao\":\"").append(u.getDataCriacao()).append("\",")
-              .append("\"ultimoAcesso\":\"").append(u.getUltimoAcesso()).append("\"")
+              .append("\"sessionId\":\"").append(escapeJson(u.getSessionId())).append("\",")
+              .append("\"nomeUsuario\":\"").append(escapeJson(u.getNomeUsuario())).append("\",")
+              .append("\"emailUsuario\":\"").append(escapeJson(u.getEmailUsuario())).append("\",")
+              .append("\"dataCriacao\":\"").append(escapeJson(u.getDataCriacao())).append("\",")
+              .append("\"ultimoAcesso\":\"").append(escapeJson(u.getUltimoAcesso())).append("\",")
+              .append("\"tempoAtivo\":\"").append(escapeJson(u.getTempoAtivo())).append("\",") // <--- Vírgula adicionada aqui
+              .append("\"consumoMemoria\":\"").append(escapeJson(u.getConsumoMemoria())).append("\"")
               .append("}");
             if (i < lista.size() - 1) sb.append(",");
         }
@@ -97,22 +109,11 @@ public class AdminSessoesServlet extends HttpServlet {
         return sb.toString();
     }
 
-    public static class SessaoInfoDTO {
-        private String sessionId;
-        private String nomeUsuario;
-        private String emailUsuario;
-        private String dataCriacao;
-        private String ultimoAcesso;
-
-        public String getSessionId() { return sessionId; }
-        public void setSessionId(String sessionId) { this.sessionId = sessionId; }
-        public String getNomeUsuario() { return nomeUsuario; }
-        public void setNomeUsuario(String nomeUsuario) { this.nomeUsuario = nomeUsuario; }
-        public String getEmailUsuario() { return emailUsuario; }
-        public void setEmailUsuario(String emailUsuario) { this.emailUsuario = emailUsuario; }
-        public String getDataCriacao() { return dataCriacao; }
-        public void setDataCriacao(String dataCriacao) { this.dataCriacao = dataCriacao; }
-        public String getUltimoAcesso() { return ultimoAcesso; }
-        public void setUltimoAcesso(String ultimoAcesso) { this.ultimoAcesso = ultimoAcesso; }
+    private String escapeJson(String valor) {
+        if (valor == null) return "";
+        return valor.replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r");
     }
 }

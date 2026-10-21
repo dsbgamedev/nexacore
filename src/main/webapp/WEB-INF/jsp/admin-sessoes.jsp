@@ -35,10 +35,12 @@
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
                         <tr>
-                            <th>ID da Sessão</th>
-                            <th>Usuário</th>
-                            <th>E-mail</th>
-                            <th>Último Acesso</th>
+                            <th class="sortable" data-column="sessionId" style="cursor:pointer;">ID da Sessão <i class="fa fa-sort text-muted"></i></th>
+                            <th class="sortable" data-column="nomeUsuario" style="cursor:pointer;">Usuário <i class="fa fa-sort text-muted"></i></th>
+                            <th class="sortable" data-column="emailUsuario" style="cursor:pointer;">E-mail <i class="fa fa-sort text-muted"></i></th>
+                            <th class="sortable" data-column="tempoAtivo" style="cursor:pointer;">Tempo Ativo <i class="fa fa-sort text-muted"></i></th>
+                            <th class="sortable" data-column="consumoMemoria" style="cursor:pointer;">Peso Estimado <i class="fa fa-sort text-muted"></i></th>
+                            <th class="sortable" data-column="ultimoAcesso" style="cursor:pointer;">Último Acesso <i class="fa fa-sort text-muted"></i></th>
                             <th class="text-center" style="width: 130px;">Ações</th>
                         </tr>
                     </thead>

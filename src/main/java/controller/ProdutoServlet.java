@@ -29,8 +29,6 @@ public class ProdutoServlet extends HttpServlet {
             return false;
         }
 
-        // Utiliza o método inteligente do objeto Usuario para validar se tem permissão no módulo
-        // (Ele já valida automaticamente se o usuário é ADMIN ou SUPER_ADMINISTRADOR)
         boolean temPermissao = usuario.temPermissao("produtos", acaoDesejada) || usuario.temPermissao("produto", acaoDesejada);
 
         if (!temPermissao) {
@@ -41,6 +39,31 @@ public class ProdutoServlet extends HttpServlet {
         }
         return true;
     }
+
+    /**
+     * Método auxiliar para determinar dinamicamente a pasta de upload com base no tipo do produto.
+     */
+    private String obterDiretorioUpload(ProdutoDTO produto) {
+        String pastaTipo = "Geral";
+        
+        if (produto.getNomeTipo() != null && !produto.getNomeTipo().trim().isEmpty()) {
+            pastaTipo = produto.getNomeTipo().trim();
+        } else if (produto.getTipoId() > 0) {
+            String nomeTipoDoBanco = dao.buscarNomeTipoPorId(produto.getTipoId());
+            if (nomeTipoDoBanco != null && !nomeTipoDoBanco.trim().isEmpty()) {
+                pastaTipo = nomeTipoDoBanco.trim();
+            }
+        }
+        
+        // Remove caracteres especiais ou acentos inadequados para nomes de pastas Windows
+        pastaTipo = pastaTipo.replaceAll("[^a-zA-Z0-9-_áàâãéèêíóôõúçÁÀÂÃÉÈÊÍÓÔÕÚÇ ]", "").trim();
+        if (pastaTipo.isEmpty()) {
+            pastaTipo = "Geral";
+        }
+
+        return "C:\\uploads_nexacore\\" + pastaTipo + "\\";
+    }
+
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
     	String path = request.getPathInfo();
@@ -49,7 +72,6 @@ public class ProdutoServlet extends HttpServlet {
 
         boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
 
-        // Se a chamada for para acessar a tela principal de cadastro (/ProdutoServlet puro), exigimos escrita
         if (path == null || path.equals("/")) {
             boolean temAcessoEscrita = usuario != null && (
                 isAdmin ||
@@ -74,24 +96,13 @@ public class ProdutoServlet extends HttpServlet {
             return;
         }
 
-        // Para rotas de API (/api/produtos/*), permitimos quem tem CONSULTAR para as listagens/consultas
-        boolean temPermissaoLeitura = usuario != null && (
-            isAdmin ||
-            usuario.temPermissao("produtos", "CONSULTAR") ||
-            usuario.temPermissao("produtos", "EDITAR") ||
-            usuario.temPermissao("produtos", "INSERIR") ||
-            usuario.temPermissao("produto", "CONSULTAR")
-        );
-        
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        // Rota: /api/produtos/listar-tipos
         if ("/listar-tipos".equals(path)) {
             List<TipoProduto> tipos = dao.listarTiposAtivos();
             response.getWriter().write(gson.toJson(tipos));
         } 
-        // Rota: /api/produtos/buscar-campos?tipoId=X
         else if ("/buscar-campos".equals(path)) {
             String tipoIdStr = request.getParameter("tipoId");
             if (tipoIdStr != null && !tipoIdStr.isEmpty()) {
@@ -100,7 +111,6 @@ public class ProdutoServlet extends HttpServlet {
                 response.getWriter().write(gson.toJson(campos));
             }
         }
-        // Rota: /api/produtos/buscar?id=X
         else if ("/buscar".equals(path)) {
             String idStr = request.getParameter("id");
             if (idStr != null && !idStr.isEmpty()) {
@@ -124,7 +134,6 @@ public class ProdutoServlet extends HttpServlet {
                 response.getWriter().write("{\"erro\": \"ID não informado.\"}");
             }
         }
-        // Rota: /api/produtos/listar-marcas
         else if ("/listar-marcas".equals(path)) {
             try {
                 response.getWriter().write(gson.toJson(dao.listarMarcas()));
@@ -132,7 +141,6 @@ public class ProdutoServlet extends HttpServlet {
                 e.printStackTrace();
             }
         }
-        // Rota: /api/produtos/listar-fabricantes
         else if ("/listar-fabricantes".equals(path)) {
             try {
                 response.getWriter().write(gson.toJson(dao.listarFabricantes()));
@@ -140,15 +148,13 @@ public class ProdutoServlet extends HttpServlet {
                 e.printStackTrace();
             }
         }
-    
-     // Rota: /api/produtos/consultar
         else if ("/consultar".equals(path)) {
             String sku = request.getParameter("sku");
             String marcaIdStr = request.getParameter("marcaId");
             String tipoIdStr = request.getParameter("tipoId");
             String modelo = request.getParameter("modelo");
             String ativoStr = request.getParameter("ativo");
-            String busca = request.getParameter("busca"); // Captura a busca global
+            String busca = request.getParameter("busca");
 
             int marcaId = 0;
             if (marcaIdStr != null && !marcaIdStr.trim().isEmpty() && !marcaIdStr.equals("Selecione...") && !marcaIdStr.equalsIgnoreCase("TODOS")) {
@@ -170,9 +176,7 @@ public class ProdutoServlet extends HttpServlet {
 
             Boolean ativo = (ativoStr != null && !ativoStr.isEmpty() && !ativoStr.equals("Selecione...")) ? Boolean.parseBoolean(ativoStr) : null;
 
-            // Passa todos os parâmetros incluindo a busca global para o DAO
             List<ProdutoDTO> resultados = dao.consultarProdutos(sku, marcaId, tipoId, modelo, ativo, busca);
-            
             response.getWriter().write(gson.toJson(resultados));
         }
    }
@@ -191,7 +195,6 @@ public class ProdutoServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        // Rota: /api/produtos/salvar
         if ("/salvar".equals(path)) {
             StringBuilder sb = new StringBuilder();
             String line;
@@ -204,14 +207,18 @@ public class ProdutoServlet extends HttpServlet {
                 return;
             }
 
-            dto.ProdutoDTO produto = gson.fromJson(sb.toString(), dto.ProdutoDTO.class);
+            ProdutoDTO produto = gson.fromJson(sb.toString(), ProdutoDTO.class);
             System.out.println("JSON recebido para salvar: " + sb.toString());
             
             if (produto.getImagens() != null && !produto.getImagens().isEmpty()) {
-                java.util.List<String> caminhosSalvos = new java.util.ArrayList<>();
-                String uploadPath = "C:\\uploads_nexacore\\";
+                List<String> caminhosSalvos = new java.util.ArrayList<>();
+                
+                // Define o diretório dinâmico com base no tipo do produto
+                String uploadPath = obterDiretorioUpload(produto);
                 java.io.File uploadDir = new java.io.File(uploadPath);
-                if (!uploadDir.exists()) uploadDir.mkdir();
+                if (!uploadDir.exists()) {
+                    uploadDir.mkdirs(); // Cria a pasta do tipo (ex: Computador, Impressora) se não existir
+                }
 
                 for (String base64 : produto.getImagens()) {
                     String data = base64.contains(",") ? base64.split(",")[1] : base64;
@@ -220,7 +227,8 @@ public class ProdutoServlet extends HttpServlet {
                     java.io.File file = new java.io.File(uploadPath + java.io.File.separator + fileName);
                     try (java.io.FileOutputStream fos = new java.io.FileOutputStream(file)) {
                         fos.write(java.util.Base64.getDecoder().decode(data));
-                        caminhosSalvos.add(fileName);
+                        // Salva o caminho relativo incluindo o nome da pasta (ex: Computador/prod_123.jpg)
+                        caminhosSalvos.add(uploadDir.getName() + "/" + fileName);
                     }
                 }
                 produto.setCaminhosImagens(caminhosSalvos);
@@ -231,7 +239,7 @@ public class ProdutoServlet extends HttpServlet {
                 response.setStatus(HttpServletResponse.SC_OK);
                 response.getWriter().write("{\"mensagem\": \"Produto salvo com sucesso!\", \"sku\": \"" + produto.getSku() + "\"}");
                 
-            } catch (java.sql.SQLException e) {
+            } catch (SQLException e) {
                 if (e.getMessage() != null && e.getMessage().contains("já está cadastrado")) {
                     response.setStatus(HttpServletResponse.SC_CONFLICT);
                 } else {
@@ -258,7 +266,6 @@ public class ProdutoServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        // Rota: /api/produtos/atualizar
         if ("/atualizar".equals(path)) {
             StringBuilder sb = new StringBuilder();
             String line;
@@ -271,17 +278,20 @@ public class ProdutoServlet extends HttpServlet {
                 return;
             }
 
-            dto.ProdutoDTO produto = gson.fromJson(sb.toString(), dto.ProdutoDTO.class);
+            ProdutoDTO produto = gson.fromJson(sb.toString(), ProdutoDTO.class);
 
-            // PROCESSAMENTO DAS IMAGENS NO MODO EDIÇÃO (Igual ao doPost)
             if (produto.getImagens() != null && !produto.getImagens().isEmpty()) {
-                java.util.List<String> caminhosSalvos = new java.util.ArrayList<>();
-                String uploadPath = "C:\\uploads_nexacore\\";
+                List<String> caminhosSalvos = new java.util.ArrayList<>();
+                
+                // Define o diretório dinâmico com base no tipo do produto
+                String uploadPath = obterDiretorioUpload(produto);
                 java.io.File uploadDir = new java.io.File(uploadPath);
-                if (!uploadDir.exists()) uploadDir.mkdir();
+                if (!uploadDir.exists()) {
+                    uploadDir.mkdirs();
+                }
 
                 for (String base64 : produto.getImagens()) {
-                    // Se a imagem já for um nome de arquivo salvo anteriormente (string simples sem base64), mantém ela
+                    // Se a imagem já for um caminho/nome salvo anteriormente (sem base64), mantém ela
                     if (!base64.startsWith("data:image") && !base64.contains(",")) {
                         caminhosSalvos.add(base64);
                         continue;
@@ -293,7 +303,7 @@ public class ProdutoServlet extends HttpServlet {
                     java.io.File file = new java.io.File(uploadPath + java.io.File.separator + fileName);
                     try (java.io.FileOutputStream fos = new java.io.FileOutputStream(file)) {
                         fos.write(java.util.Base64.getDecoder().decode(data));
-                        caminhosSalvos.add(fileName);
+                        caminhosSalvos.add(uploadDir.getName() + "/" + fileName);
                     }
                 }
                 produto.setCaminhosImagens(caminhosSalvos);
@@ -326,7 +336,6 @@ public class ProdutoServlet extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
-        // Rota: /api/produtos/excluir?id=X
         if ("/excluir".equals(path)) {
             String idStr = request.getParameter("id");
             if (idStr != null && !idStr.isEmpty()) {

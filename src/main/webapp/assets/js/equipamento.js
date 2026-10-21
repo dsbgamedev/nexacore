@@ -644,25 +644,14 @@ document.addEventListener("DOMContentLoaded", function() {
         let imagemAtualIndex = 0;
         let caminhosImagens = [];
 
-        if (prod.caminhosImagens && prod.caminhosImagens.length > 0) {
+		if (prod.caminhosImagens && prod.caminhosImagens.length > 0) {
+            // Mantém o caminho completo contendo a subpasta (ex: Computador/prod_123.jpg)
             caminhosImagens = prod.caminhosImagens.map(img => {
-                let nomeArquivo = img;
-                if (img.includes('\\')) {
-                    nomeArquivo = img.substring(img.lastIndexOf('\\') + 1);
-                } else if (img.includes('/')) {
-                    nomeArquivo = img.substring(img.lastIndexOf('/') + 1);
-                }
-                return contextPath + '/api/imagens/' + nomeArquivo;
+                return contextPath + '/api/imagens/' + img;
             });
         } else if (prod.imagemUrl || prod.foto || prod.caminhoImagem) {
             let imgBruta = prod.imagemUrl || prod.foto || prod.caminhoImagem;
-            let nomeArquivo = imgBruta;
-            if (imgBruta.includes('\\')) {
-                nomeArquivo = imgBruta.substring(imgBruta.lastIndexOf('\\') + 1);
-            } else if (imgBruta.includes('/')) {
-                nomeArquivo = imgBruta.substring(imgBruta.lastIndexOf('/') + 1);
-            }
-            caminhosImagens = [contextPath + '/api/imagens/' + nomeArquivo];
+            caminhosImagens = [contextPath + '/api/imagens/' + imgBruta];
         }
 
         const btnPrev = document.getElementById("btn-prev-img");

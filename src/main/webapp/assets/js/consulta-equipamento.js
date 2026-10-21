@@ -398,19 +398,18 @@ async function visualizarDetalhesEquipamento(idEquipamento) {
 		// Chamada para carregar as especificações dinâmicas integradas na Unidade Física
 		carregarEspecificacoesDossie(eq.idProduto || eq.produtoId, eq.idEquipamento);
 
-        const containerImg = document.getElementById('det-container-img');
-        const imgProduto = document.getElementById('det-img-produto');
-        
-        if (containerImg && imgProduto) {
-            if (eq.imagemUrl || eq.foto || eq.caminhoImagem) {
-                let imgBruta = eq.imagemUrl || eq.foto || eq.caminhoImagem;
-                let nomeArquivo = imgBruta.includes('\\') ? imgBruta.substring(imgBruta.lastIndexOf('\\') + 1) : imgBruta.split('/').pop();
-                imgProduto.src = `${contextPath}/api/imagens/${nomeArquivo}`;
-                containerImg.style.display = 'block';
-            } else {
-                containerImg.style.display = 'none';
-            }
-        }
+		const containerImg = document.getElementById('det-container-img');
+		const imgProduto = document.getElementById('det-img-produto');
+
+		if (containerImg && imgProduto) {
+		    if (eq.imagemUrl || eq.foto || eq.caminhoImagem) {
+		        let caminhoImg = eq.imagemUrl || eq.foto || eq.caminhoImagem;
+		        imgProduto.src = `${contextPath}/api/imagens/${caminhoImg}`;
+		        containerImg.style.display = 'block';
+		    } else {
+		        containerImg.style.display = 'none';
+		    }
+		}
 
         const modalElement = document.getElementById('modalDetalhesEquipamento');
         if (modalElement) {
