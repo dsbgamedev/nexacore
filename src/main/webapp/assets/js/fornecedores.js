@@ -3,23 +3,45 @@
   const form = document.getElementById('formFornecedor');
   const alertBox = document.getElementById('formAlert');
   const enderecosContainer = document.getElementById('enderecosContainer');
-  const enderecos = Array.isArray(window.FORNECEDOR_ENDERECOS) ? window.FORNECEDOR_ENDERECOS : [];
+  let enderecosLista = Array.isArray(window.FORNECEDOR_ENDERECOS) ? [...window.FORNECEDOR_ENDERECOS] : [];
   const filiaisAtuais = (Array.isArray(window.FORNECEDOR_FILIAIS) ? window.FORNECEDOR_FILIAIS : []).map(Number);
   
-  // Recupera as observações por filial vindas do JSP (caso seja edição)
   const filiaisObsAtuais = Array.isArray(window.FORNECEDOR_FILIAIS_OBS) ? window.FORNECEDOR_FILIAIS_OBS : [];
 
-  // --- CONTROLE DE ESTADO DAS OBSERVAÇÕES POR FILIAL (ABA ÚNICA) ---
   let filialAtivaId = null;
-  const mapaObservacoesFiliais = {}; // { idFilial: textoObservacao }
+  const mapaObservacoesFiliais = {}; 
 
-  // Carrega as observações iniciais no mapa caso seja edição
   if (filiaisObsAtuais.length > 0) {
       filiaisObsAtuais.forEach(item => {
           if (item.idFilial && item.observacao) {
               mapaObservacoesFiliais[item.idFilial] = item.observacao;
           }
       });
+  }
+
+  // --- FUNÇÃO PADRÃO DE MENSAGENS COM MODAL SERVICE ---
+  async function mostrarAlerta(titulo, mensagem, tipo = 'error') {
+    try {
+      if (typeof ModalService !== 'undefined') {
+        if (tipo === 'success' && typeof ModalService.success === 'function') {
+          await ModalService.success(titulo, mensagem);
+        } else if (tipo === 'warning' && typeof ModalService.warning === 'function') {
+          await ModalService.warning(titulo, mensagem);
+        } else if (typeof ModalService.error === 'function') {
+          await ModalService.error(titulo, mensagem);
+        } else if (typeof ModalService.alert === 'function') {
+          await ModalService.alert(titulo, mensagem, tipo);
+        } else {
+          alert(mensagem);
+        }
+      } else {
+        console.warn('ModalService não definido globalmente.');
+        alert(mensagem);
+      }
+    } catch (e) {
+      console.error('Erro ao acionar ModalService:', e);
+      alert(mensagem);
+    }
   }
 
   function showAlert(message, success) {
@@ -34,64 +56,67 @@
     return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); 
   }
 
-  // --- BUSCA CEP VIA API VIACEP ---
-  async function buscarCep(inputCep, cardEl) {
-    const cepLimpo = inputCep.value.replace(/\D/g, '');
-    if (cepLimpo.length !== 8) return;
+  window.limparFiltrosFornecedores = () => {
+    const formFiltro = document.getElementById('formFiltros');
+    if (!formFiltro) return;
+    formFiltro.querySelectorAll('input').forEach(input => input.value = '');
+    formFiltro.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+    window.location.href = ctx + '/ConsultaFornecedorServlet';
+  };
 
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-      const data = await response.json();
+  // --- GESTÃO DE ENDEREÇOS POR SISTEMA DE ABAS (COM ENTER E MODAL SERVICE) ---
+  let enderecoAtivoIndex = 0;
 
-      if (data.erro) {
-        alert('CEP não encontrado.');
-        return;
-      }
-
-      cardEl.querySelector('.a-logradouro').value = data.logradouro || '';
-      cardEl.querySelector('.a-bairro').value = data.bairro || '';
-      cardEl.querySelector('.a-cidade').value = data.localidade || '';
-      cardEl.querySelector('.a-uf').value = (data.uf || '').toUpperCase();
-      
-      cardEl.querySelector('.a-numero')?.focus();
-    } catch (e) {
-      console.error('Erro ao consultar o CEP:', e);
-    }
+  if (enderecosLista.length === 0) {
+    enderecosLista.push({ tipoEndereco: 'COMERCIAL', pais: 'Brasil', principal: true });
   }
-  
-  // --- LIMPAR FILTROS DE CONSULTA ---
-    window.limparFiltrosFornecedores = () => {
-      const form = document.getElementById('formFiltros');
-      if (!form) return;
-      
-      form.querySelectorAll('input').forEach(input => input.value = '');
-      form.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
-      
-      window.location.href = ctx + '/ConsultaFornecedorServlet';
-    };
-	
-  // --- GESTÃO DE ENDEREÇOS DINÂMICOS ---
-  // --- GESTÃO DE ENDEREÇOS DINÂMICOS E BUSCA CEP CORRIGIDA ---
-  // --- GESTÃO DE ENDEREÇOS DINÂMICOS E NAVEGAÇÃO POR ENTER ---
-    function addressCard(e = {}, idx = Date.now()) {
-      const el = document.createElement('div'); 
-      el.className = 'address-card'; 
-      el.dataset.address = '1';
-      
-      el.innerHTML = `
-        <div class="address-card-head">
-          <div>
-            <span class="address-index">ENDEREÇO</span>
-            <strong class="address-label">${esc(e.tipoEndereco || 'COMERCIAL')}</strong>
+
+  function renderizarGerenciadorEnderecos() {
+    if (!enderecosContainer) return;
+
+    if (!enderecosLista.some(a => a.principal) && enderecosLista.length > 0) {
+      enderecosLista[0].principal = true;
+    }
+
+    if (enderecoAtivoIndex >= enderecosLista.length) {
+      enderecoAtivoIndex = enderecosLista.length - 1;
+    }
+    if (enderecoAtivoIndex < 0) enderecoAtivoIndex = 0;
+
+    const e = enderecosLista[enderecoAtivoIndex] || {};
+
+    let htmlAbas = '';
+    enderecosLista.forEach((item, idx) => {
+      const ativa = idx === enderecoAtivoIndex ? 'btn-primary' : 'btn-outline-secondary';
+      const label = item.tipoEndereco || `ENDEREÇO ${idx + 1}`;
+      htmlAbas += `
+        <button type="button" class="btn btn-sm ${ativa} me-1 mb-2 aba-endereco" data-index="${idx}">
+          <i class="fa-solid fa-map-pin me-1"></i>${label} ${item.principal ? '⭐' : ''}
+        </button>
+      `;
+    });
+
+    enderecosContainer.innerHTML = `
+      <div class="card border shadow-sm p-3 mb-3" id="painelCardEndereco">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div class="d-flex flex-wrap align-items-center" id="containerAbasEnderecos">
+            ${htmlAbas}
           </div>
-          <button type="button" class="btn-icon danger remove-address" title="Remover endereço">
-            <i class="fa-regular fa-trash-can"></i>
-          </button>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnAddNovoEndereco">
+              <i class="fa-solid fa-plus me-1"></i> Adicionar Endereço
+            </button>
+            ${enderecosLista.length > 1 ? `
+              <button type="button" class="btn btn-outline-danger btn-sm" id="btnRemoverEnderecoAtivo">
+                <i class="fa-solid fa-trash-can me-1"></i> Remover Este
+              </button>` : ''}
+          </div>
         </div>
+
         <div class="form-grid">
           <div class="field">
             <label>Tipo</label>
-            <select class="form-select a-tipo">
+            <select class="form-select a-tipo" id="abaTipo">
               <option value="COMERCIAL">Comercial</option>
               <option value="COBRANCA">Cobrança</option>
               <option value="ENTREGA">Entrega</option>
@@ -101,190 +126,231 @@
           </div>
           <div class="field">
             <label>CEP</label>
-            <input class="form-control a-cep" maxlength="9" value="${esc(e.cep)}" placeholder="00000-000">
+            <input class="form-control a-cep" id="abaCep" maxlength="9" value="${esc(e.cep)}" placeholder="00000-000">
           </div>
           <div class="field span-2">
             <label>Logradouro</label>
-            <input class="form-control a-logradouro" value="${esc(e.logradouro)}" maxlength="200">
+            <input class="form-control a-logradouro" id="abaLogradouro" value="${esc(e.logradouro)}" maxlength="200">
           </div>
           <div class="field">
             <label>Número</label>
-            <input class="form-control a-numero" value="${esc(e.numero)}" maxlength="20">
+            <input class="form-control a-numero" id="abaNumero" value="${esc(e.numero)}" maxlength="20">
           </div>
           <div class="field">
             <label>Complemento</label>
-            <input class="form-control a-complemento" value="${esc(e.complemento)}" maxlength="100">
+            <input class="form-control a-complemento" id="abaComplemento" value="${esc(e.complemento)}" maxlength="100">
           </div>
           <div class="field">
             <label>Bairro</label>
-            <input class="form-control a-bairro" value="${esc(e.bairro)}" maxlength="100">
+            <input class="form-control a-bairro" id="abaBairro" value="${esc(e.bairro)}" maxlength="100">
           </div>
           <div class="field">
             <label>Cidade</label>
-            <input class="form-control a-cidade" value="${esc(e.cidade)}" maxlength="100">
+            <input class="form-control a-cidade" id="abaCidade" value="${esc(e.cidade)}" maxlength="100">
           </div>
           <div class="field">
             <label>UF</label>
-            <input class="form-control a-uf" value="${esc(e.uf)}" maxlength="2">
+            <input class="form-control a-uf" id="abaUf" value="${esc(e.uf)}" maxlength="2">
           </div>
           <div class="field">
             <label>País</label>
-            <input class="form-control a-pais" value="${esc(e.pais || 'Brasil')}" maxlength="60">
+            <input class="form-control a-pais" id="abaPais" value="${esc(e.pais || 'Brasil')}" maxlength="60">
           </div>
           <div class="field span-2">
             <label>Referência</label>
-            <input class="form-control a-referencia" value="${esc(e.referencia)}" maxlength="200">
+            <input class="form-control a-referencia" id="abaReferencia" value="${esc(e.referencia)}" maxlength="200">
           </div>
         </div>
-        <label class="main-address">
-          <input class="form-check-input a-principal" type="radio" name="enderecoPrincipal" ${e.principal ? 'checked' : ''}> 
-          Definir como endereço principal
-        </label>
-      `;
-      
-      el.querySelector('.a-tipo').value = e.tipoEndereco || 'COMERCIAL';
-      el.querySelector('.remove-address').addEventListener('click', () => { el.remove(); refreshAddresses(); });
-      el.querySelector('.a-principal').addEventListener('change', () => { 
-        document.querySelectorAll('.a-principal').forEach(r => { if (r !== el.querySelector('.a-principal')) r.checked = false; }); 
-      });
-      el.querySelector('.a-tipo').addEventListener('change', () => { 
-        el.querySelector('.address-label').textContent = el.querySelector('.a-tipo').selectedOptions[0].textContent.toUpperCase(); 
-      });
-      
-      // Função interna isolada para buscar o CEP e preencher os campos deste card específico
-      const cepInput = el.querySelector('.a-cep');
-      const executarBuscaCep = async () => {
-        const cepLimpo = cepInput.value.replace(/\D/g, '');
-        if (cepLimpo.length !== 8) return;
+        <div class="mt-3">
+          <label class="main-address">
+            <input class="form-check-input a-principal" id="abaPrincipal" type="radio" name="enderecoPrincipal" ${e.principal ? 'checked' : ''}> 
+            Definir como endereço principal
+          </label>
+        </div>
+      </div>
+    `;
 
-        try {
-          const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
-          const data = await response.json();
+    document.getElementById('abaTipo').value = e.tipoEndereco || 'COMERCIAL';
 
-          if (data.erro) {
-            alert('CEP não encontrado.');
-            return;
-          }
+    const inputsCard = enderecosContainer.querySelectorAll('input, select');
+    inputsCard.forEach(inp => {
+      inp.addEventListener('input', () => sincronizarCamposParaMemoria());
+      inp.addEventListener('change', () => sincronizarCamposParaMemoria());
+    });
 
-          el.querySelector('.a-logradouro').value = data.logradouro || '';
-          el.querySelector('.a-bairro').value = data.bairro || '';
-          el.querySelector('.a-cidade').value = data.localidade || '';
-          el.querySelector('.a-uf').value = (data.uf || '').toUpperCase();
-          
-          el.querySelector('.a-numero')?.focus();
-        } catch (err) {
-          console.error('Erro ao consultar o CEP:', err);
-        }
-      };
-
-      cepInput.addEventListener('input', ev => { 
-        let n = ev.target.value.replace(/\D/g,'').slice(0,8); 
-        ev.target.value = n.length > 5 ? n.slice(0,5) + '-' + n.slice(5) : n;
-        if (n.length === 8) {
-          executarBuscaCep();
-        }
-      });
-      cepInput.addEventListener('blur', executarBuscaCep);
-
-      // 👉 NAVEGAÇÃO POR ENTER DENTRO DO CARD DE ENDEREÇO
-      el.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const focusableElements = Array.from(el.querySelectorAll('input, select, button')).filter(item => !item.disabled && item.offsetParent !== null);
-          const index = focusableElements.indexOf(e.target);
+    const painelCard = document.getElementById('painelCardEndereco');
+    if (painelCard) {
+      painelCard.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          const focusableElements = Array.from(painelCard.querySelectorAll('input, select, button')).filter(item => !item.disabled && item.offsetParent !== null);
+          const index = focusableElements.indexOf(ev.target);
           if (index > -1 && focusableElements[index + 1]) {
             focusableElements[index + 1].focus();
           }
         }
       });
-
-      enderecosContainer.appendChild(el); 
-      refreshAddresses();
-    }
-  // --- GESTÃO DA ABA ÚNICA DE OBSERVAÇÕES POR FILIAL (DEFINITIVO) ---
-    function atualizarAbasFiliais() {
-      const containerAbas = document.getElementById('listaAbasFiliais');
-      const painelUnico = document.getElementById('painelObsUnico');
-      const tituloAtiva = document.getElementById('tituloFilialAtiva');
-      const textoObs = document.getElementById('textoObsAtiva');
-      
-      if (!containerAbas) return;
-
-      const checkboxesSelecionados = document.querySelectorAll('.filial-check:checked');
-
-      if (checkboxesSelecionados.length === 0) {
-          containerAbas.innerHTML = '<span class="text-muted small">Nenhuma filial selecionada.</span>';
-          if (painelUnico) painelUnico.classList.add('d-none');
-          filialAtivaId = null;
-          if (textoObs) textoObs.value = '';
-          return;
-      }
-
-      let idsMarcados = Array.from(checkboxesSelecionados).map(cb => cb.value);
-
-      // Se a filial ativa atual não está mais marcada (ou é nula), pega a primeira disponível
-      if (!idsMarcados.includes(String(filialAtivaId))) {
-          filialAtivaId = idsMarcados[0];
-      }
-
-      // Renderiza as abas apenas uma vez de forma limpa
-      let htmlAbas = '';
-      checkboxesSelecionados.forEach(cb => {
-          const id = cb.value;
-          const labelParent = cb.closest('label');
-          const sufixo = labelParent.querySelector('.badge').innerText;
-          const isAtiva = String(id) === String(filialAtivaId) ? 'btn-primary' : 'btn-outline-secondary';
-
-          htmlAbas += `<button type="button" class="btn btn-sm ${isAtiva} filial-aba" data-filial-id="${id}">${sufixo}</button>`;
-      });
-
-      containerAbas.innerHTML = htmlAbas;
-
-      // Exibe o painel único de texto
-      if (painelUnico) painelUnico.classList.remove('d-none');
-
-      // Atualiza o título e o conteúdo do textarea com base estritamente na filial ativa
-      if (filialAtivaId) {
-          const cbOriginal = document.querySelector(`.filial-check[value="${filialAtivaId}"]`);
-          if (cbOriginal) {
-              const labelParent = cbOriginal.closest('label');
-              const nomeEmpresa = labelParent.querySelector('strong').innerText;
-              const sufixo = labelParent.querySelector('.badge').innerText;
-              
-              if (tituloAtiva) {
-                  tituloAtiva.innerHTML = `<i class="fa-solid fa-building me-1"></i> ${sufixo} - ${nomeEmpresa}`;
-              }
-          }
-          // Carrega rigorosamente o valor salvo para esta filial ou deixa em branco se não existir
-          if (textoObs) {
-              textoObs.value = mapaObservacoesFiliais[filialAtivaId] || '';
-          }
-      }
-
-      // Associa o evento de clique fixo em cada aba gerada
-      containerAbas.querySelectorAll('.filial-aba').forEach(btn => {
-          btn.onclick = () => {
-              // 1. Salva o texto atual do textarea na filial que estava ativa ANTES de mudar
-              if (filialAtivaId && textoObs) {
-                  mapaObservacoesFiliais[filialAtivaId] = textoObs.value;
-              }
-              // 2. Altera para o novo ID da aba clicada
-              filialAtivaId = btn.dataset.filialId;
-              
-              // 3. Atualiza a interface
-              atualizarAbasFiliais();
-          };
-      });
     }
 
-    // Garante que qualquer alteração direta no textarea também atualize imediatamente a memória da filial ativa
-    document.getElementById('textoObsAtiva')?.addEventListener('input', e => {
-        if (filialAtivaId) {
-            mapaObservacoesFiliais[filialAtivaId] = e.target.value;
-        }
+    enderecosContainer.querySelectorAll('.aba-endereco').forEach(btn => {
+      btn.addEventListener('click', () => {
+        sincronizarCamposParaMemoria();
+        enderecoAtivoIndex = parseInt(btn.dataset.index);
+        renderizarGerenciadorEnderecos();
+      });
     });
 
-  // --- MÁSCARAS DE INPUT ---
+    document.getElementById('btnAddNovoEndereco')?.addEventListener('click', () => {
+      sincronizarCamposParaMemoria();
+      enderecosLista.push({ tipoEndereco: 'OUTRO', pais: 'Brasil', principal: false });
+      enderecoAtivoIndex = enderecosLista.length - 1;
+      renderizarGerenciadorEnderecos();
+    });
+
+    document.getElementById('btnRemoverEnderecoAtivo')?.addEventListener('click', async () => {
+      if (enderecosLista.length <= 1) {
+        await mostrarAlerta('Atenção', 'O fornecedor deve possuir pelo menos um endereço.', 'warning');
+        return;
+      }
+      enderecosLista.splice(enderecoAtivoIndex, 1);
+      enderecoAtivoIndex = 0;
+      renderizarGerenciadorEnderecos();
+    });
+
+    const cepInput = document.getElementById('abaCep');
+    if (cepInput) {
+      const executarBuscaCep = async () => {
+        const cepLimpo = cepInput.value.replace(/\D/g, '');
+        if (cepLimpo.length !== 8) return;
+        try {
+          const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+          const data = await response.json();
+          if (data.erro) {
+            await mostrarAlerta('Atenção', 'CEP não encontrado.', 'warning');
+            return;
+          }
+          document.getElementById('abaLogradouro').value = data.logradouro || '';
+          document.getElementById('abaBairro').value = data.bairro || '';
+          document.getElementById('abaCidade').value = data.localidade || '';
+          document.getElementById('abaUf').value = (data.uf || '').toUpperCase();
+          sincronizarCamposParaMemoria();
+          document.getElementById('abaNumero')?.focus();
+        } catch (err) {
+          console.error('Erro ao consultar CEP:', err);
+        }
+      };
+
+      cepInput.addEventListener('input', ev => {
+        let n = ev.target.value.replace(/\D/g,'').slice(0,8);
+        ev.target.value = n.length > 5 ? n.slice(0,5) + '-' + n.slice(5) : n;
+        if (n.length === 8) executarBuscaCep();
+      });
+      cepInput.addEventListener('blur', executarBuscaCep);
+    }
+  }
+
+  function sincronizarCamposParaMemoria() {
+    if (!enderecosContainer) return;
+    const item = enderecosLista[enderecoAtivoIndex];
+    if (!item) return;
+
+    item.tipoEndereco = document.getElementById('abaTipo')?.value || 'COMERCIAL';
+    item.cep = document.getElementById('abaCep')?.value || '';
+    item.logradouro = document.getElementById('abaLogradouro')?.value || '';
+    item.numero = document.getElementById('abaNumero')?.value || '';
+    item.complemento = document.getElementById('abaComplemento')?.value || '';
+    item.bairro = document.getElementById('abaBairro')?.value || '';
+    item.cidade = document.getElementById('abaCidade')?.value || '';
+    item.uf = (document.getElementById('abaUf')?.value || '').toUpperCase();
+    item.pais = document.getElementById('abaPais')?.value || 'Brasil';
+    item.referencia = document.getElementById('abaReferencia')?.value || '';
+    item.principal = document.getElementById('abaPrincipal')?.checked || false;
+
+    if (item.principal) {
+      enderecosLista.forEach((adr, idx) => {
+        if (idx !== enderecoAtivoIndex) adr.principal = false;
+      });
+    }
+  }
+
+  function collectAddresses() {
+    sincronizarCamposParaMemoria();
+    return enderecosLista;
+  }
+
+  // --- CONTROLE DE ABAS DE FILIAIS ---
+  function atualizarAbasFiliais() {
+    const containerAbas = document.getElementById('listaAbasFiliais');
+    const painelUnico = document.getElementById('painelObsUnico');
+    const tituloAtiva = document.getElementById('tituloFilialAtiva');
+    const textoObs = document.getElementById('textoObsAtiva');
+    
+    if (!containerAbas) return;
+
+    const checkboxesSelecionados = document.querySelectorAll('.filial-check:checked');
+
+    if (checkboxesSelecionados.length === 0) {
+        containerAbas.innerHTML = '<span class="text-muted small">Nenhuma filial selecionada.</span>';
+        if (painelUnico) painelUnico.classList.add('d-none');
+        filialAtivaId = null;
+        if (textoObs) textoObs.value = '';
+        return;
+    }
+
+    let idsMarcados = Array.from(checkboxesSelecionados).map(cb => cb.value);
+
+    if (!idsMarcados.includes(String(filialAtivaId))) {
+        filialAtivaId = idsMarcados[0];
+    }
+
+    let htmlAbas = '';
+    checkboxesSelecionados.forEach(cb => {
+        const id = cb.value;
+        const labelParent = cb.closest('label');
+        const sufixo = labelParent.querySelector('.badge').innerText;
+        const isAtiva = String(id) === String(filialAtivaId) ? 'btn-primary' : 'btn-outline-secondary';
+
+        htmlAbas += `<button type="button" class="btn btn-sm ${isAtiva} filial-aba" data-filial-id="${id}">${sufixo}</button>`;
+    });
+
+    containerAbas.innerHTML = htmlAbas;
+
+    if (painelUnico) painelUnico.classList.remove('d-none');
+
+    if (filialAtivaId) {
+        const cbOriginal = document.querySelector(`.filial-check[value="${filialAtivaId}"]`);
+        if (cbOriginal) {
+            const labelParent = cbOriginal.closest('label');
+            const nomeEmpresa = labelParent.querySelector('strong').innerText;
+            const sufixo = labelParent.querySelector('.badge').innerText;
+            
+            if (tituloAtiva) {
+                tituloAtiva.innerHTML = `<i class="fa-solid fa-building me-1"></i> ${sufixo} - ${nomeEmpresa}`;
+            }
+        }
+        if (textoObs) {
+            textoObs.value = mapaObservacoesFiliais[filialAtivaId] || '';
+        }
+    }
+
+    containerAbas.querySelectorAll('.filial-aba').forEach(btn => {
+        btn.onclick = () => {
+            if (filialAtivaId && textoObs) {
+                mapaObservacoesFiliais[filialAtivaId] = textoObs.value;
+            }
+            filialAtivaId = btn.dataset.filialId;
+            atualizarAbasFiliais();
+        };
+    });
+  }
+
+  document.getElementById('textoObsAtiva')?.addEventListener('input', e => {
+      if (filialAtivaId) {
+          mapaObservacoesFiliais[filialAtivaId] = e.target.value;
+      }
+  });
+
+  // --- MÁSCARAS ---
   function maskDoc() {
     const input = document.getElementById('documento'); 
     const tipoPessoaEl = document.getElementById('tipoPessoa');
@@ -299,32 +365,27 @@
     input.value = n;
   }
 
-  // --- MÁSCARA DE TELEFONE ATUALIZADA (SUPORTE A FIXO E 0800) ---
-    function maskTelefone(e) {
-      let v = e.target.value.replace(/\D/g, '');
-      
-      // Se começar com 0800 (ou 0300, etc.), formata como 0800-000-0000 (11 dígitos)
-      if (v.startsWith('0')) {
-        v = v.slice(0, 11);
-        if (v.length > 7) {
-          v = v.replace(/^(\d{4})(\d{3})(\d{0,4})/, '$1-$2-$3');
-        } else if (v.length > 4) {
-          v = v.replace(/^(\d{4})(\d{0,3})/, '$1-$2');
-        }
-      } else {
-        // Telefone fixo tradicional (10 dígitos: (00) 0000-0000)
-        v = v.slice(0, 10);
-        if (v.length > 6) {
-          v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
-        } else if (v.length > 2) {
-          v = v.replace(/^(\d{2})(\d{0,4})/, '($1) $2');
-        } else if (v.length > 0) {
-          v = v.replace(/^(\d{0,2})/, '($1');
-        }
+  function maskTelefone(e) {
+    let v = e.target.value.replace(/\D/g, '');
+    if (v.startsWith('0')) {
+      v = v.slice(0, 11);
+      if (v.length > 7) {
+        v = v.replace(/^(\d{4})(\d{3})(\d{0,4})/, '$1-$2-$3');
+      } else if (v.length > 4) {
+        v = v.replace(/^(\d{4})(\d{0,3})/, '$1-$2');
       }
-      
-      e.target.value = v;
+    } else {
+      v = v.slice(0, 10);
+      if (v.length > 6) {
+        v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+      } else if (v.length > 2) {
+        v = v.replace(/^(\d{2})(\d{0,4})/, '($1) $2');
+      } else if (v.length > 0) {
+        v = v.replace(/^(\d{0,2})/, '($1');
+      }
     }
+    e.target.value = v;
+  }
 
   function maskCelular(e) {
     let v = e.target.value.replace(/\D/g, '').slice(0, 11);
@@ -338,11 +399,6 @@
     e.target.value = v;
   }
 
-  // --- EVENT LISTENERS GLOBAIS DO FORMULÁRIO ---
-  document.getElementById('addEndereco')?.addEventListener('click', () => {
-    addressCard({ tipoEndereco: 'COMERCIAL', pais: 'Brasil', principal: !enderecosContainer.querySelector('.address-card') });
-  });
-  
   document.getElementById('marcarTodas')?.addEventListener('click', () => {
       document.querySelectorAll('.filial-check').forEach(c => c.checked = true);
       atualizarAbasFiliais();
@@ -375,7 +431,7 @@
     e.target.value = e.target.value.replace(/\D/g, '').slice(0, 11);
   });
 
-  // Inicializa marcações de filiais e endereços caso seja edição
+  // Inicialização no carregamento
   if (form) {
     document.querySelectorAll('.filial-check').forEach(c => {
         if (filiaisAtuais.includes(Number(c.value))) {
@@ -383,11 +439,10 @@
         }
     });
     
-    // Dispara a renderização inicial das abas de filiais
     atualizarAbasFiliais();
-    enderecos.forEach(e => addressCard(e));
+    renderizarGerenciadorEnderecos();
     
-    // --- SUBMISSÃO DO FORMULÁRIO ---
+    // Submissão do formulário com validações via ModalService
     form.addEventListener('submit', async ev => {
       ev.preventDefault();
       if (!form.reportValidity()) return;
@@ -396,98 +451,98 @@
       const pf = document.getElementById('tipoPessoa')?.value === 'PF';
       
       if (pf && doc.length !== 11) { 
-        showAlert('Informe um CPF válido com exatamente 11 dígitos.', false); 
+        await mostrarAlerta('Atenção', 'Informe um CPF válido com exatamente 11 dígitos.', 'warning'); 
         return; 
       }
       if (!pf && doc.length !== 14) { 
-        showAlert('Informe um CNPJ válido com exatamente 14 dígitos.', false); 
+        await mostrarAlerta('Atenção', 'Informe um CNPJ válido com exatamente 14 dígitos.', 'warning'); 
         return; 
       }
 
-	  // Validação robusta para aceitar tanto a classe quanto o name dos checkboxes de filiais
-	  // Salva o texto da última aba ativa antes de gerar o JSON final
-        const textoObsAtiva = document.getElementById('textoObsAtiva');
-        if (filialAtivaId && textoObsAtiva) {
-            mapaObservacoesFiliais[filialAtivaId] = textoObsAtiva.value;
-        }
+      // 👉 Validação da Inscrição Estadual (Permite de 8 a 14 dígitos)
+      const ie = document.getElementById('inscricaoEstadual').value.replace(/\D/g, '');
+      if (ie.length < 8 || ie.length > 14) {
+        await mostrarAlerta('Atenção', 'Inscrição Estadual inválida. Deve conter entre 8 e 14 dígitos numéricos.', 'warning');
+        return;
+      }
 
-        // 👉 Coleta unificada e robusta das filiais e observações
-        const observacoesPorFilial = [];
-        const idsFiliaisSelecionadas = [];
+      const textoObsAtiva = document.getElementById('textoObsAtiva');
+      if (filialAtivaId && textoObsAtiva) {
+          mapaObservacoesFiliais[filialAtivaId] = textoObsAtiva.value;
+      }
 
-        document.querySelectorAll('.filial-check:checked, input[name="filiaisIds"]:checked').forEach(cb => {
-            const id = cb.value;
-            const idNum = parseInt(id);
-            
-            if (!idsFiliaisSelecionadas.includes(idNum)) {
-                idsFiliaisSelecionadas.push(idNum);
-            }
+      const observacoesPorFilial = [];
+      const idsFiliaisSelecionadas = [];
 
-            const obs = mapaObservacoesFiliais[id];
-            if (obs && obs.trim() !== '') {
-                observacoesPorFilial.push({
-                    idFilial: idNum,
-                    observacao: obs.trim()
-                });
-            }
-        });
+      document.querySelectorAll('.filial-check:checked, input[name="filiaisIds"]:checked').forEach(cb => {
+          const id = cb.value;
+          const idNum = parseInt(id);
+          
+          if (!idsFiliaisSelecionadas.includes(idNum)) {
+              idsFiliaisSelecionadas.push(idNum);
+          }
 
-        // Validação no front para garantir que marcou pelo menos uma filial
-        if (idsFiliaisSelecionadas.length === 0) {
-          showAlert('Selecione pelo menos uma filial ou matriz autorizada para este fornecedor.', false);
-          return;
-        }
+          const obs = mapaObservacoesFiliais[id];
+          if (obs && obs.trim() !== '') {
+              observacoesPorFilial.push({
+                  idFilial: idNum,
+                  observacao: obs.trim()
+              });
+          }
+      });
 
-        // Atribui o JSON de observações específicas
-        document.getElementById('filiaisObservacoesJson').value = JSON.stringify(observacoesPorFilial);
+      if (idsFiliaisSelecionadas.length === 0) {
+        await mostrarAlerta('Atenção', 'Selecione pelo menos uma filial ou matriz autorizada para este fornecedor.', 'warning');
+        return;
+      }
+
+      document.getElementById('filiaisObservacoesJson').value = JSON.stringify(observacoesPorFilial);
+      
+      form.querySelectorAll('input.hidden-filial-id-dinamico').forEach(el => el.remove());
+      idsFiliaisSelecionadas.forEach(idFilial => {
+          const hid = document.createElement('input');
+          hid.type = 'hidden';
+          hid.name = 'filiaisIds';
+          hid.value = idFilial;
+          hid.className = 'hidden-filial-id-dinamico';
+          form.appendChild(hid);
+      });
+
+      const addrs = collectAddresses();
+      if (addrs.filter(a => a.principal).length > 1) { 
+        await mostrarAlerta('Atenção', 'Defina apenas um endereço principal.', 'warning'); 
+        return; 
+      }
+      
+      document.getElementById('enderecosJson').value = JSON.stringify(addrs);
+
+      const data = new FormData(form);
+      
+      const btns = form.querySelectorAll('button[type="submit"]'); 
+      btns.forEach(b => { 
+        b.disabled = true; 
+        b.dataset.oldText = b.innerHTML; 
+        b.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...'; 
+      });
+
+      try {
+        const r = await fetch(ctx + '/FornecedorServlet', { method: 'POST', body: data, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const result = await r.json();
+        if (!r.ok || !result.sucesso) throw new Error(result.mensagem || 'Não foi possível salvar o fornecedor.');
         
-        // Injeta dinamicamente os IDs simples que o Java valida obrigatoriamente
-        form.querySelectorAll('input.hidden-filial-id-dinamico').forEach(el => el.remove());
-        idsFiliaisSelecionadas.forEach(idFilial => {
-            const hid = document.createElement('input');
-            hid.type = 'hidden';
-            hid.name = 'filiaisIds';
-            hid.value = idFilial;
-            hid.className = 'hidden-filial-id-dinamico';
-            form.appendChild(hid);
-        });
-
-        const addrs = collectAddresses();
-        if (addrs.filter(a => a.principal).length > 1) { 
-          showAlert('Defina apenas um endereço principal.', false); 
-          return; 
-        }
-        
-        // Recolhe os dados dos endereços
-        document.getElementById('enderecosJson').value = JSON.stringify(addrs);
-
-        const data = new FormData(form);
-        
-        const btns = form.querySelectorAll('button[type="submit"]'); 
+        await mostrarAlerta('Sucesso', result.mensagem, 'success');
+        setTimeout(() => window.location.href = ctx + '/ConsultaFornecedorServlet', 500);
+      } catch(err) { 
+        await mostrarAlerta('Erro', err.message || 'Falha de comunicação com o servidor.', 'error'); 
+      } finally { 
         btns.forEach(b => { 
-          b.disabled = true; 
-          b.dataset.oldText = b.innerHTML; 
-          b.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando...'; 
-        });
-
-        try {
-          const r = await fetch(ctx + '/FornecedorServlet', { method: 'POST', body: data, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-          const result = await r.json();
-          if (!r.ok || !result.sucesso) throw new Error(result.mensagem || 'Não foi possível salvar o fornecedor.');
-          showAlert(result.mensagem, true); 
-          setTimeout(() => window.location.href = ctx + '/ConsultaFornecedorServlet', 700);
-        } catch(err) { 
-          showAlert(err.message || 'Falha de comunicação com o servidor.', false); 
-        } finally { 
-          btns.forEach(b => { 
-            b.disabled = false; 
-            if(b.dataset.oldText) b.innerHTML = b.dataset.oldText; 
-          }); 
-        }
+          b.disabled = false; 
+          if(b.dataset.oldText) b.innerHTML = b.dataset.oldText; 
+        }); 
+      }
     });
   }
 
-  // Torna a função globalmente acessível para exclusão
   window.excluirFornecedor = async (id, context) => {
     if (typeof ModalService !== 'undefined' && typeof ModalService.confirm === 'function') {
       const confirmado = await ModalService.confirm(
@@ -495,10 +550,7 @@
         'Deseja realmente excluir este fornecedor? Os endereços e vínculos com filiais também serão removidos.',
         'warning'
       );
-      
-      if (confirmado) {
-        await executarExclusao(id, context);
-      }
+      if (confirmado) await executarExclusao(id, context);
     } else {
       if (!confirm('Deseja realmente excluir este fornecedor? Os endereços e vínculos com filiais também serão removidos.')) return;
       await executarExclusao(id, context);
@@ -513,18 +565,10 @@
           headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest' }, 
           body: data 
         }); 
-
         const responseText = await r.text();
-        let result;
-        try {
-          result = JSON.parse(responseText);
-        } catch (err) {
-          throw new Error('Usuário não tem permissão para realizar esta operação.');
-        }
+        let result = JSON.parse(responseText);
 
-        if (!r.ok || !result.sucesso) {
-          throw new Error(result.mensagem || 'Não foi possível excluir.'); 
-        }
+        if (!r.ok || !result.sucesso) throw new Error(result.mensagem || 'Não foi possível excluir.'); 
         
         if (typeof ModalService !== 'undefined' && typeof ModalService.success === 'function') {
           await ModalService.success('Sucesso', result.mensagem || 'Fornecedor excluído com sucesso.');
@@ -533,19 +577,13 @@
           location.reload();
         }
       } catch(e) { 
-        if (typeof ModalService !== 'undefined' && typeof ModalService.error === 'function') {
-          await ModalService.error('Atenção', e.message || 'Erro ao excluir fornecedor.');
-        } else {
-          alert(e.message || 'Erro ao excluir fornecedor.');
-        }
+        await mostrarAlerta('Atenção', e.message || 'Erro ao excluir fornecedor.', 'error');
       }
   }
 
-  // --- VISUALIZAR FORNECEDOR VIA MODAL ---
   window.visualizarFornecedor = async (id, context) => {
       const modalEl = document.getElementById('viewModal');
       const bodyEl = document.getElementById('viewModalBody');
-      
       if (!modalEl || !bodyEl) return;
 
       bodyEl.innerHTML = `
@@ -563,21 +601,11 @@
           method: 'GET',
           headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
+        const result = await response.json();
 
-        const responseText = await response.text();
-        let result;
-        try {
-          result = JSON.parse(responseText);
-        } catch (err) {
-          throw new Error('Sessão expirada ou usuário sem permissão.');
-        }
-
-        if (!response.ok || !result.sucesso) {
-          throw new Error(result.mensagem || 'Não foi possível carregar os dados do fornecedor.');
-        }
+        if (!response.ok || !result.sucesso) throw new Error(result.mensagem || 'Não foi possível carregar os dados.');
 
         const f = result.fornecedor;
-        
         bodyEl.innerHTML = `
           <div class="row g-3">
             <div class="col-md-6">
@@ -613,9 +641,15 @@
               <span>${esc(f.email || '-')}</span>
             </div>
 			<div class="col-md-4">
-              <label class="text-muted small d-block">Site</label>
+             <label class="text-muted small d-block">Site / Links</label>
               <span>
-                ${f.site ? `<a href="${esc(f.site)}" target="_blank" rel="noopener noreferrer" class="text-decoration-none"><i class="fa-solid fa-globe me-1"></i>${esc(f.site)}</a>` : '-'}
+                ${f.site ? f.site.split(/[\s,]+/).filter(link => link.trim() !== '').map(link => {
+                  let urlFormatada = link.trim();
+                  if (!urlFormatada.startsWith('http://') && !urlFormatada.startsWith('https://')) {
+                    urlFormatada = 'https://' + urlFormatada;
+                  }
+                  return `<a href="${esc(urlFormatada)}" target="_blank" rel="noopener noreferrer" class="text-decoration-none d-block text-truncate"><i class="fa-solid fa-globe me-1"></i>${esc(link.trim())}</a>`;
+                }).join('') : '-'}
               </span>
             </div>
             <div class="col-12">
@@ -649,7 +683,6 @@
               </div>
             </div>
             
-            <!-- Filiais e Observações Específicas -->
             <div class="col-12">
               <hr class="my-2">
               <label class="fw-bold text-secondary mb-2">
@@ -659,14 +692,12 @@
 			    ${f.filiaisComObservacoes && f.filiaisComObservacoes.length > 0 ? f.filiaisComObservacoes.map(item => `
 			      <div class="list-group-item bg-light mb-2 rounded border d-flex flex-column align-items-start text-start">
 			        <strong><i class="fa-solid fa-building me-1"></i>${esc(item.nomeFilial)}</strong>
-			        <p class="text-muted small mb-0 mt-1 text-start" style="white-space: pre-wrap; word-break: break-word;">${esc((item.observacao || 'Nenhuma observação específica cadastrada para esta unidade.').trim())}</p>
+			        <p class="text-muted small mb-0 mt-1 text-start" style="white-space: pre-wrap; word-break: break-word;">${esc((item.observacao || 'Nenhuma observação específica cadastrada.').trim())}</p>
 			      </div>
 			    `).join('') : '<span class="text-muted small text-start d-block">Nenhuma filial com observação específica.</span>'}
 			  </div>
             </div>
 
-
-          <!-- Observações Gerais -->
 		  <div class="col-12">
             <hr class="my-2">
             <label class="fw-bold text-secondary mb-1">
@@ -678,7 +709,6 @@
           </div>
           </div>
         `;
-
       } catch (e) {
         bodyEl.innerHTML = `
           <div class="alert alert-danger mb-0">

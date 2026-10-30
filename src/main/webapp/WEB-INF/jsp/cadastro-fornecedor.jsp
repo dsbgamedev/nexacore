@@ -89,9 +89,9 @@
                                 <input class="form-control" name="razaoSocial" required maxlength="200" value="<%= fornecedor.getRazaoSocial() == null ? "" : fornecedor.getRazaoSocial() %>" placeholder="Nome cadastrado oficialmente">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Inscrição estadual *</label>
-                                <input class="form-control" name="inscricaoEstadual" id="inscricaoEstadual" required maxlength="14" value="<%= fornecedor.getInscricaoEstadual() == null ? "" : fornecedor.getInscricaoEstadual() %>" placeholder="9 a 14 dígitos">
-                            </div>
+							    <label class="form-label">Inscrição estadual *</label>
+							    <input class="form-control" name="inscricaoEstadual" id="inscricaoEstadual" required maxlength="14" value="<%= fornecedor.getInscricaoEstadual() == null ? "" : fornecedor.getInscricaoEstadual() %>" placeholder="8 a 14 dígitos">
+							</div>
                             <div class="col-md-4">
                                 <label class="form-label">Inscrição municipal *</label>
                                 <input class="form-control" name="inscricaoMunicipal" id="inscricaoMunicipal" required maxlength="11" value="<%= fornecedor.getInscricaoMunicipal() == null ? "" : fornecedor.getInscricaoMunicipal() %>" placeholder="Até 11 dígitos">
@@ -130,9 +130,9 @@
                                 <input class="form-control" name="celular" id="celular" maxlength="15" value="<%= fornecedor.getCelular() == null ? "" : fornecedor.getCelular() %>" placeholder="(00) 00000-0000">
                             </div>
                             <div class="col-12">
-                                <label class="form-label">Site</label>
-                                <input type="url" class="form-control" name="site" value="<%= fornecedor.getSite() == null ? "" : fornecedor.getSite() %>" placeholder="https://www.empresa.com.br">
-                            </div>
+							    <label class="form-label">Sites / Links Úteis</label>
+							    <textarea class="form-control" name="site" rows="3" placeholder="Cole os links separados por quebra de linha ou vírgula..."><%= fornecedor.getSite() == null ? "" : fornecedor.getSite() %></textarea>
+							</div>
                         </div>
                     </div>
 
@@ -238,6 +238,37 @@
 
         <footer class="text-center py-3 text-muted" style="font-size: 13px;">NexaCore <span>•</span> Cadastro de fornecedores</footer>
     </div>
+    
+    <!-- ==========================================================
+     NEXACORE - MODAIS DE SISTEMA (ALERTA / CONFIRMAÇÃO)
+         Modal de Alerta (Padrão NexaCore)
+	========================================================== --> 
+	<div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+       	 <div class="modal-content-custom" id="alertBox">
+	            <h3 id="alertTitle"></h3>
+	            <p id="alertMessage"></p>
+	            <div class="modal-buttons">
+	                <button type="button" class="btn-confirmar" id="alertOkBtn">OK</button>
+	            </div>
+	        </div>
+	    </div>
+	</div>
+
+	<div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  	  <div class="modal-dialog modal-dialog-centered">
+	        <div class="modal-content" style="background: transparent; border: none; box-shadow: none;">
+	            <div class="modal-content-custom" id="confirmBox">
+	                <h3 id="confirmTitle"></h3>
+	                <p id="confirmMessage"></p>
+	                <div class="modal-buttons">
+	                    <button type="button" class="btn-cancelar" id="confirmCancelBtn">Cancelar</button>
+	                    <button type="button" class="btn-confirmar" id="confirmOkBtn">Confirmar</button>
+	                </div>
+	            </div>
+	        </div>
+    	</div>
+	</div>
 
     <script>
         window.NEXACORE_CONTEXT = '${pageContext.request.contextPath}';
@@ -246,7 +277,7 @@
         window.FORNECEDOR_FILIAIS_OBS = <%= filiaisComObservacoesJson %>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="${pageContext.request.contextPath}/assets/js/fornecedores.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+    <script src="${pageContext.request.contextPath}/assets/js/fornecedores.js"></script>
 </body>
 </html>
