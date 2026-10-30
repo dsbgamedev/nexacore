@@ -3,6 +3,7 @@ package dao;
 import conexao.Conexao;
 import model.Fornecedor;
 import model.FornecedorEndereco;
+import dto.FornecedorFilial;
 
 import java.sql.*;
 import java.util.*;
@@ -47,7 +48,7 @@ public class FornecedorDAO {
             }
 
             substituirEnderecos(c, id, f.getEnderecos());
-            substituirFiliais(c, id, f.getFiliaisIds());
+            substituirFiliais(c, id, f.getFiliaisComObservacoes());
             c.commit();
             return id;
 
@@ -127,23 +128,26 @@ public class FornecedorDAO {
         }
     }
 
-    private void substituirFiliais(Connection c, long id, List<Integer> ids) throws SQLException {
+    private void substituirFiliais(Connection c, long id, List<FornecedorFilial> listaFiliais) throws SQLException {
         try (PreparedStatement ps = c.prepareStatement("DELETE FROM public.fornecedor_filiais WHERE id_fornecedor=?")) {
             ps.setLong(1, id);
             ps.executeUpdate();
         }
 
-        if (ids == null || ids.isEmpty()) {
+        if (listaFiliais == null || listaFiliais.isEmpty()) {
             return;
         }
 
-        String sql = "INSERT INTO public.fornecedor_filiais (id_fornecedor, id_filial, ativo) VALUES (?, ?, TRUE)";
+        String sql = "INSERT INTO public.fornecedor_filiais (id_fornecedor, id_filial, ativo, observacao) VALUES (?, ?, TRUE, ?)";
         try (PreparedStatement ps = c.prepareStatement(sql)) {
-            Set<Integer> unicos = new LinkedHashSet<>(ids);
-            for (Integer filial : unicos) {
-                if (filial == null || filial <= 0) continue;
+            Set<Integer> processados = new HashSet<>();
+            for (FornecedorFilial vf : listaFiliais) {
+                if (vf.getIdFilial() == null || vf.getIdFilial() <= 0) continue;
+                if (!processados.add(vf.getIdFilial())) continue;
+
                 ps.setLong(1, id);
-                ps.setInt(2, filial);
+                ps.setInt(2, vf.getIdFilial());
+                ps.setString(3, vazio(vf.getObservacao()));
                 ps.addBatch();
             }
             ps.executeBatch();
@@ -159,7 +163,8 @@ public class FornecedorDAO {
                 Fornecedor f = map(rs);
                 f.setEnderecos(listarEnderecos(c, id));
                 f.setFiliaisIds(listarFiliaisIds(c, id));
-                f.setListaFiliaisNomes(buscarFiliaisFormatadasPorFornecedor(c, id)); // <--- ADICIONADO AQUI
+                f.setListaFiliaisNomes(buscarFiliaisFormatadasPorFornecedor(c, id));
+                f.setFiliaisComObservacoes(listarFiliaisComObservacao(c, id));
                 return f;
             }
         }
@@ -211,7 +216,7 @@ public class FornecedorDAO {
                     Fornecedor f = map(rs);
                     f.setQuantidadeEnderecos(rs.getInt("qtd_enderecos"));
                     f.setQuantidadeFiliais(rs.getInt("qtd_filiais"));
-                    f.setListaFiliaisNomes(buscarFiliaisFormatadasPorFornecedor(c, f.getIdFornecedor())); // <--- ADICIONADO AQUI
+                    f.setListaFiliaisNomes(buscarFiliaisFormatadasPorFornecedor(c, f.getIdFornecedor()));
                     out.add(f);
                 }
             }
@@ -219,7 +224,6 @@ public class FornecedorDAO {
         return out;
     }
 
-    // --- NOVO MÉTODO AUXILIAR PARA FORMATAR AS FILIAIS (origem_codigo + sufixo) ---
     public List<String> buscarFiliaisFormatadasPorFornecedor(Connection c, long idFornecedor) throws SQLException {
         List<String> filiaisFormatadas = new ArrayList<>();
         String sql = "SELECT f.origem_codigo || ' ' || f.sufixo AS filial_str " +
@@ -238,8 +242,34 @@ public class FornecedorDAO {
         return filiaisFormatadas;
     }
 
-    public List<Map<String, Object>> listarFiliais() throws SQLException {
-        List<Map<String, Object>> out = new ArrayList<>();
+    public List<FornecedorFilial> listarFiliaisComObservacao(Connection c, long idFornecedor) throws SQLException {
+        List<FornecedorFilial> lista = new ArrayList<>();
+        String sql = "SELECT ff.id_filial, ff.observacao, f.origem_codigo, f.sufixo, f.nome_empresa " +
+                     "FROM public.fornecedor_filiais ff " +
+                     "JOIN public.filiais f ON ff.id_filial = f.id_filial " +
+                     "WHERE ff.id_fornecedor = ? AND ff.ativo = TRUE " +
+                     "ORDER BY f.nome_empresa";
+                     
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, idFornecedor);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    FornecedorFilial vf = new FornecedorFilial();
+                    vf.setIdFilial(rs.getInt("id_filial"));
+                    vf.setObservacao(rs.getString("observacao"));
+                    
+                    String nomeFormatado = rs.getInt("origem_codigo") + " " + rs.getString("sufixo") + " - " + rs.getString("nome_empresa");
+                    vf.setNomeFilial(nomeFormatado);
+                    
+                    lista.add(vf);
+                }
+            }
+        }
+        return lista;
+    }
+
+    public List listarFiliais() throws SQLException {
+        List out = new ArrayList<>();
         String sql = "SELECT id_filial, origem_codigo, sufixo, nome_empresa FROM public.filiais ORDER BY nome_empresa";
         
         try (Connection c = Conexao.conectar(); PreparedStatement ps = c.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
@@ -344,8 +374,8 @@ public class FornecedorDAO {
         return s == null ? null : s.replaceAll("\\D", "");
     }
    
-    public List<Map<String, Object>> listarCategorias() throws SQLException {
-        List<Map<String, Object>> out = new ArrayList<>();
+    public List listarCategorias() throws SQLException {
+        List out = new ArrayList<>();
         String sql = "SELECT id_categoria, nome FROM public.fornecedor_categorias WHERE ativo = TRUE ORDER BY nome";
         try (Connection c = Conexao.conectar(); PreparedStatement ps = c.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
             while (rs.next()) {

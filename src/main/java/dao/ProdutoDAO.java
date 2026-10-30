@@ -69,6 +69,7 @@ public class ProdutoDAO {
      */
     public List<ProdutoDTO> listarFabricantes() throws SQLException {
         List<ProdutoDTO> lista = new ArrayList<>();
+        // Incluído o id_fabricante na consulta SQL
         String sql = "SELECT id_fabricante, razao_social FROM fabricantes ORDER BY razao_social ASC";
 
         try (Connection conn = Conexao.conectar();
@@ -77,7 +78,32 @@ public class ProdutoDAO {
             
             while (rs.next()) {
                 ProdutoDTO dto = new ProdutoDTO();
+                dto.setFabricanteId(rs.getInt("id_fabricante")); 
                 dto.setNomeFabricante(rs.getString("razao_social"));
+                lista.add(dto); 
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return lista;
+    }
+    
+    /**
+     * Lista as categorias para popular o select no formulário.
+     */
+    public List<ProdutoDTO> listarCategorias() throws SQLException {
+        List<ProdutoDTO> lista = new ArrayList<>();
+        // Alinhado com o novo nome da tabela: produtos_categoria
+        String sql = "SELECT id, nome FROM produtos_categoria ORDER BY nome ASC";
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                ProdutoDTO dto = new ProdutoDTO();
+                dto.setCategoriaId(rs.getInt("id"));
+                dto.setNomeCategoria(rs.getString("nome"));
                 lista.add(dto); 
             }
         } catch (SQLException e) {
@@ -92,12 +118,13 @@ public class ProdutoDAO {
     public List<ProdutoDTO> consultarProdutos(String sku, int marcaId, int tipoId, String modelo, Boolean ativo, String busca) {
         List<ProdutoDTO> lista = new ArrayList<>();
         StringBuilder sql = new StringBuilder(
-            "SELECT p.*, t.nome as tipo_nome, m.nome_marca as marca_nome, f.razao_social as fabricante_nome " +
-            "FROM produtos p " +
-            "JOIN tipos_produto t ON p.tipo_id = t.id " +
-            "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
-            "LEFT JOIN fabricantes f ON m.id_fabricante = f.id_fabricante " +
-            "WHERE 1=1 "
+        		"SELECT p.*, t.nome as tipo_nome, m.nome_marca as marca_nome, f.razao_social as fabricante_nome, c.nome as categoria_nome " +
+	            "FROM produtos p " +
+	            "JOIN tipos_produto t ON p.tipo_id = t.id " +
+	            "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+	            "LEFT JOIN fabricantes f ON m.id_fabricante = f.id_fabricante " +
+	            "LEFT JOIN produtos_categoria c ON p.categoria_id = c.id " +
+	            "WHERE 1=1 "
         );
 
         if (sku != null && !sku.isEmpty()) {
@@ -158,6 +185,8 @@ public class ProdutoDAO {
                 p.setId(produtoId);
                 p.setSku(rs.getString("codigo_catalogo"));
                 p.setModelo(rs.getString("modelo"));
+                p.setCategoriaId(rs.getInt("categoria_id"));
+                p.setNomeCategoria(rs.getString("categoria_nome"));
                 p.setDescricaoResumida(rs.getString("nome_produto"));
                 p.setNomeTipo(rs.getString("tipo_nome"));
                 p.setNomeMarca(rs.getString("marca_nome")); 
@@ -267,12 +296,13 @@ public class ProdutoDAO {
      */
     public ProdutoDTO buscarPorId(int id) {
         ProdutoDTO p = null;
-        String sqlProduto = "SELECT p.*, t.nome as tipo_nome, m.nome_marca as marca_nome, f.razao_social as fabricante_nome " +
-                            "FROM produtos p " +
-                            "JOIN tipos_produto t ON p.tipo_id = t.id " +
-                            "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
-                            "LEFT JOIN fabricantes f ON m.id_fabricante = f.id_fabricante " +
-                            "WHERE p.id = ?";
+        String sqlProduto = "SELECT p.*, t.nome as tipo_nome, m.nome_marca as marca_nome, f.razao_social as fabricante_nome, c.nome as categoria_nome " +
+					        "FROM produtos p " +
+					        "JOIN tipos_produto t ON p.tipo_id = t.id " +
+					        "LEFT JOIN marcas m ON p.marca_id = m.id_marca " +
+					        "LEFT JOIN fabricantes f ON p.fabricante_id = f.id_fabricante " + // <-- Alterado de m.id_fabricante para p.fabricante_id
+					        "LEFT JOIN produtos_categoria c ON p.categoria_id = c.id " +
+					        "WHERE p.id = ?";
 
         try (Connection conn = Conexao.conectar();
              PreparedStatement stmt = conn.prepareStatement(sqlProduto)) {
@@ -285,6 +315,9 @@ public class ProdutoDAO {
                     p.setSku(rs.getString("codigo_catalogo"));
                     p.setTipoId(rs.getInt("tipo_id"));
                     p.setMarcaId(rs.getInt("marca_id"));
+                    p.setCategoriaId(rs.getInt("categoria_id"));
+                    p.setFabricanteId(rs.getInt("fabricante_id"));
+                    p.setNomeCategoria(rs.getString("categoria_nome"));
                     p.setModelo(rs.getString("modelo"));
                     p.setDescricaoResumida(rs.getString("nome_produto"));
                     p.setDescricaoDetalhada(rs.getString("descricao_catalogo"));
@@ -342,8 +375,9 @@ public class ProdutoDAO {
      * Atualiza os dados completos de um produto existente.
      */
     public void atualizarProdutoCompleto(ProdutoDTO p) throws SQLException {
-        String sqlProduto = "UPDATE produtos SET tipo_id = ?, marca_id = ?, modelo = ?, nome_produto = ?, " +
-                            "descricao_catalogo = ?, ativo = ?, observacoes = ? WHERE id = ?";
+        // Adicionado codigo_catalogo = ? no início da instrução UPDATE
+        String sqlProduto = "UPDATE produtos SET codigo_catalogo = ?, tipo_id = ?, marca_id = ?, categoria_id = ?, fabricante_id = ?, modelo = ?, nome_produto = ?, " +
+                "descricao_catalogo = ?, ativo = ?, observacoes = ? WHERE id = ?";
         
         String deleteAttr = "DELETE FROM produto_especificacoes WHERE produto_id = ?";
         String insertAttr = "INSERT INTO produto_especificacoes (produto_id, campo_id, valor) VALUES (?, ?, ?)";
@@ -356,20 +390,33 @@ public class ProdutoDAO {
 
             try {
                 try (PreparedStatement ps = conn.prepareStatement(sqlProduto)) {
-                    ps.setInt(1, p.getTipoId());
+                    ps.setString(1, p.getSku()); // 1 -> codigo_catalogo (SKU atualizado)
+                    ps.setInt(2, p.getTipoId()); // 2 -> tipo_id
                     
                     if (p.getMarcaId() > 0) {
-                        ps.setInt(2, p.getMarcaId());
+                        ps.setInt(3, p.getMarcaId());
                     } else {
-                        ps.setNull(2, Types.INTEGER);
+                        ps.setNull(3, Types.INTEGER);
                     }
-
-                    ps.setString(3, p.getModelo());
-                    ps.setString(4, p.getDescricaoResumida());
-                    ps.setString(5, p.getDescricaoDetalhada());
-                    ps.setBoolean(6, p.isAtivo());
-                    ps.setString(7, p.getObservacoes());
-                    ps.setInt(8, p.getId());
+                    
+                    if (p.getCategoriaId() > 0) {
+                        ps.setInt(4, p.getCategoriaId());
+                    } else {
+                        ps.setNull(4, Types.INTEGER);
+                    }
+                    
+                    if (p.getFabricanteId() > 0) {
+                        ps.setInt(5, p.getFabricanteId());
+                    } else {
+                        ps.setNull(5, Types.INTEGER);
+                    }
+                    
+                    ps.setString(6, p.getModelo());
+                    ps.setString(7, p.getDescricaoResumida());
+                    ps.setString(8, p.getDescricaoDetalhada());
+                    ps.setBoolean(9, p.isAtivo());
+                    ps.setString(10, p.getObservacoes());
+                    ps.setInt(11, p.getId()); // WHERE id
 
                     int linhasAfetadas = ps.executeUpdate();
                     if (linhasAfetadas == 0) {
@@ -479,14 +526,19 @@ public class ProdutoDAO {
         return false;
     }
     
-    public String buscarProximoSequencial(String prefixo) {
+    public String buscarProximoSequencial(String prefixoTipo) {
+        // Pega apenas a sigla do tipo (ex: COMP) para que o sequencial seja contínuo 
+        // para todos os produtos daquele tipo, independente da marca ou modelo!
+        String siglaTipo = prefixoTipo.split("-")[0];
+        
         String sql = "SELECT COALESCE(MAX(CAST(NULLIF(regexp_replace(codigo_catalogo, '^.*-', ''), '') AS INTEGER)), 0) + 1 " +
                      "FROM produtos WHERE codigo_catalogo LIKE ?";
         
         try (Connection conn = Conexao.conectar();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            stmt.setString(1, prefixo + "-%");
+            stmt.setString(1, siglaTipo + "-%");
+            
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return String.format("%03d", rs.getInt(1)); 
@@ -519,9 +571,16 @@ public class ProdutoDAO {
     }
     
     public void salvarProdutoCompleto(ProdutoDTO p) throws SQLException {
-        String prefixoBase = p.getSku(); 
-        String sequencial = buscarProximoSequencial(prefixoBase);
-        String skuFinal = prefixoBase + "-" + sequencial;
+        String skuRecebido = p.getSku();
+        
+        // BLINTAGEM: Remove qualquer sufixo numérico indesejado do final (ex: -001) 
+        // enviado pelo front-end para garantir que o cálculo do próximo sequencial seja limpo.
+        if (skuRecebido != null && skuRecebido.matches(".*-\\d+$")) {
+            skuRecebido = skuRecebido.replaceFirst("-\\d+$", "");
+        }
+
+        String sequencial = buscarProximoSequencial(skuRecebido);
+        String skuFinal = skuRecebido + "-" + sequencial;
         
         p.setSku(skuFinal);
 
@@ -529,8 +588,8 @@ public class ProdutoDAO {
             throw new SQLException("O SKU '" + p.getSku() + "' já está cadastrado no sistema.");
         }
         
-        String sqlProduto = "INSERT INTO produtos (codigo_catalogo, tipo_id, marca_id, modelo, nome_produto, descricao_catalogo, ativo, observacoes) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
+        String sqlProduto = "INSERT INTO produtos (codigo_catalogo, tipo_id, marca_id, fabricante_id, categoria_id, modelo, nome_produto, descricao_catalogo, ativo, observacoes) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
         
         String sqlAtributo = "INSERT INTO produto_especificacoes (produto_id, campo_id, valor) VALUES (?, ?, ?)";
 
@@ -542,17 +601,32 @@ public class ProdutoDAO {
                 ps.setString(1, p.getSku());
                 ps.setInt(2, p.getTipoId());
                 
+                // 3 -> marca_id
                 if (p.getMarcaId() > 0) {
                     ps.setInt(3, p.getMarcaId());
                 } else {
                     ps.setNull(3, Types.INTEGER);
                 }
+                
+                // 4 -> fabricante_id (ADICIONADO AQUI QUE ESTAVA FALTANDO)
+                if (p.getFabricanteId() > 0) {
+                    ps.setInt(4, p.getFabricanteId());
+                } else {
+                    ps.setNull(4, Types.INTEGER);
+                }
 
-                ps.setString(4, p.getModelo());
-                ps.setString(5, p.getDescricaoResumida());
-                ps.setString(6, p.getDescricaoDetalhada());
-                ps.setBoolean(7, p.isAtivo());
-                ps.setString(8, p.getObservacoes());
+                // 5 -> categoria_id
+                if (p.getCategoriaId() > 0) {
+                    ps.setInt(5, p.getCategoriaId());
+                } else {
+                    ps.setNull(5, Types.INTEGER);
+                }
+
+                ps.setString(6, p.getModelo());
+                ps.setString(7, p.getDescricaoResumida());
+                ps.setString(8, p.getDescricaoDetalhada());
+                ps.setBoolean(9, p.isAtivo());
+                ps.setString(10, p.getObservacoes());
                 
                 try (ResultSet rs = ps.executeQuery()) {
                     if (rs.next()) produtoId = rs.getInt(1);
@@ -562,7 +636,10 @@ public class ProdutoDAO {
             if (p.getAtributos() != null) {
                 try (PreparedStatement psAttr = conn.prepareStatement(sqlAtributo)) {
                     for (AtributoDTO attr : p.getAtributos()) {
-                        if (attr.getIdAtributo() != null && !attr.getIdAtributo().trim().isEmpty()) {
+                        // Ignora o atributo se ele for o "Modelo" para evitar conflito com a coluna principal da tabela produtos
+                        boolean ehModelo = (attr.getNomeAtributo() != null && attr.getNomeAtributo().equalsIgnoreCase("modelo"));
+                        
+                        if (!ehModelo && attr.getIdAtributo() != null && !attr.getIdAtributo().trim().isEmpty()) {
                             psAttr.setInt(1, produtoId);
                             psAttr.setInt(2, Integer.parseInt(attr.getIdAtributo()));
                             psAttr.setString(3, attr.getValor());

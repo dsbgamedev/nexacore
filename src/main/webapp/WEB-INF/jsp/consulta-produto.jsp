@@ -77,10 +77,11 @@
 	
 	<div class="row align-items-end">
 	    <div class="col-md-4 mb-3">
+	    
 	        <label class="form-label">Situação</label>
 	        <select id="filtro-ativo" class="form-select">
 	            <option value="">Selecione...</option>
-	            <option value="true">Ativo</option>
+	                    <option value="true">Ativo</option>
 	            <option value="false">Inativo</option>
 	        </select>
 	    </div>
@@ -95,14 +96,21 @@
     <div class="card p-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0 fw-bold text-primary-dark"><i class="fas fa-list me-2"></i> PRODUTOS CADASTRADOS</h5>
-            <div class="d-flex align-items-center">
-                <span class="me-2 text-muted small">Registros por página:</span>
-                <select class="form-select form-select-sm select-paginacao"><option>10</option><option>25</option></select>
-            </div>
+            
         </div>
         <table class="table table-hover align-middle">
             <thead class="table-light">
-                <tr><th>Código (SKU)</th><th>Tipo</th><th>Marca</th><th>Modelo</th><th>Descrição Resumida</th><th>Status</th><th>Ações</th></tr>
+                <tr>
+                    <th style="cursor: pointer;" onclick="ordenarTabela('sku')">Código (SKU) <i class="fas fa-sort text-muted ms-1" id="sort-sku"></i></th>
+                    <th style="cursor: pointer;" onclick="ordenarTabela('nomeTipo')">Tipo <i class="fas fa-sort text-muted ms-1" id="sort-nomeTipo"></i></th>
+                    <th style="cursor: pointer;" onclick="ordenarTabela('nomeFabricante')">Fabricante <i class="fas fa-sort text-muted ms-1" id="sort-nomeFabricante"></i></th>
+                    <th style="cursor: pointer;" onclick="ordenarTabela('nomeMarca')">Marca <i class="fas fa-sort text-muted ms-1" id="sort-nomeMarca"></i></th>
+                    <th style="cursor: pointer;" onclick="ordenarTabela('nomeCategoria')">Categoria <i class="fas fa-sort text-muted ms-1" id="sort-nomeCategoria"></i></th>
+                    <th style="cursor: pointer;" onclick="ordenarTabela('modelo')">Modelo <i class="fas fa-sort text-muted ms-1" id="sort-modelo"></i></th>
+                    <th style="cursor: pointer;" onclick="ordenarTabela('descricaoResumida')">Descrição Resumida <i class="fas fa-sort text-muted ms-1" id="sort-descricaoResumida"></i></th>
+                    <th style="cursor: pointer;" onclick="ordenarTabela('ativo')">Status <i class="fas fa-sort text-muted ms-1" id="sort-ativo"></i></th>
+                    <th class="text-center">Ações</th>
+                </tr>
             </thead>
             <tbody id="tabela-produtos"></tbody>
         </table>

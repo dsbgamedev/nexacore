@@ -94,6 +94,12 @@
                         <option value="">Selecione...</option>
                     </select>
                 </div>
+                <div class="col-md-3">
+				    <label class="form-label">Tipo de Produto</label>
+				    <select class="form-select form-select-sm" id="filtroTipoProduto">
+				        <option value="">Todos os tipos...</option>
+				    </select>
+				</div>
                 <div class="col-12 d-flex justify-content-end gap-2 mt-3 pt-3 border-top">
                     <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limparFiltros()">
                         <i class="fa fa-sync-alt me-1"></i> Limpar Filtros
@@ -118,22 +124,20 @@
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
                 <thead class="table-light text-secondary">
-                    <thead class="table-light text-secondary">
-				    <tr>
-				        <th class="sortable" onclick="ordenarTabela('idSistema')">ID Sistema <i class="fas fa-sort text-muted small"></i></th>
-				        <th class="sortable" onclick="ordenarTabela('patrimonio')">Patrimônio / Etiqueta <i class="fas fa-sort text-muted small"></i></th>
-				        <th class="sortable" onclick="ordenarTabela('produtoNome')">Produto (Catálogo) <i class="fas fa-sort text-muted small"></i></th>
-				        <th class="sortable" onclick="ordenarTabela('nome')">Nome / CPU <i class="fas fa-sort text-muted small"></i></th>
-				        <th class="sortable" onclick="ordenarTabela('origem')">Origem (Filial) <i class="fas fa-sort text-muted small"></i></th>
-				        <th class="sortable" onclick="ordenarTabela('usuarioAtual')">Usuário Atual <i class="fas fa-sort text-muted small"></i></th>
-				        <th class="sortable" onclick="ordenarTabela('departamento')">Departamento <i class="fas fa-sort text-muted small"></i></th>
-				        <th class="sortable" onclick="ordenarTabela('status')">Status <i class="fas fa-sort text-muted small"></i></th>
-				        <th class="sortable" onclick="ordenarTabela('situacao')">Situação <i class="fas fa-sort text-muted small"></i></th>
-				        <th class="sortable" onclick="ordenarTabela('numeroSerie')">Nº de Série <i class="fas fa-sort text-muted small"></i></th>
-				        <th class="text-center" style="width: 140px;">Ações</th>
-				    </tr>
-				</thead>
-              
+                    <tr>
+                        <th class="sortable" onclick="ordenarTabela('idSistema')">ID Sistema <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" onclick="ordenarTabela('patrimonio')">Patrimônio / Etiqueta <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" onclick="ordenarTabela('produtoNome')">Produto (Catálogo) <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" onclick="ordenarTabela('nome')">Nome / CPU <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" onclick="ordenarTabela('origem')">Origem (Filial) <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" onclick="ordenarTabela('usuarioAtual')">Usuário Atual <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" onclick="ordenarTabela('departamento')">Departamento <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" onclick="ordenarTabela('status')">Status <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" onclick="ordenarTabela('situacao')">Situação <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="sortable" onclick="ordenarTabela('numeroSerie')">Nº de Série <i class="fas fa-sort text-muted small"></i></th>
+                        <th class="text-center" style="width: 140px;">Ações</th>
+                    </tr>
+                </thead>
                 <tbody id="tabelaEquipamentosBody">
                     <tr>
                         <td colspan="11" class="text-center text-muted py-4">Utilize os filtros acima para consultar os equipamentos.</td>
@@ -149,9 +153,15 @@
             </div>
             <nav>
                 <ul class="pagination pagination-sm mb-0" id="paginacaoContainer">
-                    <li class="page-item disabled"><a class="page-link" href="#">Anterior</a></li>
-                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                    <li class="page-item disabled"><a class="page-link" href="#">Próximo</a></li>
+                    <li class="page-item" id="btn-pagina-anterior">
+                        <a class="page-link" href="#" onclick="mudarPagina(-1); return false;">Anterior</a>
+                    </li>
+                    <li class="page-item active">
+                        <span class="page-link" id="span-pagina-atual">1</span>
+                    </li>
+                    <li class="page-item" id="btn-pagina-proximo">
+                        <a class="page-link" href="#" onclick="mudarPagina(1); return false;">Próximo</a>
+                    </li>
                 </ul>
             </nav>
         </div>

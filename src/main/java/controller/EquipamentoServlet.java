@@ -265,6 +265,7 @@ public class EquipamentoServlet extends HttpServlet {
 
             String pesquisaGlobal = limparParametro.apply(request.getParameter("pesquisaGlobal"));
             String produto = limparParametro.apply(request.getParameter("produto"));
+            String tipoProduto = limparParametro.apply(request.getParameter("tipoProduto")); // 👉 NOVO PARÂMETRO CAPTURADO
             String idSistema = limparParametro.apply(request.getParameter("idSistema"));
             String patrimonio = limparParametro.apply(request.getParameter("patrimonio"));
             String serial = limparParametro.apply(request.getParameter("serial"));
@@ -276,14 +277,14 @@ public class EquipamentoServlet extends HttpServlet {
 
             List<Equipamento> lista;
 
-            if (pesquisaGlobal != null || produto != null || idSistema != null || 
-                patrimonio != null || serial != null || origem != null || 
-                departamento != null || usuario != null || status != null || situacao != null) {
-                
-                lista = dao.listarComFiltros(pesquisaGlobal, idSistema, patrimonio, serial, origem, departamento, status, situacao, produto, usuario, unidadesPermitidas);
-            } else {
-                lista = dao.listarComFiltros(null, null, null, null, null, null, null, null, null, null, unidadesPermitidas);
-            }
+            if (pesquisaGlobal != null || produto != null || tipoProduto != null || idSistema != null || 
+        	    patrimonio != null || serial != null || origem != null || 
+        	    departamento != null || usuario != null || status != null || situacao != null) {
+        	    
+        	    lista = dao.listarComFiltros(pesquisaGlobal, idSistema, patrimonio, serial, origem, departamento, status, situacao, produto, usuario, tipoProduto, unidadesPermitidas);
+        	} else {
+        	    lista = dao.listarComFiltros(null, null, null, null, null, null, null, null, null, null, null, unidadesPermitidas);
+        	}
 
             out.print(gson.toJson(lista));
         } catch (Exception e) {

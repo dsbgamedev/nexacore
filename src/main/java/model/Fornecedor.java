@@ -5,6 +5,8 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
+import dto.FornecedorFilial;
+
 public class Fornecedor implements Serializable {
     private static final long serialVersionUID = 1L;
     private Long idFornecedor;
@@ -29,6 +31,9 @@ public class Fornecedor implements Serializable {
     private List<FornecedorEndereco> enderecos = new ArrayList<>();
     private List<Integer> filiaisIds = new ArrayList<>();
     private List<String> listaFiliaisNomes = new ArrayList<>();
+ // Lista detalhada para as observações e vínculos específicos por filial
+    private List<FornecedorFilial> filiaisComObservacoes = new ArrayList<>();
+    
 
     public Long getIdFornecedor(){return idFornecedor;} public void setIdFornecedor(Long v){idFornecedor=v;}
     public String getTipoPessoa(){return tipoPessoa;} public void setTipoPessoa(String v){tipoPessoa=v;}
@@ -56,5 +61,11 @@ public class Fornecedor implements Serializable {
     }
     public void setListaFiliaisNomes(List<String> listaFiliaisNomes) {
         this.listaFiliaisNomes = listaFiliaisNomes != null ? listaFiliaisNomes : new ArrayList<>();
+    }
+    public List<FornecedorFilial> getFiliaisComObservacoes() {
+        return filiaisComObservacoes;
+    }
+    public void setFiliaisComObservacoes(List<FornecedorFilial> filiaisComObservacoes) {
+        this.filiaisComObservacoes = filiaisComObservacoes != null ? filiaisComObservacoes : new ArrayList<>();
     }
 }

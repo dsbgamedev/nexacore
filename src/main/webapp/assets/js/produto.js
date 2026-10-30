@@ -6,6 +6,8 @@
 document.addEventListener("DOMContentLoaded", function() {
     const selectTipo = document.getElementById("select-tipo-produto");
     const selectMarca = document.getElementById("marcaId");
+	const selectCategoria = document.getElementById("categoriaId");
+	const selectFabricante = document.getElementById("fabricanteId"); 
     const divCamposDinamicos = document.getElementById("div-campos-dinamicos");
     const containerAtributos = document.getElementById("container-atributos-tecnicos");
     const containerLista = document.getElementById("container-lista-campos");
@@ -17,6 +19,14 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const txtObservacoes = document.getElementById('txt-observacoes');
     const charCount = document.getElementById('char-count');
+	
+	// Escuta alterações em qualquer campo dinâmico ou de modelo na tela em tempo real
+    document.addEventListener('input', function(event) {
+        if (event.target && (event.target.id === 'input-modelo' || event.target.classList.contains('dynamic-attribute'))) {
+            atualizarDescricao();
+            gerarSKU(); // <--- Garante que qualquer tecla digitada no modelo recalcule o SKU instantaneamente
+        }
+    });
     
     if (txtObservacoes) {
         txtObservacoes.addEventListener('input', function() {
@@ -41,6 +51,8 @@ document.addEventListener("DOMContentLoaded", function() {
     async function inicializarPagina() {
         await carregarTipos();
         await carregarMarcas();
+		await carregarCategorias();
+		await carregarFabricantes();
 
         if (produtoIdEmEdicao) {
             await carregarProdutoParaEdicao(produtoIdEmEdicao);
@@ -53,13 +65,15 @@ document.addEventListener("DOMContentLoaded", function() {
         verificarEstadoFormulario(); 
         if (this.value) {
             await carregarCampos(this.value);
+			atualizarDescricao();
+			gerarSKU();          // <-- ADICIONADO: Recarrega o SKU ao mudar o tipo de produto
         }
     });
 
     if (selectMarca) {
         selectMarca.addEventListener("change", function() {
-            gerarSKU();
-            atualizarDescricao();
+			atualizarDescricao();	
+			gerarSKU();		
         });
     }
 
@@ -284,57 +298,58 @@ document.addEventListener("DOMContentLoaded", function() {
 	        }
 	    }
 
-    async function carregarCampos(tipoId) {
-        try {
-            const response = await fetch(`/nexacore/api/produtos/buscar-campos?tipoId=${tipoId}`);
-            const campos = await response.json();
+		async function carregarCampos(tipoId) {
+	        try {
+	            const response = await fetch(`/nexacore/api/produtos/buscar-campos?tipoId=${tipoId}`);
+	            const campos = await response.json();
 
-            containerAtributos.innerHTML = ""; 
-            containerLista.innerHTML = ""; 
+	            containerAtributos.innerHTML = ""; 
+	            containerLista.innerHTML = ""; 
 
-            if (!campos || campos.length === 0) {
-                divCamposDinamicos.style.display = "none";
-                return;
-            }
+	            if (!campos || campos.length === 0) {
+	                divCamposDinamicos.style.display = "none";
+	                return;
+	            }
 
-            divCamposDinamicos.style.display = "flex";
+	            divCamposDinamicos.style.display = "flex";
 
-            campos.forEach(campo => {
-                const divCol = document.createElement("div");
-                divCol.className = "col-md-6";
-                
-                const tooltipIcon = campo.tooltip ? `<i class="fa fa-info-circle ms-1" title="${campo.tooltip}"></i>` : "";
-                const nomeNormalizado = campo.nomeAtributo.toLowerCase().trim();
-                
-                let inputId = (nomeNormalizado === "modelo") ? "input-modelo" : `input-attr-${campo.id || campo.nomeAtributo.replace(/\s+/g, '-').toLowerCase()}`;
+	            campos.forEach(campo => {
+	                const divCol = document.createElement("div");
+	                divCol.className = "col-md-6";
+	                
+	                const tooltipIcon = campo.tooltip ? `<i class="fa fa-info-circle ms-1" title="${campo.tooltip}"></i>` : "";
+	                const nomeNormalizado = campo.nomeAtributo.toLowerCase().trim();
+	                
+	                let inputId = (nomeNormalizado === "modelo") ? "input-modelo" : `input-attr-${campo.id || campo.nomeAtributo.replace(/\s+/g, '-').toLowerCase()}`;
 
-                divCol.innerHTML = `
-                    <label class="form-label">${campo.nomeAtributo} ${campo.obrigatorio ? '*' : ''} ${tooltipIcon}</label>
-                    <input type="${campo.tipoDado === 'number' ? 'number' : 'text'}" 
-                           id="${inputId}"
-                           data-id-atributo="${campo.id || ''}"
-                           data-nome-atributo="${campo.nomeAtributo}"
-                           class="form-control form-control-sm dynamic-attribute" 
-                           placeholder="${campo.placeholder || ''}"
-                           maxlength="${campo.tamanho || ''}"
-                           ${campo.obrigatorio ? 'required' : ''}
-                           value="${campo.valorPadrao || ''}">
-                `;
-                containerAtributos.appendChild(divCol);
-            });
+	                divCol.innerHTML = `
+	                    <label class="form-label">${campo.nomeAtributo} ${campo.obrigatorio ? '*' : ''} ${tooltipIcon}</label>
+	                    <input type="${campo.tipoDado === 'number' ? 'number' : 'text'}" 
+	                           id="${inputId}"
+	                           data-id-atributo="${campo.id || ''}"
+	                           data-nome-atributo="${campo.nomeAtributo}"
+	                           class="form-control form-control-sm dynamic-attribute" 
+	                           placeholder="${campo.placeholder || ''}"
+	                           maxlength="${campo.tamanho || ''}"
+	                           ${campo.obrigatorio ? 'required' : ''}
+	                           value="${campo.valorPadrao || ''}">
+	                `;
+	                containerAtributos.appendChild(divCol);
+	            });
 
-            containerLista.innerHTML = campos.map(c => 
-                `<div>
-                    <span><i class="fa-solid fa-circle-check text-success me-2"></i>${c.nomeAtributo}</span>
-                    <span class="valor-atributo-lateral" id="valor-lateral-${c.id}"></span>
-                </div>`
-            ).join("");
-            
-            atualizarDescricao();
-        } catch (error) {
-            console.error("Erro na requisição de campos:", error);
-        }
-    }
+	            containerLista.innerHTML = campos.map(c => 
+	                `<div>
+	                    <span><i class="fa-solid fa-circle-check text-success me-2"></i>${c.nomeAtributo}</span>
+	                    <span class="valor-atributo-lateral" id="valor-lateral-${c.id}"></span>
+	                </div>`
+	            ).join("");
+	            
+	            atualizarDescricao();
+	            gerarSKU(); // <--- ADICIONADO AQUI: Garante que o SKU seja gerado logo que os campos aparecem na tela
+	        } catch (error) {
+	            console.error("Erro na requisição de campos:", error);
+	        }
+	    }
 
     document.getElementById('div-campos-dinamicos').addEventListener('input', function(e) {
         if (e.target.classList.contains('dynamic-attribute')) {
@@ -344,25 +359,52 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    function gerarSKU() {
-        if (produtoIdEmEdicao) return; 
-
-        const nomeTipo = selectTipo && selectTipo.selectedIndex > 0 ? selectTipo.options[selectTipo.selectedIndex].text : "PROD";
-        const siglaTipo = nomeTipo.substring(0, 4).toUpperCase();
-
-        let nomeMarca = "GENERICA";
-        if (selectMarca && selectMarca.selectedIndex > 0) {
-            let textoMarca = selectMarca.options[selectMarca.selectedIndex].text;
-            nomeMarca = textoMarca.split(' ')[0].toUpperCase();
+	function gerarSKU() {
+        // Valida se o tipo de produto e a marca estão selecionados
+        if (!selectTipo || selectTipo.selectedIndex <= 0 || !selectMarca || selectMarca.selectedIndex <= 0) {
+            if (skuInput && !produtoIdEmEdicao) skuInput.value = "";
+            return;
         }
 
-        const inputModelo = document.getElementById('input-modelo');
-        let textoModelo = inputModelo ? inputModelo.value.trim().toUpperCase().replace(/\s+/g, '') : "";
+        const nomeTipo = selectTipo.options[selectTipo.selectedIndex].text;
+        const siglaTipo = nomeTipo.substring(0, 4).toUpperCase();
 
-        let skuBase = `${siglaTipo}-${nomeMarca}-${textoModelo}`;
-        if (skuInput) skuInput.value = skuBase;
+        let textoMarca = selectMarca.options[selectMarca.selectedIndex].text;
+        let nomeMarca = textoMarca.split(' ')[0].toUpperCase();
+
+        // Tenta buscar o modelo pelo ID padrão ou procurando em qualquer input dinâmico que tenha o nome "Modelo"
+        let textoModelo = "";
+        const inputModeloFix = document.getElementById('input-modelo');
+        if (inputModeloFix && inputModeloFix.value.trim() !== "") {
+            textoModelo = inputModeloFix.value.trim().toUpperCase().replace(/\s+/g, '');
+        } else {
+            // Varre os atributos dinâmicos caso o ID mude
+            const inputsDinamicos = containerAtributos ? containerAtributos.querySelectorAll('.dynamic-attribute') : [];
+            inputsDinamicos.forEach(input => {
+                const nomeAttr = input.getAttribute('data-nome-atributo');
+                if (nomeAttr && nomeAttr.toLowerCase() === 'modelo' && input.value.trim() !== "") {
+                    textoModelo = input.value.trim().toUpperCase().replace(/\s+/g, '');
+                }
+            });
+        }
+
+        if (produtoIdEmEdicao) {
+            let sequencial = "-001";
+            if (skuInput && skuInput.value) {
+                const match = skuInput.value.match(/-\d+$/);
+                if (match) {
+                    sequencial = match[0];
+                }
+            }
+            // Se o modelo estiver preenchido, inclui no SKU; caso contrário, mantém a base com o sequencial
+            let skuBase = textoModelo ? `${siglaTipo}-${nomeMarca}-${textoModelo}${sequencial}` : `${siglaTipo}-${nomeMarca}${sequencial}`;
+            if (skuInput) skuInput.value = skuBase;
+        } else {
+            // No cadastro novo, monta com o modelo se houver
+            let skuBase = textoModelo ? `${siglaTipo}-${nomeMarca}-${textoModelo}` : `${siglaTipo}-${nomeMarca}`;
+            if (skuInput) skuInput.value = skuBase;
+        }
     }
-
     function atualizarDescricao() {
         const inputsDinamicos = containerAtributos ? containerAtributos.querySelectorAll('.dynamic-attribute') : [];
         const descDetalhada = document.getElementById('desc-detalhada');
@@ -389,7 +431,7 @@ document.addEventListener("DOMContentLoaded", function() {
             descDetalhada.value = novasPartes.join(", ");
         }
     }   
-
+    //Carrega produtos para edição apertando botao na tela de consulta produtos
     async function carregarProdutoParaEdicao(id) {
         try {
             const response = await fetch(`/nexacore/api/produtos/buscar?id=${id}`);
@@ -404,6 +446,16 @@ document.addEventListener("DOMContentLoaded", function() {
 
             if (selectMarca) {
                 selectMarca.value = produto.marcaId;
+            }
+			
+			const selectCategoria = document.getElementById('categoriaId');
+            if (selectCategoria) {
+                selectCategoria.value = produto.categoriaId;
+            }
+
+            const selectFabricante = document.getElementById('fabricanteId');
+            if (selectFabricante) {
+                selectFabricante.value = produto.fabricanteId;
             }
 
             if (skuInput) skuInput.value = produto.sku;
@@ -483,6 +535,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
         if (selectTipo) selectTipo.value = "";
         if (selectMarca) selectMarca.value = ""; 
+		if (selectCategoria) selectCategoria.value = ""; 
+		if (selectFabricante) selectFabricante.value = ""; 
         const selectAtivo = document.getElementById("ativo");
         if (selectAtivo) selectAtivo.value = "true"; 
 
@@ -505,7 +559,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-    async function salvarProduto() {
+	async function salvarProduto() {
         const tipoId = selectTipo.value;
         if (!tipoId) {
             await ModalService.error("Atenção", "Por favor, selecione um Tipo de Produto!");
@@ -513,31 +567,67 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         const marcaId = selectMarca ? selectMarca.value : "";
-        const inputModeloDinamico = document.getElementById('input-modelo');
+        const categoriaId = selectCategoria ? selectCategoria.value : "";
+        const fabricanteId = selectFabricante ? selectFabricante.value : "";
 
-        if (!marcaId || !inputModeloDinamico || !inputModeloDinamico.value.trim()) {
-            await ModalService.error("Campo Obrigatório", "Marca e Modelo são obrigatórios.");
+        // 1. CAPTURA BLINDADA DO MODELO: Garante que pega o modelo do input fixo ou dinâmico atualizado
+        let textoModelo = "";
+        const inputModeloFix = document.getElementById('input-modelo');
+        if (inputModeloFix && inputModeloFix.value.trim() !== "") {
+            textoModelo = inputModeloFix.value.trim();
+        } else {
+            const inputsDinamicos = containerAtributos ? containerAtributos.querySelectorAll('.dynamic-attribute') : [];
+            inputsDinamicos.forEach(input => {
+                const nomeAttr = input.getAttribute('data-nome-atributo');
+                if (nomeAttr && nomeAttr.toLowerCase() === 'modelo' && input.value.trim() !== "") {
+                    textoModelo = input.value.trim();
+                }
+            });
+        }
+
+        if (!marcaId || !categoriaId || !fabricanteId || !textoModelo) {
+            await ModalService.error("Campo Obrigatório", "Marca, Categoria, Fabricante e Modelo são obrigatórios.");
             return;
+        }
+
+        // 2. FORÇA A REGERAÇÃO IMEDIATA DO SKU ANTES DE MONTAR O PAYLOAD
+        gerarSKU(); 
+
+        // Pega o valor do SKU gerado no input da tela (ou recalcula caso o input esteja oculto)
+        let skuFinalParaEnvio = skuInput ? skuInput.value.trim() : "";
+        
+        if (!skuFinalParaEnvio || !skuFinalParaEnvio.includes(textoModelo.toUpperCase().replace(/\s+/g, ''))) {
+            const nomeTipo = selectTipo.options[selectTipo.selectedIndex].text;
+            const siglaTipo = nomeTipo.substring(0, 4).toUpperCase();
+            let textoMarca = selectMarca.options[selectMarca.selectedIndex].text;
+            let nomeMarca = textoMarca.split(' ')[0].toUpperCase();
+            let modeloFormatado = textoModelo.toUpperCase().replace(/\s+/g, '');
+            skuFinalParaEnvio = `${siglaTipo}-${nomeMarca}-${modeloFormatado}`;
         }
 
         const selectAtivo = document.getElementById('ativo');
         const valorAtivo = (selectAtivo.value === 'true');
     
-        gerarSKU();
+        // Coleta os atributos dinâmicos (ignorando o modelo para evitar duplicidade)
         const atributos = [];
         containerAtributos.querySelectorAll('.dynamic-attribute').forEach(input => {
-            atributos.push({
-                idAtributo: input.getAttribute('data-id-atributo'),
-                nomeAtributo: input.getAttribute('data-nome-atributo'),
-                valor: input.value.trim()
-            });
+            const nomeAttr = input.getAttribute('data-nome-atributo');
+            if (nomeAttr && nomeAttr.toLowerCase() !== 'modelo') {
+                atributos.push({
+                    idAtributo: input.getAttribute('data-id-atributo'),
+                    nomeAtributo: nomeAttr,
+                    valor: input.value.trim()
+                });
+            }
         });
 
         const payload = {
             tipoId: parseInt(tipoId),
-            sku: skuInput.value,
+            sku: skuFinalParaEnvio, // Envia o SKU completo garantido com o modelo
             marcaId: parseInt(marcaId),
-            modelo: inputModeloDinamico.value.trim(),
+            categoriaId: parseInt(categoriaId), 
+            fabricanteId: parseInt(fabricanteId), 
+            modelo: textoModelo, 
             descricaoResumida: descInput.value.trim(),
             descricaoDetalhada: document.getElementById('desc-detalhada')?.value.trim() || "",
             ativo: valorAtivo,
@@ -565,13 +655,14 @@ document.addEventListener("DOMContentLoaded", function() {
             ModalService.error("Erro Técnico", "Não foi possível conectar ao servidor.");
         }
     }
-
     async function atualizarProduto(id) {
         const tipoId = selectTipo.value;
         const marcaId = selectMarca ? selectMarca.value : "";
+		const categoriaId = selectCategoria ? selectCategoria.value : "";
+		const fabricanteId = selectFabricante ? selectFabricante.value : "";
         const inputModeloDinamico = document.getElementById('input-modelo');
     
-        if (!marcaId || !inputModeloDinamico || !inputModeloDinamico?.value.trim()) {
+        if (!marcaId || !categoriaId || !fabricanteId || !inputModeloDinamico || !inputModeloDinamico?.value.trim()) {
             await ModalService.error("Campo Obrigatório", "Marca e Modelo são obrigatórios.");
             return;
         }
@@ -593,6 +684,8 @@ document.addEventListener("DOMContentLoaded", function() {
             tipoId: parseInt(tipoId),
             sku: skuInput.value,
             marcaId: parseInt(marcaId),
+			categoriaId: parseInt(categoriaId),     
+			fabricanteId: parseInt(fabricanteId),   
             modelo: inputModeloDinamico.value.trim(),
             descricaoResumida: descInput.value.trim(),
             descricaoDetalhada: document.getElementById('desc-detalhada')?.value.trim() || "",
@@ -619,6 +712,53 @@ document.addEventListener("DOMContentLoaded", function() {
         } catch (error) {
             console.error("Erro na requisição de atualização:", error);
             ModalService.error("Erro Técnico", "Não foi possível conectar ao servidor.");
+        }
+    }
+	
+	async function carregarCategorias() {
+	        try {
+	            const response = await fetch('/nexacore/api/produtos/listar-categorias');
+	            const categorias = await response.json();
+	            
+	            if (selectCategoria) {
+	                selectCategoria.innerHTML = '<option value="">-- Selecione --</option>';
+	                if (categorias && Array.isArray(categorias)) {
+	                    categorias.forEach(c => {
+	                        const id = c.categoriaId || c.id;
+	                        const nome = c.nomeCategoria || c.nome;
+	                        
+	                        if (id && nome) {
+	                            selectCategoria.innerHTML += `<option value="${id}">${nome}</option>`;
+	                        }
+	                    });
+	                }
+	            }
+	        } catch (error) {
+	            console.error("Error a mangala kadagiti categoria:", error);
+	        }
+	    }
+
+	async function carregarFabricantes() {
+        try {
+            const response = await fetch('/nexacore/api/produtos/listar-fabricantes');
+            const fabricantes = await response.json();
+            
+            if (selectFabricante) {
+                selectFabricante.innerHTML = '<option value="">-- Selecione --</option>';
+                if (fabricantes && Array.isArray(fabricantes)) {
+                    fabricantes.forEach(f => {
+                        // Aceita tanto fabricanteId quanto idFabricante
+                        const id = f.fabricanteId || f.idFabricante || f.id;
+                        const nome = f.nomeFabricante || f.razaoSocial || f.nome;
+                        
+                        if (id && nome) {
+                            selectFabricante.innerHTML += `<option value="${id}">${nome}</option>`;
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao carregar fabricantes:", error);
         }
     }
 });

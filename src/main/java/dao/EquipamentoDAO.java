@@ -197,7 +197,7 @@ public class EquipamentoDAO {
 	    }
 	    return lista;
 	}
-	public List<Equipamento> listarComFiltros(String pesquisaGlobal, String idSistema, String patrimonio, String serial, String origem, String departamento, String statusIdFiltro, String situacaoIdFiltro, String produto, String usuario, List<Integer> unidadesPermitidas) throws SQLException {
+	public List<Equipamento> listarComFiltros(String pesquisaGlobal, String idSistema, String patrimonio, String serial, String origem, String departamento, String statusIdFiltro, String situacaoIdFiltro, String produto, String usuario, String tipoIdFiltro, List<Integer> unidadesPermitidas) throws SQLException {
 	    List<Equipamento> lista = new ArrayList<>();
 	    
 	    if (unidadesPermitidas == null || unidadesPermitidas.isEmpty()) {
@@ -248,10 +248,9 @@ public class EquipamentoDAO {
 	        }
 
 	        if (pesquisaGlobal != null && !pesquisaGlobal.trim().isEmpty()) {
-	            // CORRIGIDO: Substituído f.nome_empresa por f.sufixo e f.origem_codigo para evitar erro de coluna
 	            sql.append(" AND (e.id_sistema ILIKE ? OR e.patrimonio ILIKE ? OR e.numero_serie ILIKE ? OR e.usuario_atual ILIKE ? OR e.nome_identificador ILIKE ? OR p.modelo ILIKE ? OR p.codigo_catalogo ILIKE ? OR f.sufixo ILIKE ? OR CAST(f.origem_codigo AS TEXT) ILIKE ? OR d.nome_departamento ILIKE ?)");
 	            String termoGlobal = "%" + pesquisaGlobal.trim() + "%";
-	            for (int i = 0; i < 10; i++) { // Ajustado para 10 parâmetros pois adicionamos um campo na busca
+	            for (int i = 0; i < 10; i++) {
 	                parametros.add(termoGlobal);
 	            }
 	        }
@@ -304,8 +303,15 @@ public class EquipamentoDAO {
 	            sql.append(" AND e.usuario_atual ILIKE ?");
 	            parametros.add("%" + usuario.trim() + "%");
 	        }
-	        sql.append(" ORDER BY e.id_equipamento DESC");
-	        sql.append(" LIMIT 20");
+	        
+	        // 👉 NOVO FILTRO DE TIPO DE PRODUTO
+	        if (tipoIdFiltro != null && !tipoIdFiltro.trim().isEmpty()) {
+	            sql.append(" AND p.tipo_id = ?");
+	            parametros.add(Integer.parseInt(tipoIdFiltro));
+	        }
+	        
+	        // 👉 ORDENAÇÃO CRESCENTE E SEM LIMIT PARA TRAZER TODOS OS DADOS DO BANCO
+	        sql.append(" ORDER BY e.id_equipamento ASC");
 
 	        stmt = conn.prepareStatement(sql.toString());
 

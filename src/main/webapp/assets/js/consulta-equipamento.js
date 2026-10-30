@@ -54,6 +54,8 @@ document.addEventListener("DOMContentLoaded", function() {
     carregarFiltroDepartamentos();
     carregarFiltroStatus();
     carregarFiltroSituacao();
+	// Chame a função aqui para carregar as opções assim que a página abrir
+	carregarFiltroTipoProduto();
 
     // Executa a pesquisa inicial para popular a tabela com todos os registros
     if (typeof pesquisarEquipamentos === 'function') {
@@ -221,27 +223,31 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 function limparFiltros() {
-    // Limpa todos os inputs de texto
-    document.getElementById("formFiltroEquipamento").reset();
+    // 1. Reseta todos os campos do formulário de filtros
+    const formFiltro = document.getElementById("formFiltroEquipamento");
+    if (formFiltro) {
+        formFiltro.reset();
+    }
     
-    // Ajusta o select de origem dependendo se é admin ou usuário comum
-    const selectOrigem = document.getElementById("filtroOrigem");
-    if (selectOrigem) {
-        //selectOrigem.value = usuarioAdmin ? "" : "todos";
-		selectOrigem.value = "";
+    // 2. Limpa explicitamente os selects para garantir que voltem para a opção vazia
+    const selects = ['filtroOrigem', 'filtroDepartamento', 'filtroStatus', 'filtroSituacao', 'filtroTipoProduto'];
+    selects.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = "";
+    });
+
+    // 3. Limpa a barra de pesquisa global externa ao formulário
+    const buscaGlobal = document.getElementById("busca-global");
+    if (buscaGlobal) {
+        buscaGlobal.value = "";
     }
 
-    document.getElementById("filtroDepartamento").value = "";
-    document.getElementById("filtroStatus").value = "";
-    document.getElementById("filtroSituacao").value = "";
-    document.getElementById("busca-global").value = "";
-	document.getElementById("origemVal").value = "";
-	
-
-    // Executa a pesquisa novamente aplicando os filtros limpos
-    pesquisarEquipamentos();
+    // 4. Reseta a paginação para a primeira página e executa a pesquisa
+    paginaAtual = 1;
+    if (typeof pesquisarEquipamentos === 'function') {
+        pesquisarEquipamentos();
+    }
 }
-
 // FUNÇÕES DE CARREGAMENTO DOS FILTROS DA TELA DE CONSULTA
 async function carregarFiltroFiliais() {
     try {
@@ -511,6 +517,8 @@ async function pesquisarEquipamentos() {
 	let origemVal = getVal('filtroOrigem');
 	    const selectOrigemEl = document.getElementById('filtroOrigem');
 	    const valorBrutoOrigem = selectOrigemEl ? selectOrigemEl.value : '';
+		// Adicione esta linha para definir a variável antes de a utilizar nos parâmetros:
+		const tipoProdutoVal = document.getElementById('filtroTipoProduto') ? document.getElementById('filtroTipoProduto').value : '';
 
 	    // Regra para usuário comum:
 	    // Se não for admin:
@@ -534,6 +542,7 @@ async function pesquisarEquipamentos() {
     const params = new URLSearchParams({
         pesquisaGlobal: getVal('busca-global'),
         produto: getVal('filtroProduto'),
+		tipoProduto: tipoProdutoVal === 'TODOS' ? '' : tipoProdutoVal, // 👉 Envia o ID ou vazio se for 'TODOS'
         idSistema: getVal('filtroIdSistema'),
         patrimonio: getVal('filtroPatrimonio'),
         serial: getVal('filtroSerial'),
@@ -557,6 +566,16 @@ async function pesquisarEquipamentos() {
         // Salva os dados globalmente para permitir a ordenação sem nova requisição
         listaGlobalEquipamentos = Array.isArray(data) ? data : [];
         const listaBruta = Array.isArray(data) ? data : [];
+		
+		// 👉 ORDENAÇÃO PADRÃO POR ID DE SISTEMA AO CARREGAR
+        listaGlobalEquipamentos.sort((a, b) => {
+            let idA = a.idSistema || '';
+            let idB = b.idSistema || '';
+            return idA.localeCompare(idB);
+        });
+
+        paginaAtual = 1;
+        renderizarTabelaEquipamentos(listaGlobalEquipamentos);
 
         // Elementos de select dos filtros para capturar os nomes amigáveis por ID
         const selOrigem = document.getElementById('filtroOrigem');
@@ -598,7 +617,11 @@ async function pesquisarEquipamentos() {
     }
 }
 
-// Função dedicada a montar as linhas e aplicar todas as regras de negócio visuais
+// Variáveis de paginação (caso já não estejam declaradas na parte 1)
+let paginaAtual = 1;
+const itensPorPagina = 15;
+
+// Função dedicada a montar as linhas e aplicar todas as regras de negócio visuais com paginação
 function renderizarTabelaEquipamentos(data) {
     const tbody = document.getElementById('tabelaEquipamentosBody');
     if (!tbody) return;
@@ -609,15 +632,28 @@ function renderizarTabelaEquipamentos(data) {
     if (!data || data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted py-4">Nenhum equipamento encontrado.</td></tr>';
         if (badgeTotal) badgeTotal.textContent = "0 registros encontrados";
+        atualizarControlesPaginacao(0);
         return;
     }
 
     if (badgeTotal) badgeTotal.textContent = `${data.length} registro(s) encontrado(s)`;
 
+    // 👉 Lógica de paginação estrita de 15 itens por página
+    const totalItens = data.length;
+    const totalPaginas = Math.ceil(totalItens / itensPorPagina) || 1;
+    
+    if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+    if (paginaAtual < 1) paginaAtual = 1;
+
+    const inicio = (paginaAtual - 1) * itensPorPagina;
+    const fim = inicio + itensPorPagina;
+    const dadosPaginados = data.slice(inicio, fim);
+
     const selOrigem = document.getElementById('filtroOrigem');
     const selDepto = document.getElementById('filtroDepartamento');
 
-    data.forEach(eq => {
+    // 👉 Alterado de 'data.forEach' para 'dadosPaginados.forEach'
+    dadosPaginados.forEach(eq => {
         const statusTexto = eq.statusAtual || eq.statusNome || eq.statusDescricao || (eq.status && eq.status.nome) || 'Ativo';
 
         const corStatusBanco = (eq.statusCor || (eq.status && eq.status.cor) || '').toLowerCase();
@@ -694,7 +730,6 @@ function renderizarTabelaEquipamentos(data) {
                 <span class="badge bg-warning text-dark" title="Operação bloqueada para esta situação">Bloqueado</span>
             `;
         } else {
-            // Só exibe o botão de Editar se a regra de negócio permitir E o usuário tiver permissão granular de EDITAR
             if (!deveOcultarEditar && (typeof permissaoEditarEquipamento === 'undefined' || permissaoEditarEquipamento)) {
                 acoesHtml += `
                     <a href="${contextPath}/CadastrarEquipamentoServlet?id=${eq.idEquipamento}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
@@ -703,7 +738,6 @@ function renderizarTabelaEquipamentos(data) {
                 `;
             }
 
-            // Só exibe o botão de Excluir se o equipamento estiver disponível E o usuário tiver permissão granular de EXCLUIR
             if (ehDisponivel && (typeof permissaoExcluirEquipamento === 'undefined' || permissaoExcluirEquipamento)) {
                 acoesHtml += `
                     <button type="button" class="btn btn-sm btn-outline-danger me-1" title="Excluir" onclick="confirmarExclusaoEquipamento(${eq.idEquipamento})">
@@ -726,24 +760,122 @@ function renderizarTabelaEquipamentos(data) {
             `;
         }
 
-		// Cria a linha da tabela com os dados processados e as ações com controle granular
-        const row = `<tr>
-            <td class="fw-bold text-primary">${eq.idSistema || '-'}</td>
-            <td>${eq.patrimonio || '-'}</td>
-            <td>${eq.codigoCatalogo || eq.idProduto || '-'}</td>
-            <td>${eq.nomeIdentificador || '-'}</td>
-            <td>${origemTexto}</td>
-            <td>${eq.usuarioAtual || '-'}</td>
-            <td>${deptoTexto}</td>
-            <td><span class="badge ${badgeStatusClass}">${statusTexto}</span></td>
-            <td><span class="badge ${badgeSituacaoClass}">${situacaoTexto}</span></td>
-            <td>${eq.numeroSerie || '-'}</td>
+		const row = `<tr>
+            <td class="fw-bold text-primary" title="${eq.idSistema || ''}">${eq.idSistema || '-'}</td>
+            <td title="${eq.patrimonio || ''}">${eq.patrimonio || '-'}</td>
+            <td title="${eq.codigoCatalogo || eq.idProduto || ''}">${eq.codigoCatalogo || eq.idProduto || '-'}</td>
+            <td title="${eq.nomeIdentificador || ''}">${eq.nomeIdentificador || '-'}</td>
+            <td title="${origemTexto}">${origemTexto}</td>
+            <td title="${eq.usuarioAtual || ''}">${eq.usuarioAtual || '-'}</td>
+            <td title="${deptoTexto}">${deptoTexto}</td>
+            <td><span class="badge ${badgeStatusClass}" title="${statusTexto}">${statusTexto}</span></td>
+            <td><span class="badge ${badgeSituacaoClass}" title="${situacaoTexto}">${situacaoTexto}</span></td>
+            <td title="${eq.numeroSerie || ''}">${eq.numeroSerie || '-'}</td>
             <td class="text-center" style="white-space: nowrap;">
                 ${acoesHtml}
             </td>
         </tr>`;
         tbody.innerHTML += row;
     });
+
+    // 👉 Atualiza os controles do rodapé da paginação
+    atualizarControlesPaginacao(totalItens);
+}
+
+// Funções de controle de página (Adicione ao final do arquivo se não existirem)
+// ATUALIZAÇÃO DOS CONTROLES DE PAGINAÇÃO COMPACTOS E INTELIGENTES
+function atualizarControlesPaginacao(totalItens) {
+    const totalPaginas = Math.ceil(totalItens / itensPorPagina) || 1;
+    if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+    if (paginaAtual < 1) paginaAtual = 1;
+
+    // Atualiza o texto descritivo
+    const infoMostrando = document.getElementById('infoPaginacao');
+    if (infoMostrando && totalItens > 0) {
+        const inicio = (paginaAtual - 1) * itensPorPagina + 1;
+        const fim = Math.min(paginaAtual * itensPorPagina, totalItens);
+        infoMostrando.textContent = `Mostrando ${inicio} a ${fim} de ${totalItens} registros`;
+    } else if (infoMostrando) {
+        infoMostrando.textContent = `Mostrando 0 registros`;
+    }
+
+    const container = document.getElementById('paginacaoContainer');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Função auxiliar para criar itens de lista (botões)
+    const criarBotaoPagina = (texto, destinoPagina, desativado = false, ativo = false) => {
+        const li = document.createElement('li');
+        li.className = `page-item ${desativado ? 'disabled' : ''} ${ativo ? 'active' : ''}`;
+        
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = '#';
+        a.innerHTML = texto;
+        
+        if (!desativado && !ativo) {
+            a.addEventListener('click', (e) => {
+                e.preventDefault();
+                mudarPagina(destinoPagina);
+            });
+        } else {
+            a.addEventListener('click', (e) => e.preventDefault());
+        }
+        
+        li.appendChild(a);
+        return li;
+    };
+
+    // 1. Botão Primeira Página (<<)
+    container.appendChild(criarBotaoPagina('<i class="fas fa-angle-double-left"></i> Primeira', 1, paginaAtual === 1));
+
+    // 2. Botão Anterior
+    container.appendChild(criarBotaoPagina('Anterior', paginaAtual - 1, paginaAtual === 1));
+
+    // 3. Lógica inteligente para exibir os números de forma compacta (Ex: 1 2 3 4 5 ... 16)
+    let paginasParaExibir = [];
+    if (totalPaginas <= 7) {
+        for (let i = 1; i <= totalPaginas; i++) paginasParaExibir.push(i);
+    } else {
+        if (paginaAtual <= 4) {
+            paginasParaExibir = [1, 2, 3, 4, 5, '...', totalPaginas];
+        } else if (paginaAtual >= totalPaginas - 3) {
+            paginasParaExibir = [1, '...', totalPaginas - 4, totalPaginas - 3, totalPaginas - 2, totalPaginas - 1, totalPaginas];
+        } else {
+            paginasParaExibir = [1, '...', paginaAtual - 1, paginaAtual, paginaAtual + 1, '...', totalPaginas];
+        }
+    }
+
+    paginasParaExibir.forEach(p => {
+        if (p === '...') {
+            const li = document.createElement('li');
+            li.className = 'page-item disabled';
+            li.innerHTML = `<span class="page-link">...</span>`;
+            container.appendChild(li);
+        } else {
+            container.appendChild(criarBotaoPagina(p, p, false, p === paginaAtual));
+        }
+    });
+
+    // 4. Botão Próximo
+    container.appendChild(criarBotaoPagina('Próximo', paginaAtual + 1, paginaAtual >= totalPaginas));
+
+    // 5. Botão Última Página (>>)
+    container.appendChild(criarBotaoPagina('Última <i class="fas fa-angle-double-right"></i>', totalPaginas, paginaAtual >= totalPaginas));
+}
+
+// FUNÇÃO DE MUDANÇA DE PÁGINA RIGOROSA (Sem erros de incremento)
+function mudarPagina(destino) {
+    const totalPaginas = Math.ceil(listaGlobalEquipamentos.length / itensPorPagina);
+    
+    // O destino agora é sempre o número exato da página para onde o usuário quer ir
+    paginaAtual = parseInt(destino, 10);
+
+    if (isNaN(paginaAtual) || paginaAtual < 1) paginaAtual = 1;
+    if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
+    renderizarTabelaEquipamentos(listaGlobalEquipamentos);
 }
 
 function carregarEquipamentosDisponiveis() {
@@ -1004,5 +1136,28 @@ async function iniciarDevolucao(idEquipamento) {
         } else {
             alert("Erro de comunicação ao tentar iniciar a devolução.");
         }
+    }
+}
+async function carregarFiltroTipoProduto() {
+    const selTipo = document.getElementById('filtroTipoProduto');
+    if (!selTipo) return;
+
+    selTipo.innerHTML = '<option value="">Selecione...</option><option value="TODOS">Todos</option>';
+
+    try {
+        const response = await fetch(`${contextPath}/api/produtos/listar-tipos`);
+        const tipos = await response.json();
+
+        if (Array.isArray(tipos)) {
+            tipos.forEach(t => {
+                const id = t.id || t.tipoId || t.idTipoProduto;
+                const nome = t.nome || t.descricao;
+                if (id !== undefined && nome) {
+                    selTipo.innerHTML += `<option value="${id}">${nome}</option>`;
+                }
+            });
+        }
+    } catch (error) {
+        console.error("Erro ao carregar tipos de produto para o filtro:", error);
     }
 }

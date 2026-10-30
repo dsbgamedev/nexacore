@@ -102,7 +102,17 @@ public class FabricanteServlet extends HttpServlet {
                 response.getWriter().write("{\"mensagem\": \"Fabricante salvo com sucesso!\"}");
             } catch (SQLException e) {
                 response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                response.getWriter().write("{\"erro\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}");
+                
+                String mensagemErro = "Erro ao salvar o registro.";
+                
+                // O código '23505' no PostgreSQL indica violação de chave única (Unique Constraint / CNPJ duplicado)
+                if ("23505".equals(e.getSQLState()) || (e.getMessage() != null && e.getMessage().toLowerCase().contains("unique"))) {
+                    mensagemErro = "Atenção: Já existe um fabricante cadastrado com este CNPJ no sistema.";
+                } else if (e.getMessage() != null) {
+                    mensagemErro = e.getMessage(); // Fallback para outras mensagens úteis do banco
+                }
+                
+                response.getWriter().write("{\"erro\": \"" + mensagemErro.replace("\"", "\\\"") + "\"}");
             }
         }
     }

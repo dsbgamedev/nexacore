@@ -10,6 +10,9 @@
 
     String filiaisIdsJson = (String) request.getAttribute("filiaisIdsJson");
     if (filiaisIdsJson == null) filiaisIdsJson = "[]";
+
+    String filiaisComObservacoesJson = (String) request.getAttribute("filiaisComObservacoesJson");
+    if (filiaisComObservacoesJson == null) filiaisComObservacoesJson = "[]";
 %>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -31,7 +34,7 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0">
                 <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/FornecedorServlet">Fornecedores</a></li>
+                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaFornecedorServlet">Consulta Fornecedores</a></li>
                 <li class="breadcrumb-item active" aria-current="page"><%= fornecedor.getIdFornecedor() == null ? "Novo fornecedor" : "Editar fornecedor" %></li>
             </ol>
         </nav>
@@ -44,6 +47,7 @@
             <input type="hidden" name="acao" value="salvar">
             <input type="hidden" name="idFornecedor" value="<%= fornecedor.getIdFornecedor() == null ? "" : fornecedor.getIdFornecedor() %>">
             <input type="hidden" name="enderecosJson" id="enderecosJson">
+            <input type="hidden" id="filiaisObservacoesJson" name="filiaisObservacoesJson">
 
             <div class="row">
                 <!-- Coluna Principal (Esquerda) -->
@@ -119,7 +123,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Telefone</label>
-                                <input class="form-control" name="telefone" id="telefone" maxlength="14" value="<%= fornecedor.getTelefone() == null ? "" : fornecedor.getTelefone() %>" placeholder="(00) 0000-0000">
+                                <input class="form-control" name="telefone" id="telefone" maxlength="13" value="<%= fornecedor.getTelefone() == null ? "" : fornecedor.getTelefone() %>" placeholder="(00) 0000-0000 ou 0800-000-0000">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Celular</label>
@@ -149,7 +153,7 @@
                     <!-- Observações -->
                     <div class="card p-4 mb-4 shadow-sm">
                         <div class="fw-bold text-primary mb-3">
-                            <i class="fa-regular fa-note-sticky me-2"></i>Observações
+                            <i class="fa-regular fa-note-sticky me-2"></i>Observações Gerais
                         </div>
                         <textarea class="form-control" rows="4" name="observacao" maxlength="3000" placeholder="Condições comerciais, informações relevantes..."><%= fornecedor.getObservacao() == null ? "" : fornecedor.getObservacao() %></textarea>
                     </div>
@@ -163,7 +167,7 @@
                     </div>
                 </div>
 
-                <!-- Coluna Lateral (Direita - Filiais Autorizadas) -->
+                <!-- Coluna Lateral (Direita - Filiais Autorizadas e Observação Unica Ativa) -->
                 <div class="col-lg-4">
                     <div class="card p-3 shadow-sm mb-3">
                         <h6 class="fw-bold text-primary mb-1">
@@ -180,7 +184,7 @@
                             <button type="button" class="btn btn-sm btn-light border w-50" id="limparFiliais">Limpar seleção</button>
                         </div>
 
-                        <div class="branch-list border rounded p-2 overflow-auto" style="max-height: 400px;">
+                        <div class="branch-list border rounded p-2 overflow-auto mb-3" style="max-height: 250px;">
                             <c:forEach items="${filiais}" var="fl">
                                 <label class="branch-option d-flex align-items-center gap-2 p-1 border-bottom">
                                     <input class="form-check-input filial-check mt-0" type="checkbox" name="filiaisIds" value="${fl.idFilial}">
@@ -191,6 +195,27 @@
                                     </div>
                                 </label>
                             </c:forEach>
+                        </div>
+
+                        <!-- 👉 Sistema de Aba Única para Observação Específica da Filial Ativa -->
+                        <div class="border-top pt-2">
+                            <h6 class="fw-bold text-secondary mb-1" style="font-size: 13px;">
+                                <i class="fa-solid fa-note-sticky me-1"></i> Observações por Filial
+                            </h6>
+                            <p class="text-muted mb-2" style="font-size: 11px;">Clique na sigla da filial abaixo para alternar o campo de observação:</p>
+                            
+                            <!-- Abas dinâmicas das filiais selecionadas -->
+                            <div id="listaAbasFiliais" class="d-flex flex-wrap gap-1 mb-2">
+                                <span class="text-muted small">Nenhuma filial selecionada.</span>
+                            </div>
+
+                            <!-- Painel com único campo de texto reativo -->
+                            <div id="painelObsUnico" class="d-none">
+                                <div class="alert alert-secondary py-1 px-2 mb-1 small fw-bold text-truncate" id="tituloFilialAtiva" style="font-size: 11px;">
+                                    Filial: Nenhuma
+                                </div>
+                                <textarea id="textoObsAtiva" class="form-control form-control-sm" rows="3" placeholder="Insira o circuito, telefonia ou observação para esta filial..."></textarea>
+                            </div>
                         </div>
                         
                         <div class="text-muted mt-2" style="font-size: 11px;">
@@ -218,6 +243,7 @@
         window.NEXACORE_CONTEXT = '${pageContext.request.contextPath}';
         window.FORNECEDOR_ENDERECOS = <%= enderecosJson %>;
         window.FORNECEDOR_FILIAIS = <%= filiaisIdsJson %>;
+        window.FORNECEDOR_FILIAIS_OBS = <%= filiaisComObservacoesJson %>;
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/fornecedores.js"></script>

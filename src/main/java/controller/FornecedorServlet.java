@@ -139,9 +139,13 @@ public class FornecedorServlet extends HttpServlet {
     private void carregarFormulario(HttpServletRequest req, HttpServletResponse resp, Fornecedor f) throws Exception {
         req.setAttribute("fornecedor", f);
         req.setAttribute("filiais", dao.listarFiliais());
-        req.setAttribute("categorias", dao.listarCategorias()); // NOVO
+        req.setAttribute("categorias", dao.listarCategorias());
         req.setAttribute("enderecosJson", gson.toJson(f.getEnderecos()));
         req.setAttribute("filiaisIdsJson", gson.toJson(f.getFiliaisIds()));
+        
+        // 👉 ADICIONADO: Envia também as observações por filial em formato JSON para o JSP/JS ler na edição
+        req.setAttribute("filiaisComObservacoesJson", gson.toJson(f.getFiliaisComObservacoes()));
+        
         req.getRequestDispatcher("/WEB-INF/jsp/cadastro-fornecedor.jsp").forward(req, resp);
     }
 
@@ -252,12 +256,22 @@ public class FornecedorServlet extends HttpServlet {
             }
             f.setEnderecos(enderecos);
 
-            // Coleta dos IDs das filiais selecionadas
+         // Coleta e desserialização das observações e filiais selecionadas via JSON do front-end
+            Type tipoFilialObs = new TypeToken<List<dto.FornecedorFilial>>() {}.getType();
+            List<dto.FornecedorFilial> filiaisComObs = Collections.emptyList();
+            String jsonFiliaisObs = req.getParameter("filiaisObservacoesJson");
+
+            if (jsonFiliaisObs != null && !jsonFiliaisObs.isBlank()) {
+                List<dto.FornecedorFilial> l = gson.fromJson(jsonFiliaisObs, tipoFilialObs);
+                if (l != null) filiaisComObs = l;
+            }
+            f.setFiliaisComObservacoes(filiaisComObs);
+
+            // Mantém a compatibilidade com a lista de IDs simples se necessário
             List<Integer> ids = new ArrayList<>();
-            String[] valores = req.getParameterValues("filiaisIds");
-            if (valores != null) {
-                for (String v : valores) {
-                    try { ids.add(Integer.valueOf(v)); } catch (NumberFormatException ignored) {}
+            for (dto.FornecedorFilial ff : filiaisComObs) {
+                if (ff.getIdFilial() != null) {
+                    ids.add(ff.getIdFilial());
                 }
             }
             f.setFiliaisIds(ids);

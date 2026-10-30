@@ -45,6 +45,22 @@
                         <input type="text" id="sku" class="form-control" readonly placeholder="O SKU será gerado automaticamente">
                     </div>
                     
+                     <!-- Seletor de Categoria -->
+                    <div class="col-md-6">
+                        <label for="categoriaId" class="form-label">Categoria *</label>
+                        <select id="categoriaId" class="form-select" required>
+                            <option value="">-- Selecione --</option>
+                        </select>
+                    </div>
+
+                    <!-- Seletor de Fabricante -->
+                    <div class="col-md-6">
+                        <label for="fabricanteId" class="form-label">Fabricante *</label>
+                        <select id="fabricanteId" class="form-select" required>
+                            <option value="">-- Selecione --</option>
+                        </select>
+                    </div>
+                    
                     <div class="col-12">
 					    <label for="marcaId" class="form-label">Marca *</label>
 					    <select id="marcaId" class="form-select" required>
@@ -52,6 +68,7 @@
 					    </select>
 					</div>
                 </div>
+                
 
                 <!-- SEÇÃO DE ATRIBUTOS DINÂMICOS -->
                 <div id="div-campos-dinamicos" class="row g-3 mb-4 pt-2 border-top" style="display: none;">

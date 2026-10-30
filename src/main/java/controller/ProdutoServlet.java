@@ -147,6 +147,14 @@ public class ProdutoServlet extends HttpServlet {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }else if ("/listar-categorias".equals(path)) {
+            try {
+                response.getWriter().write(gson.toJson(dao.listarCategorias()));
+            } catch (Exception e) {
+                e.printStackTrace();
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                response.getWriter().write("{\"erro\": \"Erro ao listar categorias.\"}");
+            }
         }
         else if ("/consultar".equals(path)) {
             String sku = request.getParameter("sku");
@@ -210,6 +218,40 @@ public class ProdutoServlet extends HttpServlet {
             ProdutoDTO produto = gson.fromJson(sb.toString(), ProdutoDTO.class);
             System.out.println("JSON recebido para salvar: " + sb.toString());
             
+            // Garante o nome do tipo
+            if (produto.getTipoId() > 0 && (produto.getNomeTipo() == null || produto.getNomeTipo().isEmpty())) {
+                String nomeTipoBanco = dao.buscarNomeTipoPorId(produto.getTipoId());
+                produto.setNomeTipo(nomeTipoBanco);
+            }
+
+            // BLINDAGEM NO SERVIDOR: Força a montagem exata da base do SKU (TIPO-MARCA-MODELO) antes de ir para o DAO
+            if (produto.getTipoId() > 0 && produto.getMarcaId() > 0 && produto.getModelo() != null && !produto.getModelo().trim().isEmpty()) {
+                String siglaTipo = (produto.getNomeTipo() != null && produto.getNomeTipo().length() >= 4) 
+                                   ? produto.getNomeTipo().substring(0, 4).toUpperCase() : "PROD";
+                
+                // Busca o nome real da marca cadastrada para extrair a sigla (ex: "HP Brasil" -> "HP")
+                String nomeMarca = "";
+                try {
+                    List<ProdutoDTO> marcas = dao.listarMarcas();
+                    for (ProdutoDTO m : marcas) {
+                        int idMarcaObj = m.getMarcaId() > 0 ? m.getMarcaId() : m.getId();
+                        if (idMarcaObj == produto.getMarcaId()) {
+                            nomeMarca = m.getNomeMarca() != null ? m.getNomeMarca() : "";
+                            break;
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                
+                String siglaMarca = !nomeMarca.isEmpty() ? nomeMarca.split(" ")[0].toUpperCase() : "MARCA";
+                String modeloLimpo = produto.getModelo().toUpperCase().replaceAll("\\s+", "");
+                
+                // Monta a base completa exigida: TIPO-MARCA-MODELO (O DAO vai anexar o sequencial global correto no final)
+                String skuBaseCalculado = siglaTipo + "-" + siglaMarca + "-" + modeloLimpo;
+                produto.setSku(skuBaseCalculado);
+            }
+
             if (produto.getImagens() != null && !produto.getImagens().isEmpty()) {
                 List<String> caminhosSalvos = new java.util.ArrayList<>();
                 
@@ -217,7 +259,7 @@ public class ProdutoServlet extends HttpServlet {
                 String uploadPath = obterDiretorioUpload(produto);
                 java.io.File uploadDir = new java.io.File(uploadPath);
                 if (!uploadDir.exists()) {
-                    uploadDir.mkdirs(); // Cria a pasta do tipo (ex: Computador, Impressora) se não existir
+                    uploadDir.mkdirs(); // Cria a pasta do tipo se não existir
                 }
 
                 for (String base64 : produto.getImagens()) {
@@ -227,7 +269,6 @@ public class ProdutoServlet extends HttpServlet {
                     java.io.File file = new java.io.File(uploadPath + java.io.File.separator + fileName);
                     try (java.io.FileOutputStream fos = new java.io.FileOutputStream(file)) {
                         fos.write(java.util.Base64.getDecoder().decode(data));
-                        // Salva o caminho relativo incluindo o nome da pasta (ex: Computador/prod_123.jpg)
                         caminhosSalvos.add(uploadDir.getName() + "/" + fileName);
                     }
                 }

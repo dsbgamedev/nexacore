@@ -1,15 +1,24 @@
+let produtosGlobais = [];
+let colunaAtual = '';
+let direcaoAsc = true;
+
 document.addEventListener("DOMContentLoaded", function() {
-	
-    carregarFiltros();
-	
+    carregarFiltros().then(() => {
+        // Define o filtro de situação como "Ativo" por padrão ao abrir a página
+        const selectAtivo = document.getElementById('filtro-ativo');
+        if (selectAtivo) {
+            selectAtivo.value = "true";
+        }
+        
+        // Carrega os produtos ativos automaticamente logo na abertura
+        pesquisarProdutos();
+    });
     
-    // Vincula o botão de pesquisa azul
     const btnPesquisar = document.querySelector('.btn-primary');
     if (btnPesquisar) {
         btnPesquisar.addEventListener('click', pesquisarProdutos);
     }
 
-    // Configura eventos de digitação e Enter para todos os campos do formulário
     configurarEventosDinamicos();
 });
 
@@ -49,7 +58,6 @@ async function carregarFiltros() {
                 }
             });
         }
-        
     } catch (error) {
         console.error("Erro ao carregar filtros:", error);
     }
@@ -88,7 +96,6 @@ function configurarEventosDinamicos() {
 
 async function pesquisarProdutos() {
     const tbody = document.getElementById('tabela-produtos');
-	
     if (!tbody) return;
 
     const getVal = (id) => {
@@ -101,16 +108,18 @@ async function pesquisarProdutos() {
     const tipoId = getVal('filtro-tipo');
     const modelo = getVal('filtro-modelo');
     const ativo = getVal('filtro-ativo');
-    const buscaGlobal = getVal('busca-global');
+    const buscaGlobal = document.getElementById('busca-global') ? document.getElementById('busca-global').value.trim() : '';
 
+    // Verifica se absolutamente nenhum filtro ou busca global foi preenchido/selecionado
     const algumFiltroPreenchido = sku !== '' || marcaId !== '' || tipoId !== '' || modelo !== '' || ativo !== '' || buscaGlobal !== '';
     
     if (!algumFiltroPreenchido) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Utilize os filtros acima ou a busca global para consultar os produtos.</td></tr>';
-        return;
+        produtosGlobais = [];
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Utilize os filtros acima ou a busca global para consultar os produtos.</td></tr>';
+        return; // Interrompe a execução para não buscar nada no banco
     }
 
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center">Buscando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center">Buscando...</td></tr>';
 
     const params = new URLSearchParams({
         sku: sku,
@@ -118,64 +127,18 @@ async function pesquisarProdutos() {
         tipoId: tipoId === 'TODOS' ? '' : tipoId,
         modelo: modelo,
         ativo: ativo,
-        busca: buscaGlobal
+        busca: buscaGlobal,
+        limite: '15'
     });
 
     try {
         const response = await fetch(`/nexacore/api/produtos/consultar?${params.toString()}`);
-        
-        if (!response.ok) {
-            throw new Error(`Erro no servidor: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Erro no servidor: ${response.status}`);
 
         const data = await response.json();
+        produtosGlobais = Array.isArray(data) ? data : [];
 
-        tbody.innerHTML = '';
-        if (!data || data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center">Nenhum produto encontrado.</td></tr>';
-            return;
-        }
-
-        data.forEach(p => {
-            // Botão de Visualização (Sempre visível para quem pode consultar)
-            let botoesAcao = `
-                <button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Visualizar" onclick="visualizarDetalhesProduto(${p.id})">
-                    <i class="fas fa-search"></i>
-                </button>`;
-
-            // Adiciona o botão de Editar apenas se o usuário tiver permissão
-            if (typeof usuarioPodeEditar !== 'undefined' && usuarioPodeEditar) {
-                botoesAcao += `
-                    <a href="/nexacore/ProdutoServlet?id=${p.id}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
-                        <i class="fas fa-pen"></i>
-                    </a>`;
-            }
-
-            // Adiciona o botão de Excluir apenas se o usuário tiver permissão
-            if (typeof usuarioPodeExcluir !== 'undefined' && usuarioPodeExcluir) {
-                botoesAcao += `
-                    <button type="button" class="btn btn-sm btn-outline-danger" title="Excluir" onclick="confirmarExclusaoProduto(${p.id})">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>`;
-            }
-
-            const row = `<tr>
-                <td>${p.sku || '-'}</td>
-                <td>${p.nomeTipo || '-'}</td>
-                <td>${p.nomeMarca || p.marca || '-'}</td>
-                <td>${p.modelo || '-'}</td>
-                <td>${p.descricaoResumida || '-'}</td>
-                <td>
-                    <span class="badge ${p.ativo ? 'bg-success' : 'bg-danger'}">
-                        ${p.ativo ? 'Ativo' : 'Inativo'}
-                    </span>
-                </td>
-                <td class="text-center">
-                    ${botoesAcao}
-                </td>
-            </tr>`;
-            tbody.innerHTML += row;
-        });
+        renderizarTabela();
     } catch (error) {
         console.error("Erro na pesquisa:", error);
         ModalService.error("Erro", "Falha ao consultar produtos.");
@@ -183,15 +146,127 @@ async function pesquisarProdutos() {
     }
 }
 
+function ordenarTabela(coluna) {
+    if (colunaAtual === coluna) {
+        direcaoAsc = !direcaoAsc; 
+    } else {
+        colunaAtual = coluna;
+        direcaoAsc = true; 
+    }
+
+    document.querySelectorAll('thead th i[id^="sort-"]').forEach(icon => {
+        icon.className = "fas fa-sort text-muted ms-1";
+    });
+
+    const iconeAtual = document.getElementById(`sort-${coluna}`);
+    if (iconeAtual) {
+        iconeAtual.className = direcaoAsc ? "fas fa-sort-up text-primary ms-1" : "fas fa-sort-down text-primary ms-1";
+    }
+
+    produtosGlobais.sort((a, b) => {
+        let valA = a[coluna];
+        let valB = b[coluna];
+
+        if (valA === undefined || valA === null) valA = '';
+        if (valB === undefined || valB === null) valB = '';
+
+        if (typeof valA === 'boolean' || typeof valB === 'boolean') {
+            return direcaoAsc ? (valA === valB ? 0 : valA ? -1 : 1) : (valA === valB ? 0 : valA ? 1 : -1);
+        }
+
+        let strA = valA.toString().trim();
+        let strB = valB.toString().trim();
+
+        // Tratamento inteligente para valores numéricos (como Modelos: 780, 3020, etc.)
+        let numA = Number(strA);
+        let numB = Number(strB);
+
+        if (!isNaN(numA) && !isNaN(numB)) {
+            return direcaoAsc ? numA - numB : numB - numA;
+        }
+
+        strA = strA.toLowerCase();
+        strB = strB.toLowerCase();
+
+        if (strA < strB) return direcaoAsc ? -1 : 1;
+        if (strA > strB) return direcaoAsc ? 1 : -1;
+        return 0;
+    });
+
+    renderizarTabela();
+}
+
+function renderizarTabela() {
+    const tbody = document.getElementById('tabela-produtos');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    if (!produtosGlobais || produtosGlobais.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center">Nenhum produto encontrado.</td></tr>';
+        return;
+    }
+
+    // Limita estritamente a exibição a no máximo 15 registros por página
+    const produtosLimitados = produtosGlobais.slice(0, 15);
+
+    produtosLimitados.forEach(p => {
+        let botoesAcao = `
+            <button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Visualizar" onclick="visualizarDetalhesProduto(${p.id})">
+                <i class="fas fa-search"></i>
+            </button>`;
+
+        if (typeof usuarioPodeEditar !== 'undefined' && usuarioPodeEditar) {
+            botoesAcao += `
+                <a href="/nexacore/ProdutoServlet?id=${p.id}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
+                    <i class="fas fa-pen"></i>
+                </a>`;
+        }
+
+        if (typeof usuarioPodeExcluir !== 'undefined' && usuarioPodeExcluir) {
+            botoesAcao += `
+                <button type="button" class="btn btn-sm btn-outline-danger" title="Excluir" onclick="confirmarExclusaoProduto(${p.id})">
+                    <i class="fas fa-trash-alt"></i>
+                </button>`;
+        }
+
+        const row = `<tr>
+            <td>${p.sku || '-'}</td>
+            <td>${p.nomeTipo || '-'}</td>
+            <td>${p.nomeFabricante || '-'}</td>
+            <td>${p.nomeMarca || p.marca || '-'}</td>
+            <td>${p.nomeCategoria || '-'}</td>
+            <td>${p.modelo || '-'}</td>
+            <td>${p.descricaoResumida || '-'}</td>
+            <td>
+                <span class="badge ${p.ativo ? 'bg-success' : 'bg-danger'}">
+                    ${p.ativo ? 'Ativo' : 'Inativo'}
+                </span>
+            </td>
+            <td class="text-center">
+                ${botoesAcao}
+            </td>
+        </tr>`;
+        tbody.innerHTML += row;
+    });
+}
+
 function limparFiltros() {
+    // Reseta todos os campos de texto para vazio
     document.querySelectorAll('.card .row input').forEach(el => el.value = '');
+    
+    // Reseta todos os selects para a primeira opção (que é o "Selecione...")
     document.querySelectorAll('.card .row select').forEach(el => el.selectedIndex = 0);
     
+    // Limpa também a barra de busca global
     const buscaGlobal = document.getElementById('busca-global');
     if (buscaGlobal) buscaGlobal.value = '';
     
+    // Limpa os dados globais e esvazia a tabela visualmente
+    produtosGlobais = [];
     const tbody = document.getElementById('tabela-produtos');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Utilize os filtros acima ou a busca global para consultar os produtos.</td></tr>';
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Utilize os filtros acima ou a busca global para consultar os produtos.</td></tr>';
+    }
 }
 
 async function confirmarExclusaoProduto(id) {
@@ -223,8 +298,6 @@ async function executarExclusaoProduto(id) {
     }
 }
 
-
-
 async function visualizarDetalhesProduto(id) {
     try {
         const response = await fetch(`/nexacore/api/produtos/buscar?id=${id}`);
@@ -245,7 +318,6 @@ async function visualizarDetalhesProduto(id) {
                     nomeAttr = `Atributo ${attr.idAtributo || ''}`.trim();
                 }
 
-                // Adiciona o atributo na descrição completa, evitando duplicar caso venha rotulado como modelo
                 if (nomeAttr.toLowerCase() !== 'modelo') {
                     descricaoCompleta += `, ${nomeAttr}: ${attr.valor || '-'}`;
                 }
@@ -255,6 +327,8 @@ async function visualizarDetalhesProduto(id) {
         const conteudoHtml = `
             <p><strong>Código (SKU):</strong> ${produto.sku || '-'}</p>
             <p><strong>Tipo:</strong> ${produto.nomeTipo || '-'}</p>
+			<p><strong>Categoria:</strong> ${produto.nomeCategoria || '-'}</p>      
+            <p><strong>Fabricante:</strong> ${produto.nomeFabricante || '-'}</p>    
             <p><strong>Marca:</strong> ${produto.nomeMarca || produto.marca || '-'}</p>
             <p><strong>Modelo:</strong> ${produto.modelo || '-'}</p>
             <p><strong>Descrição Resumida:</strong> ${produto.descricaoResumida || '-'}</p>

@@ -15,6 +15,10 @@ public class ProdutoDTO {
     private int fabricanteId;
     private String nomeMarca;
     private String nomeFabricante;
+    
+ // Novo campo para Categoria (ID e Nome para exibição, alinhado à tabela produtos_categoria)
+    private int categoriaId;
+    private String nomeCategoria;
 
     private String modelo; 
     private String observacoes;
@@ -75,4 +79,11 @@ public class ProdutoDTO {
 
     public String getNomeFabricante() { return nomeFabricante; }
     public void setNomeFabricante(String nomeFabricante) { this.nomeFabricante = nomeFabricante; }
+    
+    // --- GETTERS E SETTERS PARA CATEGORIA ---   
+    public int getCategoriaId() { return categoriaId; }
+    public void setCategoriaId(int categoriaId) { this.categoriaId = categoriaId; }
+
+    public String getNomeCategoria() { return nomeCategoria; }
+    public void setNomeCategoria(String nomeCategoria) { this.nomeCategoria = nomeCategoria; }
 }
