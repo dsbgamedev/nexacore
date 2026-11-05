@@ -11,16 +11,32 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
 </head>
 <body class="p-4 bg-light" data-context-path="${pageContext.request.contextPath}">
-    <div class="container-fluid">
-        <nav aria-label="breadcrumb">
-	        <ol class="breadcrumb mb-4">
-	           <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-	           <li class="breadcrumb-item active" aria-current="page">Gerencias Sessões</li>
-	        </ol>
-    	</nav>  
-    	
-    	<!-- Filtros de Pesquisa -->
-	    <div class="d-flex align-items-center text-primary mb-3">
+    
+    <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+    
+        <!-- Cabeçalho Padrão com Tema Escuro -->
+        <div class="card-cabecalho-padrao tema-escuro">
+            <!-- Linha Superior: Título e Breadcrumb -->
+            <div class="mb-3">
+                <h4 class="page-title fw-bold mb-1">GERENCIAMENTO DE SESSÕES</h4>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                        <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Gerenciamento de Sessões</li>
+                    </ol>
+                </nav>  
+            </div>
+               
+            <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+            <div class="cabecalho-botoes-atalho">
+                <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-success btn-moderno px-3 py-2 text-white">
+                    <i class="fa fa-plus me-1"></i> Menu
+                </a>
+            </div>
+        </div>
+        
+        <!-- Filtros de Pesquisa -->
+        <div class="d-flex align-items-center text-primary mb-3">
             <i class="fa-solid fa-filter me-2"></i>
             <span class="fw-bold small text-uppercase">Filtros de Pesquisa</span>
         </div> 

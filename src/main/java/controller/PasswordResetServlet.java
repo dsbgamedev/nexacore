@@ -206,11 +206,11 @@ public class PasswordResetServlet extends HttpServlet {
             // Se o token é válido, define o atributo e encaminha para a página JSP
             request.setAttribute("token", token); // O JSP irá ler este atributo
             request.setAttribute("title", "Redefinir Senha"); // Define o título aqui
-            request.getRequestDispatcher("/resetPassword.jsp").forward(request, response);
+            request.getRequestDispatcher("/WEB-INF/jsp/resetPassword.jsp").forward(request, response);
         } else {
             // Se a ação não for "showResetPage" (ou se não houver ação), encaminha para forgotPassword.jsp
             request.setAttribute("title", "Esqueci Minha Senha"); // Define o título para forgotPassword.jsp
-            request.getRequestDispatcher("/forgotPassword.jsp").forward(request, response);
+            request.getRequestDispatcher("/WEB-INF/jsp/forgotPassword.jsp").forward(request, response);
         }
     }
 }

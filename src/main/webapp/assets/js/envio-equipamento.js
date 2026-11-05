@@ -1,5 +1,10 @@
 // Armazena os equipamentos selecionados para envio (Chave: idEquipamento, Valor: Objeto do Equipamento)
 let equipamentosSelecionadosMap = new Map();
+// Armazena a lista geral de transportadoras para filtragem rápida no modal
+let listaTransportadorasGeral = [];
+let paginaAtualTransportadora = 1;
+const itensPorPaginaTransportadora = 10;
+let termoBuscaModalTransportadora = "";
 
 document.addEventListener("DOMContentLoaded", function() {
     // 1. Definir a data de hoje por padrão
@@ -9,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function() {
         inputDataEnvio.value = hoje;
     }
 	
-	// --- NOVO: Preenche a Data Prevista de Entrega com o dia atual ---
+	// --- Preenche a Data Prevista de Entrega com o dia atual ---
     const inputDataPrevisao = document.getElementById("dataPrevisao");
     if (inputDataPrevisao && !inputDataPrevisao.value) {
         inputDataPrevisao.value = hoje;
@@ -64,6 +69,51 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
+    // --- 3.1. EVENTOS PARA O MODAL E DIGITAÇÃO DE TRANSPORTADORAS ---
+    const btnAbrirModalTransp = document.getElementById("btnAbrirModalTransportadora");
+    const inputTranspNome = document.getElementById("transportadoraNome");
+    
+    if (btnAbrirModalTransp && inputTranspNome) {
+        // Apenas a LUPA abre o modal diretamente por clique
+        btnAbrirModalTransp.addEventListener("click", abrirModalTransportadoras);
+
+        // Atalho F1 para abrir o modal completo com paginação
+        inputTranspNome.addEventListener("keydown", function(e) {
+            if (e.key === "F1") {
+                e.preventDefault(); // Evita o comportamento padrão de ajuda do navegador
+                abrirModalTransportadoras();
+            }
+        });
+
+        // Digitação direta na barra (Autocomplete / Sugestões rápidas)
+        inputTranspNome.addEventListener("input", function() {
+            let termo = this.value.trim();
+            if (termo === "") {
+                document.getElementById("transportadoraId").value = "";
+            }
+            executarBuscaRapidaDireta(termo);
+        });
+    }
+
+    // Fechar sugestões ao clicar fora
+    document.addEventListener("click", function(e) {
+        const sugestoes = document.getElementById("sugestoesTransportadora");
+        const input = document.getElementById("transportadoraNome");
+        if (sugestoes && input && !input.contains(e.target) && !sugestoes.contains(e.target)) {
+            sugestoes.style.display = "none";
+        }
+    });
+
+    const inputBuscaTranspModal = document.getElementById("inputBuscaTransportadoraModal");
+    if (inputBuscaTranspModal) {
+        inputBuscaTranspModal.addEventListener("input", function() {
+            termoBuscaModalTransportadora = this.value.toLowerCase().trim();
+            paginaAtualTransportadora = 1; // Reseta para a primeira página ao filtrar
+            renderizarTabelaTransportadorasModal();
+        });
+    }
+    // -------------------------------------------------------------
+
 	// 4. Evento do botão de confirmar seleção dentro do modal (Validando pelo idSistema)
 	const btnConfirmarSelecao = document.getElementById("btnConfirmarSelecao");
 	if (btnConfirmarSelecao) {
@@ -103,7 +153,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	        });
 
 	        if (itensDuplicados.length > 0) {
-	            let msg = `O(s) equipamento(s) com o ID de Sistema abaixo já foi(ram) lançado(s) nesta lista de envio:\n\n• ${itensDuplicados.join("\n• ")}`;
+ 	            let msg = `O(s) equipamento(s) com o ID de Sistema abaixo já foi(ram) lançado(s) nesta lista de envio:\n\n${itensDuplicados.join("\n")}`;
 	            if (typeof ModalService !== 'undefined') {
 	                ModalService.warning("Equipamento já adicionado", msg);
 	            } else {
@@ -138,7 +188,7 @@ document.addEventListener("DOMContentLoaded", function() {
 	}
 
     // =========================================================================
-    // NOVA VALIDAÇÃO EM TEMPO REAL: Dispara assim que altera a Origem ou Destino
+    // VALIDAÇÃO EM TEMPO REAL: Origem e Destino Iguais
     // =========================================================================
     const selectOrigemEl = document.getElementById("origemId");
     const selectDestinoEl = document.getElementById("destinoId");
@@ -165,95 +215,272 @@ document.addEventListener("DOMContentLoaded", function() {
     if (selectDestinoEl) selectDestinoEl.addEventListener("change", validarOrigemDestinoIgual);
     // =========================================================================
 
-	  // 5. Evento de submissão do formulário principal de Envio
-	    const formEnvio = document.getElementById("formEnvio");
-	    if (formEnvio) {
-	        formEnvio.addEventListener("submit", function(e) {
-	            e.preventDefault();
+	// 5. Evento de submissão do formulário principal de Envio
+    const formEnvio = document.getElementById("formEnvio");
+    if (formEnvio) {
+        formEnvio.addEventListener("submit", function(e) {
+            e.preventDefault();
 
-	            if (equipamentosSelecionadosMap.size === 0) {
-	                if (typeof ModalService !== 'undefined') {
-	                    ModalService.warning("Atenção", "Adicione pelo menos um equipamento ao envio.");
-	                } else {
-	                    alert("Adicione pelo menos um equipamento ao envio.");
-	                }
-	                return;
-	            }
+            if (equipamentosSelecionadosMap.size === 0) {
+                if (typeof ModalService !== 'undefined') {
+                    ModalService.warning("Atenção", "Adicione pelo menos um equipamento ao envio.");
+                } else {
+                    alert("Adicione pelo menos um equipamento ao envio.");
+                }
+                return;
+            }
 
-	            const selectOrigem = document.getElementById("origemId");
-	            let origemIdValor = selectOrigem ? selectOrigem.value : null;
+            // Validação da Transportadora via Modal ou Digitação
+            const transportadoraIdVal = document.getElementById("transportadoraId")?.value;
+            const transportadoraNomeVal = document.getElementById("transportadoraNome")?.value;
 
-	            const selectDestino = document.getElementById("destinoId");
-	            let destinoIdValor = selectDestino ? selectDestino.value : null;
+            if (!transportadoraIdVal || !transportadoraNomeVal) {
+                if (typeof ModalService !== 'undefined') {
+                    ModalService.warning("Transportadora Obrigatória", "Por favor, selecione uma transportadora válida.");
+                } else {
+                    alert("Por favor, selecione uma transportadora válida.");
+                }
+                return;
+            }
 
-	            // Validação final antes de enviar
-	            if (validarOrigemDestinoIgual()) {
-	                return; // Interrompe o envio se forem iguais
-	            }
+            const selectOrigem = document.getElementById("origemId");
+            let origemIdValor = selectOrigem ? selectOrigem.value : null;
 
-	            const payload = {
-	                dataEnvio: document.getElementById("dataEnvio").value,
-	                origemId: parseInt(origemIdValor),
-	                destinoId: parseInt(destinoIdValor),
-	                responsavel: document.getElementById("responsavel").value,
-	                transportadora: document.getElementById("transportadora").value,
-	                codigoRastreio: document.getElementById("codigoRastreio").value,
-	                numeroNota: document.getElementById("numeroNota") ? document.getElementById("numeroNota").value : null,
-	                dataPrevisaoEntrega: document.getElementById("dataPrevisao").value,
-	                observacoes: document.getElementById("observacoes").value,
-	                equipamentosIds: Array.from(equipamentosSelecionadosMap.keys())
-	            };
+            const selectDestino = document.getElementById("destinoId");
+            let destinoIdValor = selectDestino ? selectDestino.value : null;
 
-	            // Recalcula o tipoParam de forma segura dentro do submit
-	            const urlParamsCheck = new URLSearchParams(window.location.search);
-	            const tipoAtual = (window.isDevolucaoForcada) ? 'devolucao' : urlParamsCheck.get('tipo');
+            if (validarOrigemDestinoIgual()) {
+                return; 
+            }
 
-	            let urlEndpoint = contextPath + '/api/envios';
-	            if (tipoAtual === 'devolucao') {
-	                urlEndpoint += '?tipo=devolucao';
-	            }
-	            const btnSubmit = formEnvio.querySelector('button[type="submit"]');
-	            if (btnSubmit) btnSubmit.disabled = true;
+            const payload = {
+                dataEnvio: document.getElementById("dataEnvio").value,
+                origemId: parseInt(origemIdValor),
+                destinoId: parseInt(destinoIdValor),
+                responsavel: document.getElementById("responsavel").value,
+                transportadoraId: parseInt(transportadoraIdVal),
+                transportadora: transportadoraNomeVal,
+                codigoRastreio: document.getElementById("codigoRastreio").value,
+                numeroNota: document.getElementById("numeroNota") ? document.getElementById("numeroNota").value : null,
+                dataPrevisaoEntrega: document.getElementById("dataPrevisao").value,
+                observacoes: document.getElementById("observacoes").value,
+                equipamentosIds: Array.from(equipamentosSelecionadosMap.keys())
+            };
 
-	            fetch(urlEndpoint, {
-	                method: 'POST',
-	                headers: { 'Content-Type': 'application/json;charset=UTF-8' },
-	                body: JSON.stringify(payload)
-	            })
-	            .then(res => res.json())
-	            .then(resposta => {
-	                if (resposta.sucesso) {
-	                    equipamentosSelecionadosMap.clear();
-	                    
-	                    if (typeof ModalService !== 'undefined') {
-	                        ModalService.success("Sucesso", resposta.mensagem).then(() => {
-	                            window.location.href = contextPath + '/ConsultaEnvioServlet';
-	                        });
-	                    } else {
-	                        alert(resposta.mensagem);
-	                        window.location.href = contextPath + '/ConsultaEnvioServlet';
-	                    }
-	                } else {
-	                    if (btnSubmit) btnSubmit.disabled = false;
-	                    if (typeof ModalService !== 'undefined') {
-	                        ModalService.error("Erro", resposta.mensagem);
-	                    } else {
-	                        alert(resposta.mensagem);
-	                    }
-	                }
-	            })
-	            .catch(err => {
-	                console.error("Erro:", err);
-	                if (btnSubmit) btnSubmit.disabled = false;
-	                if (typeof ModalService !== 'undefined') {
-	                    ModalService.error("Erro", "Erro de comunicação ao efetuar o envio.");
-	                } else {
-	                    alert("Erro de comunicação ao efetuar o envio.");
-	                }
-	            });
-	        });
-	    }
+            const urlParamsCheck = new URLSearchParams(window.location.search);
+            const tipoAtual = (window.isDevolucaoForcada) ? 'devolucao' : urlParamsCheck.get('tipo');
+
+            let urlEndpoint = contextPath + '/api/envios';
+            if (tipoAtual === 'devolucao') {
+                urlEndpoint += '?tipo=devolucao';
+            }
+            const btnSubmit = formEnvio.querySelector('button[type="submit"]');
+            if (btnSubmit) btnSubmit.disabled = true;
+
+            fetch(urlEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(resposta => {
+                if (resposta.sucesso) {
+                    equipamentosSelecionadosMap.clear();
+                    
+                    if (typeof ModalService !== 'undefined') {
+                        ModalService.success("Sucesso", resposta.mensagem).then(() => {
+                            window.location.href = contextPath + '/ConsultaEnvioServlet';
+                        });
+                    } else {
+                        alert(resposta.mensagem);
+                        window.location.href = contextPath + '/ConsultaEnvioServlet';
+                    }
+                } else {
+                    if (btnSubmit) btnSubmit.disabled = false;
+                    if (typeof ModalService !== 'undefined') {
+                        ModalService.error("Erro", resposta.mensagem);
+                    } else {
+                        alert(resposta.mensagem);
+                    }
+                }
+            })
+            .catch(err => {
+                console.error("Erro:", err);
+                if (btnSubmit) btnSubmit.disabled = false;
+                if (typeof ModalService !== 'undefined') {
+                    ModalService.error("Erro", "Erro de comunicação ao efetuar o envio.");
+                } else {
+                    alert("Erro de comunicação ao efetuar o envio.");
+                }
+            });
+        });
+    }
 });
+
+// --- FUNÇÕES DO MODAL E PAGINAÇÃO DE TRANSPORTADORAS ---
+function abrirModalTransportadoras() {
+    let modalEl = document.getElementById("modalSelecionarTransportadora");
+    if (modalEl && window.bootstrap) {
+        let modal = new bootstrap.Modal(modalEl);
+        modal.show();
+        
+        if (listaTransportadorasGeral.length === 0) {
+            carregarTransportadorasParaModal();
+        } else {
+            renderizarTabelaTransportadorasModal();
+        }
+    }
+}
+
+function carregarTransportadorasParaModal() {
+    let tbody = document.getElementById("tabelaModalTransportadorasBody");
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Carregando transportadoras...</td></tr>`;
+
+    fetch(contextPath + "/ConsultaTransportadoraServlet?acao=listarJson")
+        .then(res => res.json())
+        .then(data => {
+            listaTransportadorasGeral = data.transportadoras || data || [];
+            paginaAtualTransportadora = 1;
+            renderizarTabelaTransportadorasModal();
+        })
+        .catch(err => {
+            console.error("Erro ao carregar transportadoras:", err);
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-3">Erro ao carregar dados do servidor.</td></tr>`;
+        });
+}
+
+function renderizarTabelaTransportadorasModal() {
+    let tbody = document.getElementById("tabelaModalTransportadorasBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    let filtradas = listaTransportadorasGeral.filter(t => 
+        (t.razaoSocial && t.razaoSocial.toLowerCase().includes(termoBuscaModalTransportadora)) ||
+        (t.nomeFantasia && t.nomeFantasia.toLowerCase().includes(termoBuscaModalTransportadora)) ||
+        (t.cnpj && t.cnpj.toLowerCase().includes(termoBuscaModalTransportadora))
+    );
+
+    if (filtradas.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Nenhuma transportadora encontrada.</td></tr>`;
+        atualizarControlesPaginacao(0, 1);
+        return;
+    }
+
+    let totalPaginas = Math.ceil(filtradas.length / itensPorPaginaTransportadora);
+    if (paginaAtualTransportadora > totalPaginas) paginaAtualTransportadora = totalPaginas;
+    if (paginaAtualTransportadora < 1) paginaAtualTransportadora = 1;
+
+    let inicio = (paginaAtualTransportadora - 1) * itensPorPaginaTransportadora;
+    let fim = inicio + itensPorPaginaTransportadora;
+    let itensPagina = filtradas.slice(inicio, fim);
+
+    itensPagina.forEach(t => {
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${t.idTransportadora}</td>
+            <td class="fw-bold">${t.razaoSocial}</td>
+            <td>${t.nomeFantasia || '-'}</td>
+            <td>${t.cnpj || '-'}</td>
+            <td class="text-center">
+                <button type="button" class="btn btn-primary btn-sm px-3" onclick="selecionarTransportadora(${t.idTransportadora}, '${t.razaoSocial.replace(/'/g, "\\'")}')">
+                    Selecionar
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    atualizarControlesPaginacao(filtradas.length, totalPaginas);
+}
+
+function mudarPaginaTransportadora(direcao) {
+    paginaAtualTransportadora += direcao;
+    renderizarTabelaTransportadorasModal();
+}
+
+function atualizarControlesPaginacao(totalItens, totalPaginas) {
+    let info = document.getElementById("paginacaoInfoTransportadora");
+    let btnAnt = document.getElementById("btnPaginaAnterior");
+    let btnProx = document.getElementById("btnPaginaProxima");
+    let lblIndice = document.getElementById("paginaAtualIndice");
+
+    if (info) {
+        let inicio = totalItens === 0 ? 0 : ((paginaAtualTransportadora - 1) * itensPorPaginaTransportadora) + 1;
+        let fim = Math.min(paginaAtualTransportadora * itensPorPaginaTransportadora, totalItens);
+        info.innerText = `Mostrando ${inicio} a ${fim} de ${totalItens} registros`;
+    }
+
+    if (lblIndice) lblIndice.innerText = `${paginaAtualTransportadora} / ${totalPaginas || 1}`;
+    if (btnAnt) btnAnt.disabled = paginaAtualTransportadora <= 1;
+    if (btnProx) btnProx.disabled = paginaAtualTransportadora >= totalPaginas;
+}
+
+window.selecionarTransportadora = function(id, nome) {
+    document.getElementById("transportadoraId").value = id;
+    document.getElementById("transportadoraNome").value = nome;
+
+    let sugestoes = document.getElementById("sugestoesTransportadora");
+    if (sugestoes) sugestoes.style.display = "none";
+
+    let modalEl = document.getElementById("modalSelecionarTransportadora");
+    if (modalEl) {
+        let modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+    }
+};
+
+// Autocomplete ao digitar direto na barra
+function executarBuscaRapidaDireta(termo) {
+    let divSugestoes = document.getElementById("sugestoesTransportadora");
+    if (!divSugestoes) return;
+
+    if (termo.length < 2) {
+        divSugestoes.style.display = "none";
+        return;
+    }
+
+    if (listaTransportadorasGeral.length === 0) {
+        fetch(contextPath + "/ConsultaTransportadoraServlet?acao=listarJson")
+            .then(res => res.json())
+            .then(data => {
+                listaTransportadorasGeral = data.transportadoras || data || [];
+                filtrarEExibirSugestoes(termo, divSugestoes);
+            })
+            .catch(err => console.error("Erro ao buscar sugestões:", err));
+    } else {
+        filtrarEExibirSugestoes(termo, divSugestoes);
+    }
+}
+
+function filtrarEExibirSugestoes(termo, divSugestoes) {
+    let termoLower = termo.toLowerCase();
+    let filtradas = listaTransportadorasGeral.filter(t => 
+        (t.razaoSocial && t.razaoSocial.toLowerCase().includes(termoLower)) ||
+        (t.cnpj && t.cnpj.toLowerCase().includes(termoLower))
+    ).slice(0, 5);
+
+    divSugestoes.innerHTML = "";
+    if (filtradas.length === 0) {
+        divSugestoes.style.display = "none";
+        return;
+    }
+
+    filtradas.forEach(t => {
+        let item = document.createElement("a");
+        item.href = "#";
+        item.className = "dropdown-item small py-2 border-bottom";
+        item.innerHTML = `<b>${t.razaoSocial}</b> <span class="text-muted">(${t.cnpj || 'Sem CNPJ'})</span>`;
+        item.onclick = function(e) {
+            e.preventDefault();
+            selecionarTransportadora(t.idTransportadora, t.razaoSocial);
+        };
+        divSugestoes.appendChild(item);
+    });
+
+    divSugestoes.style.display = "block";
+}
 
 // Função para buscar filiais e popular os selects de origem e destino
 function carregarFiliais() {
@@ -271,7 +498,6 @@ function carregarFiliais() {
             
             if (!selectOrigem || !selectDestino) return;
 
-            // BLINDAGEM: Garante que 'data' seja tratado como array
             let listaEmpresas = [];
             if (Array.isArray(data)) {
                 listaEmpresas = data;
@@ -279,10 +505,8 @@ function carregarFiliais() {
                 listaEmpresas = data.content || data.empresas || data.lista || Object.values(data).find(v => Array.isArray(v)) || [];
             }
 
-            // Limpa as opções existentes mantendo apenas a opção padrão "Selecione..."
             selectOrigem.innerHTML = '<option value="">Selecione a origem...</option>';
 
-            // Popula os selects com as filiais permitidas
             listaEmpresas.forEach(filial => {
                 let id = filial.origemCodigo || filial.idFilial || filial.id || filial.codigo;
                 let codigo = filial.origemCodigo || filial.codigo || id;
@@ -297,7 +521,6 @@ function carregarFiliais() {
                 }
             });
 
-            // GARANTIA DE SEGURANÇA: Se a Matriz (161) não estiver no destino, injetamos manualmente
             const urlParams = new URLSearchParams(window.location.search);
             const tipoParam = (window.isDevolucaoForcada) ? 'devolucao' : urlParams.get('tipo');
 
@@ -347,7 +570,6 @@ async function carregarEquipamentoDevolucaoAutomatico(idEquipamento) {
         equipamentosSelecionadosMap.set(eq.idEquipamento, eq);
         atualizarTabelaPrincipalItens();
 
-        // 1. Seta e trava a Origem com verificação de segurança caso as options demorem um instante
         const selectOrigem = document.getElementById("origemId");
         if (selectOrigem && filialAtualId) {
             let tentativas = 0;
@@ -377,7 +599,6 @@ async function carregarEquipamentoDevolucaoAutomatico(idEquipamento) {
             tentarSelecionarOrigem();
         }
 
-        // 2. BUSCA E TRAVA O DESTINO FIXO OBRIGATORIAMENTE EM: 161 - CBA DIESEL SP MATRIZ
         const selectDestino = document.getElementById("destinoId");
         if (selectDestino) {
             let encontrado = false;

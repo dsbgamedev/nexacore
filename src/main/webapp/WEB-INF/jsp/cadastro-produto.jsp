@@ -3,7 +3,8 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore - Cadastro de Produto</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexaCore | Cadastro de Produto</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
@@ -11,21 +12,36 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/cadastro-produto.css">
 </head>
 <body class="p-4 bg-light">
-<div class="container-fluid mb-4">
-    <h4 class="page-title fw-bold text-primary-dark"> CADASTRO DE PRODUTO (CATÁLOGO)</h4>
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb mb-0">
-           <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-           <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MarcaServlet">Marca</a></li>
-           <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/FabricanteServlet">Fabricante</a></li>
-           <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaProdutoServlet">Consulta Produtos</a></li>
-           <li class="breadcrumb-item active" aria-current="page">Produtos</li>
-            
-        </ol>
-    </nav>
-</div>
 
-<div class="container-fluid">
+<div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+
+    <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+    <div class="card-cabecalho-padrao tema-escuro p-4 mb-4 shadow-sm border-0">
+        <!-- Linha Superior: Título e Breadcrumb -->
+        <div class="mb-3">
+            <h4 class="page-title fw-bold text-white mb-1">CADASTRO DE PRODUTO (CATÁLOGO)</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                   <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                   <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MarcaServlet" class="text-light text-decoration-none">Marca</a></li>
+                   <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/FabricanteServlet" class="text-light text-decoration-none">Fabricante</a></li>
+                   <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaProdutoServlet" class="text-light text-decoration-none">Consulta Produtos</a></li>
+                   <li class="breadcrumb-item active text-secondary" aria-current="page">Produtos</li>
+                </ol>
+            </nav>
+        </div>
+        
+        <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+        <div class="cabecalho-botoes-atalho border-secondary pt-2 border-top">
+            <a href="${pageContext.request.contextPath}/ConsultaProdutoServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white">
+                <i class="fa-solid fa-arrow-left me-1"></i> Consulta Produtos
+            </a>
+            <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-success btn-moderno px-3 py-2 text-white">
+                <i class="fa fa-plus me-1"></i> Menu
+            </a>
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-lg-8">
             <div class="card p-4">

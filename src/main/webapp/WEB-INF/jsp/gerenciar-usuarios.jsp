@@ -12,23 +12,32 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
 </head>
-<body>
-<div class="container-fluid px-4 py-4">
-    <!-- CABEÇALHO -->
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <div>
-            <h4 class="page-title text-uppercase fw-bold">Gerenciamento de Usuários</h4>
+<body class="p-4 bg-light">
+
+<div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+
+    <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+    <div class="card-cabecalho-padrao tema-escuro ">
+        <!-- Linha Superior: Título e Breadcrumb -->
+        <div class="mb-3">
+            <h4 class="page-title text-uppercase fw-bold text-white mb-1">Gerenciamento de Usuários</h4>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Gerenciamento de Usuários</li>
+                <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item active text-secondary" aria-current="page">Gerenciamento de Usuários</li>
                 </ol>
             </nav>
         </div>
-
-        <a href="${pageContext.request.contextPath}/CadastrarUsuarioServlet?action=new" class="btn btn-success btn-nexa">
-            <i class="bi bi-person-plus-fill me-1"></i> Novo Usuário
-        </a>
+        
+        <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+        <div class="cabecalho-botoes-atalho ">
+            <a href="${pageContext.request.contextPath}/CadastrarUsuarioServlet?action=new" class="btn btn-success btn-moderno px-3 py-2 text-white">
+                <i class="bi bi-person-plus-fill me-1"></i> Novo Usuário
+            </a>
+            <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white">
+                <i class="fa fa-plus me-1"></i> Menu
+            </a>
+        </div>
     </div>
 
     <!-- FILTROS -->
@@ -115,7 +124,6 @@
 </script>
 <!-- 3. OBRIGATÓRIO: Carregue o JavaScript do Bootstrap PRIMEIRO -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<!-- (Ou o caminho local do seu bootstrap.bundle.js, ex: ${pageContext.request.contextPath}/assets/js/bootstrap.bundle.min.js) -->
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/gerenciar-usuarios.js"></script>
 </body>

@@ -3,7 +3,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore - Consulta de Envios</title>
+    <title>Nexacore | Consulta de Envios</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Adicionado Bootstrap Icons para combinar com a nova UI moderna -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
@@ -16,17 +16,36 @@
 <body class="bg-light">
 
 <div class="container-fluid px-4 py-4">
- 	<div>
-      <h4 class="page-title fw-bold text-primary-dark">CONSULTA DE ENVIOS(TRANSPORTE)</h4>
-      <nav aria-label="breadcrumb">
-          <ol class="breadcrumb mb-0">
-              <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-              <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/EnvioEquipamentoServlet">Enivos Equipamentos</a></li>
-              <li class="breadcrumb-item active" aria-current="page">Consulta Enivos Equipamentos</li>
-          </ol>
-      </nav>     
-     </div>
-
+    <!-- Cabeçalho da Página Envolvido em Card / Painel de Fundo -->
+    <div class="card-cabecalho-padrao tema-escuro">
+        <!-- Linha Superior: Título e Breadcrumb -->
+        <div class="mb-3">
+            <h4 class="page-title fw-bold text-primary-dark mb-1">CONSULTA DE ENVIOS (TRANSPORTE)</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/EnvioEquipamentoServlet">Envio Equipamentos</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Consulta de Envios</li>
+                </ol>
+            </nav>     
+        </div>
+        
+        <!-- Linha Inferior: Grupo de Botões (Com cores sólidas e alinhados à esquerda abaixo) -->
+        <div class="cabecalho-botoes-atalho">
+            <a href="${pageContext.request.contextPath}/EnvioEquipamentoServlet" class="btn btn-success btn-moderno px-3 py-2 text-white">
+                <i class="fa fa-plus me-1"></i> Novo Envio
+            </a>
+            <a href="${pageContext.request.contextPath}/DevolucaoEquipamentoServlet" class="btn btn-warning btn-moderno px-3 py-2 text-dark fw-semibold">
+                <i class="fas fa-undo me-1"></i> Novo Envio Devolução
+            </a>
+            <a href="${pageContext.request.contextPath}/ConsultaEquipamentosServlet" class="btn btn-primary btn-moderno px-3 py-2 text-white">
+                <i class="fas fa-external-link-alt me-1"></i> Consulta Equipamentos
+            </a>            
+            <a href="${pageContext.request.contextPath}/RecebimentoServlet" class="btn btn-info btn-moderno px-3 py-2 text-white">
+                <i class="fas fa-box-open me-1"></i> Recebimento / Devolução
+            </a>
+        </div>
+    </div>
     <!-- Barra Superior de Pesquisa e Ações (Filtros, Exportar, Novo Envio) -->
     <div class="card border-0 p-3 mb-4 shadow-sm">
         <div class="row g-3 align-items-center">
@@ -76,9 +95,6 @@
                 <button class="btn btn-outline-secondary btn-sm me-2" type="button">
                     <i class="bi bi-download"></i> Exportar
                 </button>
-                <a href="${pageContext.request.contextPath}/EnvioEquipamentoServlet" class="btn btn-primary btn-sm">
-                    <i class="bi bi-plus-lg"></i> Novo Envio
-                </a>
             </div>
         </div>
     </div>

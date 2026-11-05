@@ -97,7 +97,7 @@ if (mensagemErro == null) {
 							<label class="remember-label"> 
 								<input type="checkbox" name="lembrar" value="true"> Lembrar acesso
 							</label> 
-							<a href="<%=ctx%>/jsp/esqueci-senha.jsp" class="forgot-link">Esqueci minha senha</a>
+							<a href="<%=ctx%>/PasswordResetServlet" class="forgot-link">Esqueci minha senha</a>
 						</div>
 
 						<button type="submit" id="btnEntrar" class="btn btn-login">

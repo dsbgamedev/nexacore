@@ -27,20 +27,36 @@
     <link href="${pageContext.request.contextPath}/assets/css/fornecedores.css" rel="stylesheet">
 </head>
 <body class="p-4 bg-light">
-    <div class="container-fluid mb-4">
-        <h4 class="page-title fw-bold text-primary-dark mb-2">
-            <%= fornecedor.getIdFornecedor() == null ? "CADASTRO DE FORNECEDOR" : "EDITAR FORNECEDOR" %>
-        </h4>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaFornecedorServlet">Consulta Fornecedores</a></li>
-                <li class="breadcrumb-item active" aria-current="page"><%= fornecedor.getIdFornecedor() == null ? "Novo fornecedor" : "Editar fornecedor" %></li>
-            </ol>
-        </nav>
-    </div>
 
-    <div class="container-fluid">
+    <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+
+        <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+        <div class="card-cabecalho-padrao tema-escuro p-4 mb-4 shadow-sm border-0">
+            <!-- Linha Superior: Título e Breadcrumb -->
+            <div class="mb-3">
+                <h4 class="page-title fw-bold text-white mb-1">
+                    <%= fornecedor.getIdFornecedor() == null ? "CADASTRO DE FORNECEDOR" : "EDITAR FORNECEDOR" %>
+                </h4>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                        <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                        <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaFornecedorServlet" class="text-light text-decoration-none">Consulta Fornecedores</a></li>
+                        <li class="breadcrumb-item active text-secondary" aria-current="page"><%= fornecedor.getIdFornecedor() == null ? "Novo fornecedor" : "Editar fornecedor" %></li>
+                    </ol>
+                </nav>
+            </div>
+            
+            <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+            <div class="cabecalho-botoes-atalho border-secondary pt-2 border-top">
+                <a href="${pageContext.request.contextPath}/ConsultaFornecedorServlet" class="btn btn-secondary btn-moderno px-3 py-2 text-white">
+                    <i class="fa-solid fa-arrow-left me-1"></i> Consulta Fornecedor
+                </a>
+                <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-success btn-moderno px-3 py-2 text-white">
+                    <i class="fa fa-plus me-1"></i> Menu
+                </a>
+            </div>
+        </div>
+
         <div id="formAlert" class="alert d-none" role="alert"></div>
 
         <form id="formFornecedor" novalidate>
@@ -197,7 +213,7 @@
                             </c:forEach>
                         </div>
 
-                        <!-- 👉 Sistema de Aba Única para Observação Específica da Filial Ativa -->
+                        <!-- Sistema de Aba Única para Observação Específica da Filial Ativa -->
                         <div class="border-top pt-2">
                             <h6 class="fw-bold text-secondary mb-1" style="font-size: 13px;">
                                 <i class="fa-solid fa-note-sticky me-1"></i> Observações por Filial
@@ -241,10 +257,9 @@
     
     <!-- ==========================================================
      NEXACORE - MODAIS DE SISTEMA (ALERTA / CONFIRMAÇÃO)
-         Modal de Alerta (Padrão NexaCore)
 	========================================================== --> 
 	<div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered">
        	 <div class="modal-content-custom" id="alertBox">
 	            <h3 id="alertTitle"></h3>
 	            <p id="alertMessage"></p>

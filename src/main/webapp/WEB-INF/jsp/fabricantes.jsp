@@ -3,7 +3,8 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore - Fabricantes</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexacore | Fabricantes</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
@@ -14,26 +15,34 @@
 
     <!-- ================= VIEW 1: LISTAGEM E FILTROS ================= -->
     <div id="view-listagem">
-        <div class="container-fluid mb-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h4 class="page-title text-uppercase fw-bold">Fabricantes</h4>
+        <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+
+            <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+            <div class="card-cabecalho-padrao tema-escuro p-4 mb-4 shadow-sm border-0">
+                <!-- Linha Superior: Título e Breadcrumb -->
+                <div class="mb-3">
+                    <h4 class="page-title text-uppercase fw-bold text-white mb-1">Fabricantes</h4>
                     <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb mb-0">
-                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MarcaServlet">Marca</a></li>
-                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet">Cadastro Produto</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Fabricantes</li>
+                        <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MarcaServlet" class="text-light text-decoration-none">Marca</a></li>
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet" class="text-light text-decoration-none">Cadastro Produto</a></li>
+                            <li class="breadcrumb-item active text-secondary" aria-current="page">Fabricantes</li>
                         </ol>
                     </nav>
                 </div>
-                <button class="btn btn-success btn-sm" id="btn-novo">
-                    <i class="fa fa-plus me-1"></i> Novo Fabricante
-                </button>
+                
+                <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+                <div class="cabecalho-botoes-atalho border-secondary pt-2 border-top d-flex flex-wrap gap-2">
+                    <button class="btn btn-success btn-moderno px-3 py-2 text-white btn-sm" id="btn-novo">
+                        <i class="fa fa-plus me-1"></i> Novo Fabricante
+                    </button>
+                    <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white btn-sm">
+                        <i class="fa fa-plus me-1"></i> Menu
+                    </a>
+                </div>
             </div>
-        </div>
 
-        <div class="container-fluid">
             <!-- Filtros de Pesquisa -->
             <div class="card p-4 mb-4 shadow-sm">
                 <div class="card-title fw-bold text-primary mb-3"><i class="fa fa-filter me-1"></i> Filtros de Pesquisa</div>
@@ -93,19 +102,31 @@
 
     <!-- ================= VIEW 2: CADASTRO / EDIÇÃO ================= -->
     <div id="view-formulario" style="display: none;">
-        <div class="container-fluid mb-4">
-            <h4 class="page-title text-uppercase fw-bold" id="form-titulo">Editar Cadastro de Fabricante</h4>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet">Cadastro Produto</a></li>
-                    <li class="breadcrumb-item"><a href="#" id="link-voltar-breadcrumb">Fabricantes</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Gerenciamento</li>
-                </ol>
-            </nav>
-        </div>
+        <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
 
-        <div class="container-fluid">
+            <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+            <div class="card-cabecalho-padrao tema-escuro p-4 mb-4 shadow-sm border-0">
+                <!-- Linha Superior: Título e Breadcrumb -->
+                <div class="mb-3">
+                    <h4 class="page-title text-uppercase fw-bold text-white mb-1" id="form-titulo">Editar Cadastro de Fabricante</h4>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet" class="text-light text-decoration-none">Cadastro Produto</a></li>
+                            <li class="breadcrumb-item"><a href="#" id="link-voltar-breadcrumb" class="text-light text-decoration-none">Fabricantes</a></li>
+                            <li class="breadcrumb-item active text-secondary" aria-current="page">Gerenciamento</li>
+                        </ol>
+                    </nav>
+                </div>
+                
+                <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+                <div class="cabecalho-botoes-atalho border-secondary pt-2 border-top d-flex flex-wrap gap-2">
+                    <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white btn-sm">
+                        <i class="fa fa-plus me-1"></i> Menu
+                    </a>
+                </div>
+            </div>
+
             <div class="card p-4 shadow-sm">
                 <div class="card-title fw-bold text-primary mb-3"><i class="fa fa-info-circle me-1"></i> Dados do Fabricante</div>
                 
@@ -118,12 +139,10 @@
                     </div>
                     <div class="col-md-3">
 					    <label class="form-label">CNPJ *</label>
-					    <!-- Aumentado o maxlength para 18 para caber a pontuação: 00.000.000/0000-00 -->
 					    <input type="text" id="input-cnpj" class="form-control form-control-sm" maxlength="18" placeholder="00.000.000/0000-00">
 					</div>
                     <div class="col-md-3">
 					    <label class="form-label">Inscrição Estadual</label>
-					    <!-- Aumentado para 30 para permitir pontos, traços ou letras dependendo do estado -->
 					    <input type="text" id="input-ie" class="form-control form-control-sm" maxlength="30" placeholder="Ex: 000.000.000.000">
 					</div>
                     

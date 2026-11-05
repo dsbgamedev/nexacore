@@ -4,7 +4,8 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore - Cadastro de Transportadora</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexacore | Cadastro de Transportadora</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -12,27 +13,37 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/transportadora.css">
 </head>
-<body data-app-context-path="${pageContext.request.contextPath}">
+<body class="p-4 bg-light" data-app-context-path="${pageContext.request.contextPath}">
 
-    <div class="container-fluid py-4 px-4">
-        <nav aria-label="breadcrumb" class="mb-3">
-            <ol class="breadcrumb mb-1" style="font-size: 0.85rem;">
-                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaTransportadoraServlet">Consulta Transportadora</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Transportadoras</li>
-            </ol>
-        </nav>
+    <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
 
-        <div class="d-flex align-items-center mb-4">
-            <div class="page-header-icon me-3"><i class="fa-solid fa-truck-fast"></i></div>
-            <div>
-                <h4 class="mb-0 fw-bold text-dark">
+        <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+        <div class="card-cabecalho-padrao tema-escuro">
+            <!-- Linha Superior: Título e Breadcrumb -->
+            <div class="mb-3">
+                <h4 class="page-title fw-bold text-white mb-1">
                     <c:choose>
-                        <c:when test="${not empty transportadora}">Editar Transportadora </c:when>
-                        <c:otherwise>Cadastro de Transportadora</c:otherwise>
+                        <c:when test="${not empty transportadora}">EDITAR TRANSPORTADORA</c:when>
+                        <c:otherwise>CADASTRO DE TRANSPORTADORA</c:otherwise>
                     </c:choose>
                 </h4>
-                <small class="text-muted">Dados cadastrais e múltiplos endereços</small>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                        <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                        <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaTransportadoraServlet" class="text-light text-decoration-none">Consulta Transportadora</a></li>
+                        <li class="breadcrumb-item active text-secondary" aria-current="page">Transportadoras</li>
+                    </ol>
+                </nav>
+            </div>
+            
+            <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+            <div class="cabecalho-botoes-atalho ">
+                <a href="${pageContext.request.contextPath}/ConsultaTransportadoraServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white">
+                    <i class="fa-solid fa-arrow-left me-1"></i> Consulta Transportadora
+                </a>
+                <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-success btn-moderno px-3 py-2 text-white">
+                    <i class="fa fa-plus me-1"></i> Menu
+                </a>
             </div>
         </div>
 
@@ -115,7 +126,7 @@
 						            <div class="form-check mb-2">
 						                <input class="form-check-input filial-checkbox" type="checkbox" value="${filial.idFilial}" id="filial_${filial.idFilial}">
 						                <label class="form-check-label fw-bold text-dark" for="filial_${filial.idFilial}">
-						                    ${filial.sufixo} - ${filial.nomeEmpresa}
+                                            ${filial.sufixo} ${filial.nomeEmpresa}
 						                </label>
 						            </div>
 						            

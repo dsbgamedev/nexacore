@@ -1,274 +1,170 @@
 document.addEventListener("DOMContentLoaded", function () {
-    const contextPath = document.body.getAttribute("data-app-context-path") || "";
-    
-    // Array local para armazenar os endereços adicionados na tela antes do envio final
-    let listaEnderecos = [];
+    // 1. Variáveis de Paginação e Ordenação
+    let paginaAtual = 1;
+    const itensPorPagina = 15;
+    let linhasOriginais = [];
+    let colunaOrdenadaAtual = 0; // Começa por ID
+    let ordemAscendente = true;  // Crescente por padrão
 
-    // 1. Busca de CEP (Via ViaCEP)
-    const btnBuscarCep = document.getElementById("btn-buscar-cep");
-    if (btnBuscarCep) {
-        btnBuscarCep.addEventListener("click", function () {
-            let cepInput = document.getElementById("input-cep");
-            if (!cepInput) return;
-            let cep = cepInput.value.replace(/\D/g, '');
-            if (cep.length !== 8) {
-                ModalService.warning("CEP Inválido", "O CEP deve conter exatamente 8 dígitos.");
-                return;
-            }
-
-            fetch(`https://viacep.com.br/ws/${cep}/json/`)
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.erro) {
-                        document.getElementById("input-logradouro").value = data.logradouro || "";
-                        document.getElementById("input-bairro").value = data.bairro || "";
-                        document.getElementById("input-cidade").value = data.localidade || "";
-                        document.getElementById("input-uf").value = data.uf || "";
-                        let numEl = document.getElementById("input-numero");
-                        if (numEl) numEl.focus();
-                    } else {
-                        ModalService.warning("Não encontrado", "CEP não encontrado na base de dados.");
-                    }
-                })
-                .catch(() => ModalService.error("Erro", "Erro ao consultar o CEP. Verifique sua conexão."));
-        });
-    }
-
-    // 2. Botão para Incluir Endereço na Tabela Dinâmica
-    const btnAdicionarEndereco = document.getElementById("btn-adicionar-endereco");
-    if (btnAdicionarEndereco) {
-        btnAdicionarEndereco.addEventListener("click", function () {
-            let tipoSelect = document.getElementById("input-tipo-endereco");
-            if (!tipoSelect) return;
-            let tipoId = tipoSelect.value;
-            let tipoNome = tipoSelect.options[tipoSelect.selectedIndex].text;
-            
-            let cep = document.getElementById("input-cep").value;
-            let logradouro = document.getElementById("input-logradouro").value;
-            let numero = document.getElementById("input-numero").value;
-            let bairro = document.getElementById("input-bairro").value;
-            let cidade = document.getElementById("input-cidade").value;
-            let uf = document.getElementById("input-uf").value;
-            let paisEl = document.getElementById("input-pais");
-            let pais = paisEl ? paisEl.value : "Brasil";
-
-            // Validação simples
-            if (!tipoId || !cep || !logradouro || !numero || !bairro || !cidade || !uf) {
-                ModalService.warning("Campos Obrigatórios", "Por favor, preencha todos os campos obrigatórios do endereço.");
-                return;
-            }
-
-            // Objeto de endereço temporário
-            let novoEndereco = {
-                tipoEnderecoId: parseInt(tipoId),
-                tipoNomeText: tipoNome,
-                cep: cep,
-                logradouro: logradouro,
-                numero: numero,
-                complemento: document.getElementById("input-complemento") ? document.getElementById("input-complemento").value : "",
-                bairro: bairro,
-                cidade: cidade,
-                uf: uf,
-                pais: pais,
-                referencia: "",
-                principal: listaEnderecos.length === 0 // O primeiro endereço cadastrado é o principal por padrão
-            };
-
-            listaEnderecos.push(novoEndereco);
-            atualizarTabelaEnderecos();
-            atualizarSelectsFiliais();
-            limparCamposEndereco();
-        });
-    }
-
-    // Função para renderizar a tabela de endereços
-    function atualizarTabelaEnderecos() {
-        let tbody = document.getElementById("tabela-enderecos-corpo");
-        if (!tbody) return;
-        tbody.innerHTML = "";
-
-        if (listaEnderecos.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">Nenhum endereço adicionado ainda.</td></tr>`;
-            return;
+    const tbody = document.getElementById("tbodyTransportadoras");
+    if (tbody) {
+        const trs = Array.from(tbody.querySelectorAll("tr"));
+        if (!(trs.length === 1 && trs[0].id === "linha-vazia")) {
+            linhasOriginais = trs;
         }
 
-        listaEnderecos.forEach((end, index) => {
-            let tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td><span class="badge bg-secondary">${end.tipoNomeText}</span></td>
-                <td>${end.logradouro}, ${end.numero} - ${end.bairro}</td>
-                <td>${end.cidade}/${end.uf}</td>
-                <td>
-                    <input type="radio" name="enderecoPrincipalRadio" ${end.principal ? 'checked' : ''} onchange="marcarPrincipal(${index})">
-                </td>
-                <td class="text-end">
-                    <button type="button" class="btn btn-outline-danger btn-sm border-0" onclick="removerEndereco(${index})">
-                        <i class="fa fa-trash"></i>
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    // Funções globais auxiliares para a tabela
-    window.removerEndereco = function (index) {
-        listaEnderecos.splice(index, 1);
-        if (listaEnderecos.length > 0 && !listaEnderecos.some(e => e.principal)) {
-            listaEnderecos[0].principal = true;
+        // Ordenação inicial padrão: ID Crescente
+        if (linhasOriginais.length > 0) {
+            ordenarDados(0, true);
         }
-        atualizarTabelaEnderecos();
-        atualizarSelectsFiliais();
-    };
-
-    window.marcarPrincipal = function (index) {
-        listaEnderecos.forEach((e, i) => e.principal = (i === index));
-    };
-
-    function limparCamposEndereco() {
-        document.getElementById("input-tipo-endereco").value = "";
-        document.getElementById("input-cep").value = "";
-        document.getElementById("input-logradouro").value = "";
-        document.getElementById("input-numero").value = "";
-        document.getElementById("input-complemento").value = "";
-        document.getElementById("input-bairro").value = "";
-        document.getElementById("input-cidade").value = "";
-        document.getElementById("input-uf").value = "";
-        let paisEl = document.getElementById("input-pais");
-        if(paisEl) paisEl.value = "Brasil";
     }
 
-    // Atualiza os selects das filiais com base nos endereços adicionados
-    function atualizarSelectsFiliais() {
-        document.querySelectorAll(".filial-endereco-select").forEach(select => {
-            select.innerHTML = '<option value="" selected disabled>Selecione um endereço...</option>';
-            
-            listaEnderecos.forEach((end, index) => {
-                let opt = document.createElement("option");
-                opt.value = index; 
-                opt.textContent = `${end.tipoNomeText} - ${end.logradouro}, ${end.numero} (${end.cidade}/${end.uf})`;
-                select.appendChild(opt);
-            });
-        });
-    }
-
-    // Habilita ou desabilita o select de endereço quando o checkbox da filial é marcado
-    document.querySelectorAll(".filial-checkbox").forEach(checkbox => {
-        checkbox.addEventListener("change", function () {
-            let filialId = this.value;
-            let selectEndereco = document.getElementById(`end_filial_${filialId}`);
-            if (selectEndereco) {
-                selectEndereco.disabled = !this.checked;
-                if (!this.checked) selectEndereco.value = "";
+    // Listener para cliques nos cabeçalhos da tabela para ordenação dinâmica
+    document.querySelectorAll(".coluna-ordenavel").forEach(th => {
+        th.addEventListener("click", function () {
+            let colunaIndex = parseInt(this.getAttribute("data-coluna"));
+            if (colunaOrdenadaAtual === colunaIndex) {
+                ordemAscendente = !ordemAscendente;
+            } else {
+                colunaOrdenadaAtual = colunaIndex;
+                ordemAscendente = true;
             }
+            ordenarDados(colunaIndex, ordemAscendente);
         });
     });
 
-    // 3. Submissão do Formulário Principal via AJAX (Integrado com o TransportadoraServlet)
-    const formTransportadora = document.getElementById("formTransportadora");
-    if (formTransportadora) {
-        formTransportadora.addEventListener("submit", async function (e) {
-            e.preventDefault();
-			
-			// Validação preventiva de permissão de salvamento/edição
-            if (typeof permissaoEditarTransportadora !== 'undefined' && !permissaoEditarTransportadora) {
-                await ModalService.warning(
-                    "Acesso Negado", 
-                    "Você não possui permissão para cadastrar ou alterar dados de transportadoras."
-                );
-                return; // Interrompe a execução para não enviar nada
+    function ordenarDados(colunaIndex, ascendente) {
+        linhasOriginais.sort((a, b) => {
+            let valA = a.children[colunaIndex].innerText.trim();
+            let valB = b.children[colunaIndex].innerText.trim();
+
+            let numA = parseFloat(valA.replace(/\D/g, ''));
+            let numB = parseFloat(valB.replace(/\D/g, ''));
+
+            if (!isNaN(numA) && !isNaN(numB) && colunaIndex === 0) {
+                return ascendente ? numA - numB : numB - numA;
             }
 
-            if (listaEnderecos.length === 0) {
-                await ModalService.warning("Atenção", "Adicione pelo menos um endereço à transportadora antes de salvar.");
-                return;
-            }
-
-            let transportadoraData = {
-                razaoSocial: document.getElementById("razaoSocial")?.value || "",
-                nomeFantasia: document.getElementById("nomeFantasia")?.value || "",
-                cnpj: document.getElementById("cnpj")?.value || "",
-                inscricaoEstadual: document.getElementById("inscricaoEstadual")?.value || "",
-                rntrc: document.getElementById("rntrc")?.value || "",
-                telefone: document.getElementById("telefone")?.value || "",
-                celular: document.getElementById("celular")?.value || "",
-                email: document.getElementById("email")?.value || "",
-                site: document.getElementById("site")?.value || "",
-                status: document.getElementById("status")?.value || "ATIVA",
-                observacao: document.getElementById("observacao")?.value || ""
-            };
-
-            let filiaisSelecionadas = [];
-            let erroFilial = false;
-            
-            for (let cb of document.querySelectorAll(".filial-checkbox:checked")) {
-                let filialId = cb.value;
-                let enderecoSelect = document.getElementById(`end_filial_${filialId}`);
-                let enderecoIndice = enderecoSelect ? enderecoSelect.value : "";
-
-                if (enderecoIndice === "") {
-                    await ModalService.warning("Filial Pendente", "Por favor, selecione um endereço para cada filial marcada.");
-                    erroFilial = true;
-                    break;
-                }
-
-                filiaisSelecionadas.push({
-                    idFilial: parseInt(filialId),
-                    enderecoIndice: parseInt(enderecoIndice)
-                });
-            }
-
-            if (erroFilial) return;
-
-            let payload = {
-                transportadora: transportadoraData,
-                enderecos: listaEnderecos,
-                filiais: filiaisSelecionadas
-            };
-
-            try {
-                let response = await fetch(contextPath + "/TransportadoraServlet?acao=salvar", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json;charset=UTF-8"
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                const contentType = response.headers.get("content-type");
-                let data = {};
-                if (contentType && contentType.includes("application/json")) {
-                    data = await response.json();
-                } else {
-                    let text = await response.text();
-                    throw new Error(text || "Erro desconhecido no servidor.");
-                }
-
-                if (response.ok && data.sucesso) {
-                    await ModalService.success("Sucesso!", data.mensagem || "Transportadora cadastrada com sucesso!");
-                    window.location.href = contextPath + "/ConsultaTransportadoraServlet";
-                } else {
-                    await ModalService.error("Erro ao Salvar", data.mensagem || data.error || "Não foi possível concluir a operação.");
-                }
-
-            } catch (err) {
-                console.error(err);
-                await ModalService.error("Erro de Comunicação", "Erro ao comunicar com o servidor: " + err.message);
-            }
+            return ascendente ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
+
+        paginaAtual = 1;
+        renderizarTabelaPaginada();
     }
 
-    // --- 4. Controle de Seleção em Massa (Checkbox "Selecionar Todos") ---
-    const selectAll = document.getElementById("selectAllCheckbox");
-    if (selectAll) {
-        selectAll.addEventListener("change", function () {
-            document.querySelectorAll(".transportadora-checkbox").forEach(cb => {
-                cb.checked = selectAll.checked;
-            });
-        });
+    function renderizarTabelaPaginada() {
+        if (!tbody) return;
+        tbody.innerHTML = "";
+
+        if (linhasOriginais.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">Nenhuma transportadora encontrada. Utilize os filtros acima.</td></tr>`;
+            document.getElementById("ulPaginacao").innerHTML = "";
+            document.getElementById("paginacao-info").innerHTML = "";
+            return;
+        }
+
+        const totalItens = linhasOriginais.length;
+        const totalPaginas = Math.ceil(totalItens / itensPorPagina);
+        
+        if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+        if (paginaAtual < 1) paginaAtual = 1;
+
+        const inicio = (paginaAtual - 1) * itensPorPagina;
+        const fim = inicio + itensPorPagina;
+        const itensPagina = linhasOriginais.slice(inicio, fim);
+
+        itensPagina.forEach(tr => tbody.appendChild(tr));
+
+        document.getElementById("paginacao-info").innerText = 
+            `Mostrando ${inicio + 1} a ${Math.min(fim, totalItens)} de ${totalItens} registros`;
+
+        renderizarBotoesPaginacao(totalPaginas);
     }
 
-    // 5. Ações da Tabela de Consulta (Visualizar, Editar, Excluir)
+	function renderizarBotoesPaginacao(totalPaginas) {
+        const ul = document.getElementById("ulPaginacao");
+        if (!ul) return;
+        ul.innerHTML = "";
+
+        if (totalPaginas <= 1) return;
+
+        // Botão Primeira
+        let liPrimeira = document.createElement("li");
+        liPrimeira.className = `page-item ${paginaAtual === 1 ? 'disabled' : ''}`;
+        liPrimeira.innerHTML = `<button class="page-link" type="button">Primeira</button>`;
+        liPrimeira.querySelector("button").addEventListener("click", () => mudarPagina(1));
+        ul.appendChild(liPrimeira);
+
+        // Botão Anterior
+        let liAnterior = document.createElement("li");
+        liAnterior.className = `page-item ${paginaAtual === 1 ? 'disabled' : ''}`;
+        liAnterior.innerHTML = `<button class="page-link" type="button">Anterior</button>`;
+        liAnterior.querySelector("button").addEventListener("click", () => mudarPagina(paginaAtual - 1));
+        ul.appendChild(liAnterior);
+
+        // Lógica de Paginação com reticências (...) igual à imagem de referência
+        let paginas = [];
+        if (totalPaginas <= 7) {
+            for (let i = 1; i <= totalPaginas; i++) paginas.push(i);
+        } else {
+            if (paginaAtual <= 4) {
+                paginas = [1, 2, 3, 4, 5, '...', totalPaginas];
+            } else if (paginaAtual >= totalPaginas - 3) {
+                paginas = [1, '...', totalPaginas - 4, totalPaginas - 3, totalPaginas - 2, totalPaginas - 1, totalPaginas];
+            } else {
+                paginas = [1, '...', paginaAtual - 1, paginaAtual, paginaAtual + 1, '...', totalPaginas];
+            }
+        }
+
+		paginas.forEach(p => {
+            let li = document.createElement("li");
+            if (p === '...') {
+                li.className = "page-item disabled";
+                li.innerHTML = `<span class="page-link">...</span>`;
+            } else {
+                let isActive = (p === paginaAtual);
+                li.className = `page-item ${isActive ? 'active' : ''}`;
+                
+                let btn = document.createElement("button");
+                btn.className = "page-link";
+                btn.type = "button";
+                btn.innerText = p;
+                
+                // Se for a página ativa, garantimos o texto branco e impedimos sobreposições
+                if (isActive) {
+                    btn.style.color = "#ffffff";
+                    btn.style.backgroundColor = "#0d6efd";
+                    btn.style.borderColor = "#0d6efd";
+                }
+
+                btn.addEventListener("click", () => mudarPagina(p));
+                li.appendChild(btn);
+            }
+            ul.appendChild(li);
+        });
+
+        // Botão Próximo
+        let liProximo = document.createElement("li");
+        liProximo.className = `page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}`;
+        liProximo.innerHTML = `<button class="page-link" type="button">Próximo</button>`;
+        liProximo.querySelector("button").addEventListener("click", () => mudarPagina(paginaAtual + 1));
+        ul.appendChild(liProximo);
+
+        // Botão Última
+        let liUltima = document.createElement("li");
+        liUltima.className = `page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}`;
+        liUltima.innerHTML = `<button class="page-link" type="button">Última</button>`;
+        liUltima.querySelector("button").addEventListener("click", () => mudarPagina(totalPaginas));
+        ul.appendChild(liUltima);
+		}
+
+	    window.mudarPagina = function(pagina) {
+	        paginaAtual = pagina;
+	        renderizarTabelaPaginada();
+	        // Removido o window.scrollTo para a página não subir ao clicar
+	    };
+
+    // 2. Ações da Tabela (Visualizar, Editar, Excluir)
     document.addEventListener("click", async function (e) {
         let btnVisualizar = e.target.closest(".btn-visualizar");
         let btnEditar = e.target.closest(".btn-editar");

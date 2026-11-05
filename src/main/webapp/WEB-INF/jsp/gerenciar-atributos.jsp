@@ -5,37 +5,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Engenharia de Atributos - Nexacore</title>
+    <title>Nexacore | Engenharia de Atributos</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="${pageContext.request.contextPath}/assets/css/global.css" rel="stylesheet">
     <link href="${pageContext.request.contextPath}/assets/css/layout.css" rel="stylesheet">
 </head>
-<!-- ... (cabeçalho mantido) ... -->
-<body>
+<body class="p-4 bg-light">
 
-<div class="container-fluid py-4">
-	<!-- Título e Introdução -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-         <div>
-              <h4 class="mb-1 text-dark"><i class="fa-solid fa-sliders text-primary me-2"></i>Nexacore - Engenharia de Atributos</h4>
-            <p class="text-muted small mb-0">Modelagem de formulários dinâmicos e especificações técnicas.</p>
-              <nav aria-label="breadcrumb">
-                  <ol class="breadcrumb mb-0">
-                      <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                      <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MarcaServlet">Marca</a></li>
-                      <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet">Cadastro Produto</a></li>
-                      <li class="breadcrumb-item active" aria-current="page">Engenharia de Atributos</li>
-                  </ol>
-              </nav>
-          </div>
+<div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+
+    <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+    <div class="card-cabecalho-padrao tema-escuro p-4 mb-4 shadow-sm border-0">
+        <!-- Linha Superior: Título e Breadcrumb -->
+        <div class="mb-3">
+            <h4 class="page-title text-uppercase fw-bold text-white mb-1">
+                <i class="fa-solid fa-sliders text-primary me-2"></i> Engenharia de Atributos
+            </h4>
+            <p class="text-light small mb-2 opacity-75">Modelagem de formulários dinâmicos e especificações técnicas.</p>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MarcaServlet" class="text-light text-decoration-none">Marca</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet" class="text-light text-decoration-none">Cadastro Produto</a></li>
+                    <li class="breadcrumb-item active text-secondary" aria-current="page">Engenharia de Atributos</li>
+                </ol>
+            </nav>
+        </div>
+        
+        <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+        <div class="cabecalho-botoes-atalho border-secondary pt-2 border-top d-flex flex-wrap gap-2">
+            <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white btn-sm">
+                <i class="fa fa-plus me-1"></i> Menu
+            </a>
+        </div>
     </div>
 
     <div class="row g-4">
     	<!-- Sidebar: Tipos de Produto -->
         <div class="col-md-3">
-            <div class="card h-100">
+            <div class="card h-100 shadow-sm border-0">
                 <div class="card-header bg-white fw-bold text-secondary pt-3 d-flex justify-content-between align-items-center">
 				    <span><i class="fa-solid fa-boxes-stacked me-2"></i>Tipos de Produto</span>
 				    <div>
@@ -57,13 +67,14 @@
         
 		<!-- Área Central: Atributos e Ações -->
         <div class="col-md-9">
-            <div class="card">
+            <div class="card shadow-sm border-0">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
                     <div>
                         <span class="text-muted small d-block">Configurando campos para:</span>
                         <h5 class="mb-0 text-dark fw-bold" id="nome-tipo-selecionado">Selecione um tipo</h5>
                     </div>                  
                     
+                    <div class="d-flex gap-2">
 					    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalVincularCampo">
 					        <i class="fa-solid fa-link me-1"></i> Vincular Atributo
 					    </button>
@@ -71,9 +82,10 @@
 					        <i class="fa-solid fa-plus me-1"></i> Novo Atributo
 					    </button>
 					    <!-- Botão para abrir o modal -->
-						<button class="btn btn-danger btn-sm" onclick="abrirModalExclusao()">- Excluir Atributos</button>
-					    
-					
+ 						<button class="btn btn-danger btn-sm" onclick="abrirModalExclusao()">
+                            Excluir Atributos
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">

@@ -75,7 +75,7 @@ public class MovimentacaoRecebimentoDAO {
                 "    e.id_envio, " +
                 "    e.origem_id, " +
                 "    e.destino_id, " +
-                "    e.transportadora, " +
+                "    t.razao_social AS transportadora_nome, " +
                 "    e.codigo_rastreio, " +
                 "    e.data_envio, " +
                 "    e.data_previsa_entrega, " +
@@ -89,6 +89,7 @@ public class MovimentacaoRecebimentoDAO {
                 "FROM movimentacao_envio e " +
                 "LEFT JOIN filiais orig ON orig.id_filial = e.origem_id " +
                 "LEFT JOIN filiais dest ON dest.id_filial = e.destino_id " +
+                "LEFT JOIN transportadoras t ON t.id_transportadora = e.id_transportadora " +
                 "WHERE e.id_envio = ?";
 
         String sqlItens =
@@ -120,7 +121,7 @@ public class MovimentacaoRecebimentoDAO {
                     resultado.put("destinoId", rs.getLong("destino_id"));
                     resultado.put("origemNome", rs.getString("origem_nome"));
                     resultado.put("destinoNome", rs.getString("destino_nome"));
-                    resultado.put("transportadora",rs.getString("transportadora"));
+                    resultado.put("transportadora", rs.getString("transportadora_nome"));
                     resultado.put("codigoRastreio", rs.getString("codigo_rastreio"));
                     resultado.put("numeroNota", rs.getString("numero_nota"));
                     resultado.put("observacoes", rs.getString("observacoes"));
@@ -330,7 +331,7 @@ public class MovimentacaoRecebimentoDAO {
                 "    e.id_envio, " +
                 "    e.origem_id, " +
                 "    e.destino_id, " +
-                "    e.transportadora, " +
+                "    t.razao_social AS transportadora_nome, " +
                 "    e.codigo_rastreio, " +
                 "    e.status_id, " +
                 "    COALESCE(orig.origem_codigo || ' - ' || orig.sufixo, " +
@@ -340,6 +341,7 @@ public class MovimentacaoRecebimentoDAO {
                 "FROM movimentacao_envio e " +
                 "LEFT JOIN filiais orig ON orig.id_filial = e.origem_id " +
                 "LEFT JOIN filiais dest ON dest.id_filial = e.destino_id " +
+                "LEFT JOIN transportadoras t ON t.id_transportadora = e.id_transportadora " +
                 "WHERE e.id_envio = ?";
         String sqlItens =
                 "SELECT " +
@@ -362,7 +364,7 @@ public class MovimentacaoRecebimentoDAO {
                     resultado.put("idEnvio", rs.getLong("id_envio"));
                     resultado.put("origemNome", rs.getString("origem_nome"));
                     resultado.put("destinoNome", rs.getString("destino_nome"));
-                    resultado.put("transportadora", rs.getString("transportadora"));
+                    resultado.put("transportadora", rs.getString("transportadora_nome"));
                     resultado.put("codigoRastreio", rs.getString("codigo_rastreio"));
                     resultado.put("statusId", rs.getLong("status_id"));
                 }

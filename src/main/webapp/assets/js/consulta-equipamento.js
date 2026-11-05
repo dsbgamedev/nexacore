@@ -328,7 +328,9 @@ async function carregarFiltroStatus() {
 
 async function carregarFiltroSituacao() {
     try {
-        const response = await fetch('/nexacore/api/equipamentos/?acaoSituacoes=edicao-direta');
+        //const response = await fetch('/nexacore/api/equipamentos/?acaoSituacoes=edicao-direta');
+		// Altera o parâmetro para 'todas' para buscar a lista completa incluindo o 'Baixado'
+		const response = await fetch(`${contextPath}/api/equipamentos/?acaoSituacoes=todas`);
         if (response.ok) {
             const listaSituacao = await response.json();
             const select = document.getElementById("filtroSituacao");

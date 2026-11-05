@@ -23,32 +23,33 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
     <link href="${pageContext.request.contextPath}/assets/css/fornecedores.css" rel="stylesheet">
 </head>
-<body>
-    <div class="nx-layout">
-       
+<body class="p-4 bg-light">
+    <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
         <!-- Main Content -->
-        <main class="nx-main">
-        
+        <main class="nx-main">      
             <div class="nx-content">
-                <!-- Breadcrumb e Título Principal -->
-                <nav aria-label="breadcrumb" class="mb-3">
-                    <ol class="breadcrumb mb-0">
-                       <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                       <li class="breadcrumb-item active" aria-current="page">Fornecedores</li>
-                    </ol>           
-                </nav>
-
-                <div class="page-heading mb-4">
-                    <div class="page-icon">
-                        <i class="fa-solid fa-building"></i>
+                <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+                <div class="card-cabecalho-padrao tema-escuro">
+                    <!-- Linha Superior: Título e Breadcrumb -->
+                    <div class="mb-3">
+                        <h4 class="page-title fw-bold text-white mb-1">
+                            <i class="fa-solid fa-building me-2"></i> FORNECEDORES
+                        </h4>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                                <li class="breadcrumb-item active text-secondary" aria-current="page">Fornecedores</li>
+                            </ol>           
+                        </nav>
                     </div>
-                    <div>
-                        <h1>Fornecedores</h1>
-                        <p class="text-muted mb-0">Consulte, cadastre e defina em quais filiais cada fornecedor pode ser utilizado.</p>
-                    </div>
-                    <div class="heading-actions ms-auto">
-                        <a class="btn btn-primary nx-btn" href="${pageContext.request.contextPath}/FornecedorServlet">
-                            <i class="fa-solid fa-plus me-2"></i>Novo fornecedor
+                    
+                    <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+                    <div class="cabecalho-botoes-atalho ">
+                        <a class="btn btn-success btn-moderno px-3 py-2 text-white" href="${pageContext.request.contextPath}/FornecedorServlet">
+                            <i class="fa-solid fa-plus me-2"></i> Novo fornecedor
+                        </a>
+                        <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white">
+                            <i class="fa fa-plus me-1"></i> Menu
                         </a>
                     </div>
                 </div>

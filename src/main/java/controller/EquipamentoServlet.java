@@ -214,7 +214,20 @@ public class EquipamentoServlet extends HttpServlet {
                 out.print("{\"erro\": \"Erro ao listar situações: " + e.getMessage() + "\"}");
             }
             return;
-        }       
+        }
+        
+        // 👇 ADICIONE ESTE BLOCO LOGO ABAIXO 👇
+        if ("todas".equals(acaoSituacoes)) {
+            try {
+                List<Map<String, Object>> listaSituacoes = dao.listarTodasSituacoesParaFiltro();
+                out.print(gson.toJson(listaSituacoes));
+            } catch (SQLException e) {
+                e.printStackTrace();
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                out.print("{\"erro\": \"Erro ao listar todas as situações: " + e.getMessage() + "\"}");
+            }
+            return;
+        }
         
         if ("proximo-id".equals(acao)) {
             try {
@@ -389,7 +402,8 @@ public class EquipamentoServlet extends HttpServlet {
                     devolucao.setOrigemId(idFilialReal);
                     devolucao.setDestinoId(idFilialReal);
                     devolucao.setResponsavel("Sistema (Devolução)");
-                    devolucao.setTransportadora("Interna / Própria");
+                    // 👇 CORRIJA AQUI PARA USAR O ID DO TIPO LONG (Ex: 2L para Interna/Própria) 👇
+                    devolucao.setIdTransportadora(2L);;
                     devolucao.setCodigoRastreio("DEV-" + eq.getIdSistema());
                     devolucao.setStatusId(1L); 
                     devolucao.setNumeroNota("DEV-AUTO");

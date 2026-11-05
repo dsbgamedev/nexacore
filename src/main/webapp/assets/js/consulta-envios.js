@@ -245,7 +245,7 @@ function renderizarTabela(dados) {
             <td class="text-nowrap" title="${destinoTexto}">${destinoTexto}</td>
             <td><span class="badge bg-light text-dark border">${textoProdutos}</span></td>
             <td class="font-monospace text-nowrap">${envio.numeroNota || envio.notaFiscal || '-'}</td>
-            <td class="text-nowrap">${envio.transportadora || '-'}</td>
+            <td class="text-nowrap" title="${envio.transportadoraNome || envio.transportadora || '-'}">${envio.transportadoraNome || envio.transportadora || '-'}</td>
             <td class="text-nowrap">${rastreioHtml}</td>
             <td class="text-nowrap">${badgeHtml}</td>
             <td class="text-nowrap">${envio.responsavel || '-'}</td>
@@ -330,6 +330,7 @@ function filtrarEnvios(termo) {
             (envio.destinoSufixo && envio.destinoSufixo.toLowerCase().includes(termoLower)) ||
             (envio.nomeOrigem && envio.nomeOrigem.toLowerCase().includes(termoLower)) ||
             (envio.nomeDestino && envio.nomeDestino.toLowerCase().includes(termoLower)) ||
+            (envio.transportadoraNome && envio.transportadoraNome.toLowerCase().includes(termoLower)) || // 👈 Adicionado aqui
             (envio.transportadora && envio.transportadora.toLowerCase().includes(termoLower)) ||
             (envio.numeroNota && envio.numeroNota.toLowerCase().includes(termoLower)) ||
             (envio.codigoRastreio && envio.codigoRastreio.toLowerCase().includes(termoLower)) ||
@@ -364,8 +365,9 @@ function visualizarEnvio(idEnvio) {
     document.getElementById("detalheDestino").innerText = destinoModal;
     // -----------------------------------
 
-    document.getElementById("detalheTransportadora").innerText = envio ? (envio.transportadora || '-') : '-';
-    document.getElementById("detalheNota").innerText = envio ? (envio.numeroNota || envio.notaFiscal || '-') : '-';
+    //document.getElementById("detalheTransportadora").innerText = envio ? (envio.transportadora || '-') : '-';
+	document.getElementById("detalheTransportadora").innerText = envio ? (envio.transportadoraNome || envio.transportadora || '-') : '-';
+	document.getElementById("detalheNota").innerText = envio ? (envio.numeroNota || envio.notaFiscal || '-') : '-';
 	
 	// Preenchimento dos responsáveis no modal
 	document.getElementById("detalheResponsavelCriacao").innerText = envio && envio.responsavel ? envio.responsavel : '-';

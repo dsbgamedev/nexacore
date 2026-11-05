@@ -22,21 +22,35 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
 </head>
 
-<body class="nexacore-cadastro-usuario">
-<div class="container-fluid px-4 py-4">
-    <!-- CABEÇALHO -->
-    <div class="mb-4">
-        <div class="page-title">
-            <i class="bi bi-person-gear me-2"></i> ${title != null ? title : "CADASTRO DE USUÁRIO"}
+<body class="nexacore-cadastro-usuario p-4 bg-light">
+<div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+    
+    <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+    <div class="card-cabecalho-padrao tema-escuro">
+        <!-- Linha Superior: Título e Breadcrumb -->
+        <div class="mb-3">
+            <h4 class="page-title fw-bold text-white mb-1">
+                <i class="bi bi-person-gear me-2"></i> ${title != null ? title : "CADASTRO DE USUÁRIO"}
+            </h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/GerenciarUsuariosServlet" class="text-light text-decoration-none">Consulta Usuarios</a></li>
+                    <li class="breadcrumb-item active text-secondary" aria-current="page">${title != null ? title : "Cadastrar Usuarios"}</li>
+                </ol>
+            </nav>
         </div>
-        <nav aria-label="breadcrumb">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/GerenciarUsuariosServlet">Consulta Usuarios</a></li>
-            <li class="breadcrumb-item active" aria-current="page">${title != null ? title : "Cadastrar Usuarios"}</li>
-        </ol>
-        </nav>
-   <div class="mb-4">
+        
+        <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+        <div class="cabecalho-botoes-atalho ">
+            <a href="${pageContext.request.contextPath}/GerenciarUsuariosServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white">
+                <i class="bi bi-arrow-left me-1"></i> Consulta Usuarios
+            </a>
+            <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-success btn-moderno px-3 py-2 text-white">
+                <i class="fa fa-plus me-1"></i> Menu
+            </a>
+        </div>
+    </div>
 
     <!-- O formulário agora envia a ação via JS ou input hidden para diferenciar cadastro/edição -->
     <form id="formCadastroUsuario">
@@ -50,22 +64,22 @@
             </div>
             <div class="row g-3">
                 <div class="col-md-3">
-                    <label class="form-label"> Usuário * </label>
+                    <label class="form-label">Usuário</label>
                     <input type="text" id="username" name="usuario" class="form-control" required placeholder="Ex.: joao.silva" value="${usuarioEdicao != null ? usuarioEdicao.username : (usuario != null ? usuario.username : '')}">
                 </div>
 
                 <div class="col-md-3">
-                    <label class="form-label"> Nome Completo * </label>
+                    <label class="form-label">Nome Completo</label>
                     <input type="text" id="nomeCompleto" name="nome" class="form-control" required placeholder="Nome do usuário" value="${usuarioEdicao != null ? usuarioEdicao.nomeCompleto : (usuario != null ? usuario.nomeCompleto : '')}">
                 </div>
 
                 <div class="col-md-3">
-                    <label class="form-label"> E-mail * </label>
+                    <label class="form-label">E-mail *</label>
                     <input type="email" id="email" name="email" class="form-control" required placeholder="usuario@empresa.com.br" value="${usuarioEdicao != null ? usuarioEdicao.email : (usuario != null ? usuario.email : '')}">
                 </div>
 
                 <div class="col-md-3">
-                    <label class="form-label"> Perfil </label>
+                    <label class="form-label">Perfil</label>
                     <select name="perfil" id="perfil" class="form-select" ${disablePerfilField ? 'disabled' : ''}>
                         <option value="">Selecione...</option>
                         <c:forEach var="p" items="${perfisDisponiveisParaSelecao}">
@@ -76,17 +90,17 @@
                     </select>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label"> Senha * </label>
+                    <label class="form-label">Senha</label>
                     <input type="password" id="senha" name="senha" class="form-control" placeholder="${isEditing ? 'Deixe em branco para manter' : 'Digite a senha'}" ${isEditing ? '' : 'required'}>
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label"> Confirmar Senha * </label>
+                    <label class="form-label">Confirmar Senha</label>
                     <input type="password" id="confirmarSenha" name="confirmarSenha" class="form-control" placeholder="Confirme a senha" ${isEditing ? '' : 'required'}>
                 </div>
                                
                <!-- FILIAL PRINCIPAL DINÂMICA -->
 				<div class="col-md-4">
-				    <label class="form-label"> Filial Principal </label>
+				    <label class="form-label">Filial Principal</label>
 				    <select name="filial" id="unidadePadrao" class="form-select" required>
 				        <option value="">Selecione a filial...</option>
 				    </select>
@@ -95,14 +109,15 @@
                 <div class="col-md-12">
                     <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" name="ativo" id="ativo" ${usuarioEdicao != null ? (usuarioEdicao.ativo ? 'checked' : '') : (usuario == null || usuario.ativo ? 'checked' : '')}>
-                        <label class="form-check-label" for="ativo"> Usuário ativo </label>
+                        <label class="form-check-label" for="ativo">Usuário ativo</label>
                     </div>
                 </div>
             </div>
         </div>
 
        <!-- PERMISSÕES DINÂMICAS (MATRIZ GRANULAR) -->
-       <div class="table-responsive">
+       <div class="card p-3 mb-4 shadow-sm">
+           <div class="table-responsive">
 		    <table class="table align-middle text-center">
 		        <thead>
 		            <tr class="permission-header">
@@ -134,6 +149,7 @@
 		        </tbody>
 		    </table>
 		</div>
+       </div>
 
        <!-- UNIDADES PERMITIDAS DINÂMICAS -->
 		<div class="card-nexa p-4 mb-4">
@@ -253,6 +269,5 @@
     const unidadesPermitidasUsuario = ${not empty usuarioUnidadesJson ? usuarioUnidadesJson : '[]'};
 </script>
 <script src="${pageContext.request.contextPath}/assets/js/cadastro-usuario.js"></script>
-<script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 </body>
 </html>

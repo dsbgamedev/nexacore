@@ -81,7 +81,8 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
         public Long origemId;
         public Long destinoId;
         public String responsavel;
-        public String transportadora;
+        public Long transportadoraId; // <--- Adicionado para receber o ID do modal
+        public String transportadora;   // <--- Nome da transportadora
         public String codigoRastreio;
         public String numeroNota; 
         public String dataPrevisaoEntrega;
@@ -281,7 +282,11 @@ public class EnvioEquipamentoApiServlet extends HttpServlet {
             envio.setOrigemId(payload.origemId);
             envio.setDestinoId(payload.destinoId);
             envio.setResponsavel(payload.responsavel);
-            envio.setTransportadora(payload.transportadora);
+            // Pega o ID da transportadora diretamente do payload JSON enviado pelo JavaScript
+            if (payload.transportadoraId != null) {
+                envio.setIdTransportadora(payload.transportadoraId);
+            }
+            
             
             String codigoRastreioFinal = payload.codigoRastreio;
             if (ehDevolucao) {

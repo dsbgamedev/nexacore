@@ -3,7 +3,8 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore - Consulta de Chamados de Manutenção</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexaCore | Consulta de Chamados de Manutenção</title>
     <script>
         var contextPath = "<%= request.getContextPath() %>";
         var usuarioLogadoUsername = "${sessionScope.usuarioLogado.username}";
@@ -24,25 +25,35 @@
 </head>
 <body class="p-4 bg-light">
 
-    <!-- CABEÇALHO / BREADCRUMB -->
-    <div class="container-fluid mb-4 d-flex justify-content-between align-items-center">
-        <div>
-            <h4 class="page-title text-uppercase fw-bold"><i class="fa-solid fa-clipboard-list me-2"></i> Consulta de Chamados de Manutenção</h4>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ManutencaoServlet">Novo Chamado</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Consulta de Chamados</li>
-                </ol>
-            </nav>
-        </div>
-        <a href="${pageContext.request.contextPath}/ManutencaoServlet" class="btn btn-primary btn-sm">
-            <i class="fa-solid fa-plus me-1"></i> Novo Chamado
-        </a>
-    </div>
+    <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
 
-    <div class="container-fluid">
-        
+        <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+        <div class="card-cabecalho-padrao tema-escuro ">
+            <!-- Linha Superior: Título e Breadcrumb -->
+            <div class="mb-3">
+                <h4 class="page-title text-uppercase fw-bold text-white mb-1">
+                    <i class="fa-solid fa-clipboard-list me-2"></i> Consulta de Chamados de Manutenção
+                </h4>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                        <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                        <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ManutencaoServlet" class="text-light text-decoration-none">Novo Chamado</a></li>
+                        <li class="breadcrumb-item active text-secondary" aria-current="page">Consulta de Chamados</li>
+                    </ol>
+                </nav>
+            </div>
+            
+            <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+            <div class="cabecalho-botoes-atalho ">
+                <a href="${pageContext.request.contextPath}/ManutencaoServlet" class="btn btn-success btn-moderno px-3 py-2 text-white">
+                    <i class="fa-solid fa-plus me-1"></i> Novo Chamado
+                </a>
+                <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white">
+                    <i class="fa fa-plus me-1"></i> Menu
+                </a>
+            </div>
+        </div>
+
         <!-- FILTROS DE PESQUISA -->
         <div class="filter-card shadow-sm">
             <div class="section-title"><i class="fa-solid fa-filter me-1"></i> Filtros de Pesquisa</div>

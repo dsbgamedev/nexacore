@@ -14,7 +14,7 @@ import java.util.Map;
 public class MovimentacaoEnvioDAO {
 
 	public Long inserir(MovimentacaoEnvio envio, List<Long> idsEquipamentos) throws SQLException {
-	    String sqlEnvio = "INSERT INTO movimentacao_envio (data_envio, origem_id, destino_id, responsavel, transportadora, codigo_rastreio, data_previsa_entrega, observacoes, status_id, numero_nota) " +
+	    String sqlEnvio = "INSERT INTO movimentacao_envio (data_envio, origem_id, destino_id, responsavel, id_transportadora, codigo_rastreio, data_previsa_entrega, observacoes, status_id, numero_nota) " +
 	                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_envio";
 	    
 	    // Busca a descrição da situação atual do equipamento
@@ -43,7 +43,13 @@ public class MovimentacaoEnvioDAO {
 	        stmtEnvio.setLong(2, envio.getOrigemId());
 	        stmtEnvio.setLong(3, envio.getDestinoId());
 	        stmtEnvio.setString(4, envio.getResponsavel());
-	        stmtEnvio.setString(5, envio.getTransportadora());
+	        //stmtEnvio.setLong(5, envio.getIdTransportadora());
+	        if (envio.getIdTransportadora() != null) {
+	            stmtEnvio.setLong(5, envio.getIdTransportadora());
+	        } else {
+	            stmtEnvio.setNull(5, Types.BIGINT);
+	        }
+	        
 	        stmtEnvio.setString(6, envio.getCodigoRastreio());
 	        if (envio.getDataPrevisaoEntrega() != null) {
 	            stmtEnvio.setDate(7, Date.valueOf(envio.getDataPrevisaoEntrega()));
@@ -115,7 +121,7 @@ public class MovimentacaoEnvioDAO {
 	//Metodo voltado para inserir um envio de Devolução equipamento como Rascunho (ID 5)
 	public Long inserirDevolucao(MovimentacaoEnvio envio, List<Long> idsEquipamentos) throws SQLException {
 		System.out.println(">>> EXECUTANDO INSERIR DEVOLUÇÃO PARA O EQUIPAMENTO ID: " + idsEquipamentos);
-		String sqlEnvio = "INSERT INTO movimentacao_envio (data_envio, origem_id, destino_id, responsavel, transportadora, codigo_rastreio, data_previsa_entrega, observacoes, status_id, numero_nota) " +
+		String sqlEnvio = "INSERT INTO movimentacao_envio (data_envio, origem_id, destino_id, responsavel, id_transportadora, codigo_rastreio, data_previsa_entrega, observacoes, status_id, numero_nota) " +
 	                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_envio";
 	    
 	    // Busca a descrição da situação atual do equipamento
@@ -148,7 +154,12 @@ public class MovimentacaoEnvioDAO {
 	        stmtEnvio.setLong(2, envio.getOrigemId());
 	        stmtEnvio.setLong(3, envio.getDestinoId());
 	        stmtEnvio.setString(4, envio.getResponsavel());
-	        stmtEnvio.setString(5, envio.getTransportadora());
+	        //stmtEnvio.setLong(5, envio.getIdTransportadora());
+	        if (envio.getIdTransportadora() != null) {
+	            stmtEnvio.setLong(5, envio.getIdTransportadora());
+	        } else {
+	            stmtEnvio.setNull(5, Types.BIGINT);
+	        }
 	        stmtEnvio.setString(6, envio.getCodigoRastreio());
 	        if (envio.getDataPrevisaoEntrega() != null) {
 	            stmtEnvio.setDate(7, Date.valueOf(envio.getDataPrevisaoEntrega()));
@@ -228,12 +239,14 @@ public class MovimentacaoEnvioDAO {
 	             "dest.origem_codigo AS destino_codigo, " +
 	             "dest.sufixo AS destino_sufixo, " +
 	             "ms.nome AS status_nome, ms.cor AS status_cor, " +
-	             "rec.comprovante AS comprovante " + // 👈 ESPAÇO ADICIONADO AQUI
+	             "rec.comprovante AS comprovante, " + // 👈 ESPAÇO ADICIONADO AQUI
+	             "t.razao_social AS transportadora_nome " +
 	             "FROM movimentacao_envio e " +
 	             "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
 	             "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
 	             "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
-	             "LEFT JOIN movimentacao_recebimento rec ON e.id_envio = rec.envio_id";
+	             "LEFT JOIN movimentacao_recebimento rec ON e.id_envio = rec.envio_id" +
+		         "LEFT JOIN transportadoras t ON e.id_transportadora = t.id_transportadora"; // 👈 Declaração da tabela t no FROM/JOIN
 
 	    String sqlItens = "SELECT iei.id_equipamento, eq.id_sistema, eq.patrimonio, eq.numero_serie, " +
 	                      "p.modelo AS nome_produto, m.nome_marca AS marca " +
@@ -272,7 +285,8 @@ public class MovimentacaoEnvioDAO {
                 env.setDestinoSufixo(rs.getString("destino_sufixo")); 
 
                 env.setResponsavel(rs.getString("responsavel"));
-                env.setTransportadora(rs.getString("transportadora"));
+                env.setIdTransportadora(rs.getLong("id_transportadora"));
+                env.setTransportadoraNome(rs.getString("transportadora_nome"));
                 env.setCodigoRastreio(rs.getString("codigo_rastreio"));
                 env.setNumeroNota(rs.getString("numero_nota"));
                 env.setResponsavelEnvio(rs.getString("responsavel_envio"));
@@ -397,12 +411,14 @@ public class MovimentacaoEnvioDAO {
     		        "dest.origem_codigo AS destino_codigo, " +
     		        "dest.sufixo AS destino_sufixo, " +
     		        "ms.nome AS status_nome, ms.cor AS status_cor, " +
-    		        "rec.comprovante AS comprovante " +
+    		        "rec.comprovante AS comprovante, " +
+    		        "t.razao_social AS transportadora_nome " +
     		        "FROM movimentacao_envio e " +
     		        "LEFT JOIN filiais orig ON e.origem_id = orig.id_filial " +
     		        "LEFT JOIN filiais dest ON e.destino_id = dest.id_filial " +
     		        "LEFT JOIN movimentacao_status ms ON e.status_id = ms.id " +
     		        "LEFT JOIN movimentacao_recebimento rec ON e.id_envio = rec.id_envio " + 
+    		        "LEFT JOIN transportadoras t ON e.id_transportadora = t.id_transportadora " + // 👈 ESSENCIAL: Declara o alias 't' aqui!
     		        "WHERE 1=1 "
 		    );
 
@@ -473,7 +489,8 @@ public class MovimentacaoEnvioDAO {
                     
                     // ----------------------------------------------------------------
                     env.setResponsavel(rs.getString("responsavel"));
-                    env.setTransportadora(rs.getString("transportadora"));
+                    env.setIdTransportadora(rs.getLong("id_transportadora"));
+                    env.setTransportadoraNome(rs.getString("transportadora_nome"));
                     env.setCodigoRastreio(rs.getString("codigo_rastreio"));
                     env.setNumeroNota(rs.getString("numero_nota"));
                     env.setResponsavelEnvio(rs.getString("responsavel_envio"));

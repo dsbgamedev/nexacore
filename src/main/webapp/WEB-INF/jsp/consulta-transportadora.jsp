@@ -1,20 +1,16 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%
-    // 1. Processa as permissões e o perfil do usuário logado no topo da página
     model.Usuario uLogado = (model.Usuario) session.getAttribute("usuarioLogado");
-    
     boolean isAdmin = uLogado != null && (
         "SUPER_ADMINISTRADOR".equalsIgnoreCase(uLogado.getPerfil()) || 
         "ADMINISTRADOR".equalsIgnoreCase(uLogado.getPerfil()) ||
         (uLogado.getPerfil() != null && uLogado.getPerfil().toUpperCase().contains("SUPER"))
     );
 
-    // Se for admin, tem acesso total. Senão, verifica a permissão granular para "transportadoras"
     boolean podeEditarGlob = isAdmin || (uLogado != null && uLogado.temPermissao("transportadoras", "EDITAR"));
     boolean podeExcluirGlob = isAdmin || (uLogado != null && uLogado.temPermissao("transportadoras", "EXCLUIR"));
 
-    // 2. Disponibiliza as variáveis para as tags JSTL (<c:if>)
     request.setAttribute("podeEditar", podeEditarGlob);
     request.setAttribute("podeExcluir", podeExcluirGlob);
 
@@ -27,47 +23,52 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore - Consulta de Transportadoras</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexacore | Consulta de Transportadoras</title>
       
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
 </head>
-<body data-app-context-path="${pageContext.request.contextPath}">
+<body class="p-4 bg-light" data-app-context-path="${pageContext.request.contextPath}">
 
-<div class="container-fluid py-4">
-    <!-- Cabeçalho da Página -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="page-title fw-bold text-primary-dark">CONSULTA DE TRANSPORTADORAS</h4>
+<div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+
+    <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+    <div class="card-cabecalho-padrao tema-escuro p-4 mb-4 shadow-sm border-0">
+        <!-- Linha Superior: Título e Breadcrumb -->
+        <div class="mb-3">
+            <h4 class="page-title fw-bold text-white mb-1">CONSULTA DE TRANSPORTADORAS</h4>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                    <!-- Rota corrigida para o servlet centralizador -->
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/TransportadoraServlet">Transportadoras</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Consulta de Transportadoras</li>
+                <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/TransportadoraServlet" class="text-light text-decoration-none">Transportadoras</a></li>
+                    <li class="breadcrumb-item active text-secondary" aria-current="page">Consulta de Transportadoras</li>
                 </ol>
             </nav>
         </div>
         
-        <div>
+        <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+        <div class="cabecalho-botoes-atalho border-secondary pt-2 border-top d-flex flex-wrap gap-2">
 		    <c:if test="${podeEditar}">
-		        <a href="${pageContext.request.contextPath}/TransportadoraServlet?acao=novo" class="btn btn-success">
+		        <a href="${pageContext.request.contextPath}/TransportadoraServlet" class="btn btn-success btn-moderno px-3 py-2 text-white">
 		            <i class="fa fa-plus me-1"></i> Nova Transportadora
 		        </a>
 		    </c:if>
-		</div>
+            <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white">
+                <i class="fa fa-plus me-1"></i> Menu
+            </a>
+        </div>
     </div>
 
-    <!-- Área de Filtros de Pesquisa -->
-    <div class="card p-4 mb-4">
+    <!-- Filtros de Pesquisa -->
+    <div class="card p-4 mb-4 shadow-sm">
         <div class="d-flex align-items-center mb-3 text-primary">
             <i class="fa fa-filter me-2"></i>
             <h5 class="mb-0 fw-bold">FILTROS DE PESQUISA</h5>
         </div>
         
-        <!-- O formulário de filtro agora submete para o TransportadoraServlet -->
         <form action="${pageContext.request.contextPath}/TransportadoraServlet" method="get" id="formFiltroTransportadora">
             <input type="hidden" name="acao" value="filtrar">
             <div class="row g-3">
@@ -101,60 +102,54 @@
     </div>
 
     <!-- Tabela de Resultados -->
-    <div class="card p-4">
+    <div class="card p-4 shadow-sm">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0 fw-bold text-primary-dark">
                 <i class="fa fa-list me-2"></i> TRANSPORTADORAS CADASTRADAS 
             </h5>
+            <span id="contador-registros" class="text-muted small"></span>
         </div>
 
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" style="font-size: 0.85rem;">
+            <table class="table table-hover align-middle mb-0" id="tabelaTransportadoras" style="font-size: 0.85rem;">
                 <thead class="table-light text-secondary">
                     <tr>
-                        <th>ID</th>
-                        <th>Razão Social</th>
-                        <th>Nome Fantasia</th>
-                        <th>CNPJ</th>
-                        <th>Telefone</th>
-                        <th>E-mail</th>
-                        <th>Status</th>
+                        <th class="coluna-ordenavel" data-coluna="0" style="cursor: pointer;">ID <i class="fa fa-sort"></i></th>
+                        <th class="coluna-ordenavel" data-coluna="1" style="cursor: pointer;">Razão Social <i class="fa fa-sort"></i></th>
+                        <th class="coluna-ordenavel" data-coluna="2" style="cursor: pointer;">Nome Fantasia <i class="fa fa-sort"></i></th>
+                        <th class="coluna-ordenavel" data-coluna="3" style="cursor: pointer;">CNPJ <i class="fa fa-sort"></i></th>
+                        <th class="coluna-ordenavel" data-coluna="4" style="cursor: pointer;">Telefone <i class="fa fa-sort"></i></th>
+                        <th class="coluna-ordenavel" data-coluna="5" style="cursor: pointer;">E-mail <i class="fa fa-sort"></i></th>
+                        <th class="coluna-ordenavel" data-coluna="6" style="cursor: pointer;">Status <i class="fa fa-sort"></i></th>
                         <th class="text-center" style="width: 140px;">Ações</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="tbodyTransportadoras">
                     <c:choose>
                         <c:when test="${not empty transportadoras}">
                             <c:forEach var="t" items="${transportadoras}">
-                                <tr>
+                                <tr data-id="${t.idTransportadora}">
                                     <td>${t.idTransportadora}</td>
                                     <td>${t.razaoSocial}</td>
                                     <td>${t.nomeFantasia != null ? t.nomeFantasia : '-'}</td>
                                     <td>${t.cnpj}</td>
                                     <td>${t.telefone != null ? t.telefone : '-'}</td>
                                     <td>${t.email != null ? t.email : '-'}</td>
-                                    <td>
-									    <span class="badge ${t.statusBadgeClass}">${t.status}</span>
-									</td>
+                                    <td><span class="badge ${t.statusBadgeClass}">${t.status}</span></td>
                                     <td class="text-center">
-									    <!-- Visualizar é liberado -->
-									    <button type="button" class="btn btn-outline-secondary btn-sm border-0 btn-visualizar" data-id="${t.idTransportadora}" title="Visualizar"><i class="fa fa-eye"></i></button>
-									    
-									    <!-- Editar protegido por JSTL -->
-									    <c:if test="${podeEditar}">
-									        <button type="button" class="btn btn-outline-primary btn-sm border-0 btn-editar" data-id="${t.idTransportadora}" title="Editar"><i class="fa fa-pen"></i></button>
-									    </c:if>
-									    
-									    <!-- Excluir protegido por JSTL -->
-									    <c:if test="${podeExcluir}">
-									        <button type="button" class="btn btn-outline-danger btn-sm border-0 btn-excluir" data-id="${t.idTransportadora}" title="Excluir"><i class="fa fa-trash"></i></button>
-									    </c:if>
-									</td>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm border-0 btn-visualizar" data-id="${t.idTransportadora}" title="Visualizar"><i class="fa fa-eye"></i></button>
+                                        <c:if test="${podeEditar}">
+                                            <button type="button" class="btn btn-outline-primary btn-sm border-0 btn-editar" data-id="${t.idTransportadora}" title="Editar"><i class="fa fa-pen"></i></button>
+                                        </c:if>
+                                        <c:if test="${podeExcluir}">
+                                            <button type="button" class="btn btn-outline-danger btn-sm border-0 btn-excluir" data-id="${t.idTransportadora}" title="Excluir"><i class="fa fa-trash"></i></button>
+                                        </c:if>
+                                    </td>
                                 </tr>
                             </c:forEach>
                         </c:when>
                         <c:otherwise>
-                            <tr>
+                            <tr id="linha-vazia">
                                 <td colspan="8" class="text-center text-muted py-4">Nenhuma transportadora encontrada. Utilize os filtros acima.</td>
                             </tr>
                         </c:otherwise>
@@ -162,10 +157,16 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Paginação -->
+        <nav class="d-flex justify-content-between align-items-center mt-3" aria-label="Navegação de página">
+            <div id="paginacao-info" class="text-muted small"></div>
+            <ul class="pagination pagination-sm mb-0" id="ulPaginacao"></ul>
+        </nav>
     </div>
 </div>
 
-<!-- Modal de Detalhes / Visualização -->
+<!-- Modal -->
 <div class="modal fade" id="modalDetalhesTransportadora" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
@@ -173,9 +174,7 @@
                 <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalhes da Transportadora</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" id="conteudoDetalhesTransportadora">
-                <!-- Carregado via AJAX / Servlet -->
-            </div>
+            <div class="modal-body" id="conteudoDetalhesTransportadora"></div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
             </div>
@@ -183,20 +182,10 @@
     </div>
 </div>
 
-<!-- SCRIPTS -->
+<!-- Scripts Globais e Injeção Segura de Contexto -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Única variável global de contexto necessária para os arquivos JS externos
     const contextPath = "${pageContext.request.contextPath}";
-</script>
-<script>
-    // Variável global de contexto padronizada para os arquivos JS externos
-    const contextPath = "${pageContext.request.contextPath}";
-
- // Variável global de contexto padronizada
-    const contextPath = "${pageContext.request.contextPath}";
-
-    // Injeta as permissões e dados do usuário logado diretamente no JS (utilizando as variáveis calculadas no topo)
     const permissaoEditarTransportadora = <%= podeEditarGlob %>;
     const permissaoExcluirTransportadora = <%= podeExcluirGlob %>;
     const usuarioAdmin = <%= isAdmin %>;

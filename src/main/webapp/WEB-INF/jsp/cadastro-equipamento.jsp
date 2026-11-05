@@ -15,18 +15,43 @@
 </head>
 <body class="p-4 bg-light">
 
-    <div class="container-fluid mb-4">
-        <h4 class="page-title text-uppercase fw-bold">Cadastro de Equipamento (Unidade Física)</h4>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-0">
-                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaEquipamentosServlet">Consulta Equipamentos</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Equipamentos</li>
-            </ol>
-        </nav>
+<div class="container-fluid mb-4" style="max-width: 1300px; margin: auto;">
+    
+    <!-- Cabeçalho da Página Utilizando a Classe Padrão do layout.css -->
+    <div class="card-cabecalho-padrao tema-escuro">
+        <!-- Linha Superior: Título e Breadcrumb -->
+        <div class="mb-3">
+            <h4 class="page-title text-uppercase fw-bold text-primary-dark mb-1">Cadastro de Equipamento (Unidade Física)</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaEquipamentosServlet">Consulta Equipamentos</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Equipamentos</li>
+                </ol>
+            </nav>
+        </div>
+        
+        <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+        <div class="cabecalho-botoes-atalho">
+            <a href="${pageContext.request.contextPath}/ConsultaEquipamentosServlet" class="btn btn-success btn-moderno px-3 py-2 text-white">
+                <i class="fa fa-plus me-1"></i> Consulta Equipamento
+            </a>
+            <a href="${pageContext.request.contextPath}/EnvioEquipamentoServlet" class="btn btn-primary btn-moderno px-3 py-2 text-white">
+                <i class="fas fa-external-link-alt me-1"></i> Envio Equipamentos
+            </a>
+            <a href="${pageContext.request.contextPath}/DevolucaoEquipamentoServlet" class="btn btn-warning btn-moderno px-3 py-2 text-dark fw-semibold">
+                <i class="fas fa-undo me-1"></i> Envio Equip. Devolução
+            </a>
+            <a href="${pageContext.request.contextPath}/RecebimentoServlet" class="btn btn-info btn-moderno px-3 py-2 text-white">
+                <i class="fas fa-box-open me-1"></i> Recebimento / Devolução
+            </a>
+            <a href="${pageContext.request.contextPath}/ManutencaoServlet" class="btn btn-secondary btn-moderno px-3 py-2 text-white">
+                <i class="fas fa-search me-1"></i> Consulta Manutenção
+            </a>
+        </div>
     </div>
 
-    <div class="container-fluid">
+    <div class="container-fluid p-0">
         <div class="row">
             <!-- COLUNA ESQUERDA: Busca de Produto, Imagem e Especificações -->
             <div class="col-md-4">
@@ -34,7 +59,7 @@
                     <h5 class="fw-bold text-primary mb-3">Selecione o Produto (Catálogo)</h5>
                     
                     <div class="mb-3 position-relative">
-                        <label class="form-label">Pesquisar Produto *</label>
+                        <label class="form-label fw-bold small">Pesquisar Produto *</label>
                         <div class="input-group input-group-sm">
                             <input type="text" id="input-busca-produto" class="form-control" placeholder="Digite o código ou modelo...">
                             <!-- Botão de Lupa -->
@@ -90,33 +115,33 @@
 
                     <div class="row g-3 mb-3" id="form-dados-equipamento">
                         <div class="col-md-4">
-                            <label class="form-label">ID Sistema *</label>
+                            <label class="form-label fw-bold small">ID Sistema *</label>
                             <input type="text" id="input-idsistema" class="form-control form-control-sm bg-white" readonly>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Patrimônio / Etiqueta *</label>
+                            <label class="form-label fw-bold small">Patrimônio / Etiqueta *</label>
                             <input type="text" id="input-patrimonio" class="form-control form-control-sm" placeholder="Ex: 001548">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Número de Série</label>
+                            <label class="form-label fw-bold small">Número de Série</label>
                             <input type="text" id="input-numeroserie" class="form-control form-control-sm" placeholder="Ex: ABC123456789">
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label">Nome / Identificador do Ativo *</label>
+                            <label class="form-label fw-bold small">Nome / Identificador do Ativo *</label>
                             <input type="text" id="input-nomeidentificador" class="form-control form-control-sm" placeholder="Ex: DESK253 ou IMP-HP-01">
                             <div class="form-text text-muted" style="font-size: 0.75rem;">Identificador único na rede/empresa</div>
                         </div>
-						                        <div class="col-md-6">
-						    <label class="form-label">Origem (Filial) *</label>
-						    <select class="form-select form-select-sm" id="input-origem" required>
-						        <option value="">Carregando origens...</option>
-						    </select>
-						</div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">Origem (Filial) *</label>
+                            <select class="form-select form-select-sm" id="input-origem" required>
+                                <option value="">Carregando origens...</option>
+                            </select>
+                        </div>
 
                         <div class="col-md-4">
                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                <label class="form-label mb-0">IP Atual</label>
+                                <label class="form-label mb-0 fw-bold small">IP Atual</label>
                                 <div class="form-check form-switch m-0" style="min-height: auto;">
                                     <input class="form-check-input" type="checkbox" id="check-possui-ip" checked title="Marque se o equipamento possui IP">
                                     <label class="form-check-label small text-muted" for="check-possui-ip" style="font-size: 0.7rem;">Possui IP</label>
@@ -125,25 +150,25 @@
                             <input type="text" id="input-ip" class="form-control form-control-sm" placeholder="Ex: 192.168.0.50">
                         </div>
                         <div class="col-md-4">
-						    <label class="form-label">Status Atual *</label>
-						    <select class="form-select form-select-sm" id="input-status" required>
-						        <option value="">Carregando status...</option>
-						    </select>
-						</div>
-						<!-- NOVO: Situação Atual -->
-					    <div class="col-md-4">
-					        <label class="form-label">Situação Atual *</label>
-					        <select class="form-select form-select-sm" id="input-situacao" required>
-					            <option value="">Carregando situação...</option>
-					        </select>
-					    </div>
+                            <label class="form-label fw-bold small">Status Atual *</label>
+                            <select class="form-select form-select-sm" id="input-status" required>
+                                <option value="">Carregando status...</option>
+                            </select>
+                        </div>
+                        <!-- NOVO: Situação Atual -->
                         <div class="col-md-4">
-                            <label class="form-label">Usuário Atual</label>
+                            <label class="form-label fw-bold small">Situação Atual *</label>
+                            <select class="form-select form-select-sm" id="input-situacao" required>
+                                <option value="">Carregando situação...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small">Usuário Atual</label>
                             <input type="text" id="input-usuario" class="form-control form-control-sm" placeholder="Ex: Carlos Alberto">
                         </div>
 
                         <div class="col-md-12">
-                            <label class="form-label">Departamento / Setor</label>
+                            <label class="form-label fw-bold small">Departamento / Setor</label>
                             <select id="input-departamento" class="form-select form-select-sm">
                                 <option value="">Selecione o setor...</option>
                                 <!-- Preenchido dinamicamente via JavaScript -->
@@ -165,7 +190,7 @@
                         </div>
 
                         <div class="col-md-12">
-                            <label class="form-label">Observações</label>
+                            <label class="form-label fw-bold small">Observações</label>
                             <textarea id="input-observacoes" class="form-control form-control-sm" rows="2" placeholder="Detalhes adicionais sobre o equipamento..."></textarea>
                         </div>
                     </div>
@@ -189,6 +214,7 @@
             </div>
         </div>
     </div>
+</div>
 
     <!-- ==========================================================
          MODAL DE SELEÇÃO DE PRODUTOS (VIA LUPA)

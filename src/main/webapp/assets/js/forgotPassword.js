@@ -4,6 +4,40 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Lê o APP_CONTEXT_PATH do data attribute no body
     const APP_CONTEXT_PATH = document.body.dataset.appContextPath || '';
+	
+	// Função global para disparar o modal do Bootstrap 5 de forma dinâmica
+	function showPasswordModal(title, message, type = 'info') {
+	    const modalTitle = document.getElementById('passwordModalLabel');
+	    const modalBody = document.getElementById('passwordModalBody');
+	    const modalHeader = document.getElementById('passwordModalHeader');
+	    
+	    if (!modalTitle || !modalBody || !modalHeader) return;
+
+	    modalTitle.textContent = title;
+	    modalBody.textContent = message;
+	    
+	    // Remove classes de cor anteriores do cabeçalho
+	    modalHeader.className = 'modal-header text-white';
+	    
+	    // Aplica a cor do cabeçalho consoante o tipo de alerta
+	    if (type === 'success') {
+	        modalHeader.classList.add('bg-success');
+	    } else if (type === 'warning') {
+	        modalHeader.classList.add('bg-warning', 'text-dark');
+	    } else if (type === 'error' || type === 'danger') {
+	        modalHeader.classList.add('bg-danger');
+	    } else {
+	        modalHeader.classList.add('bg-primary');
+	    }
+
+	    // Instancia e abre o modal utilizando a API do Bootstrap 5
+	    const modalElement = document.getElementById('passwordModal');
+	    let modalInstance = bootstrap.Modal.getInstance(modalElement);
+	    if (!modalInstance) {
+	        modalInstance = new bootstrap.Modal(modalElement);
+	    }
+	    modalInstance.show();
+	}
 
     forgotPasswordForm.addEventListener('submit', async function(event) {
         event.preventDefault(); // Previne o envio padrão do formulário

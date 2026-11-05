@@ -3,45 +3,56 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore - Consulta de Equipamentos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexacore | Consulta de Equipamentos</title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
 </head>
-<body>
+<body class="p-4 bg-light">
 
-<div class="container-fluid py-4">
-    <!-- Cabeçalho da Página -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="page-title fw-bold text-primary-dark">CONSULTA DE EQUIPAMENTOS (UNIDADE FÍSICA)</h4>
+<div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+    
+    <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+    <div class="card-cabecalho-padrao tema-escuro">
+        <!-- Linha Superior: Título e Breadcrumb -->
+        <div class="mb-3">
+            <h4 class="page-title fw-bold text-white mb-1">CONSULTA DE EQUIPAMENTOS (UNIDADE FÍSICA)</h4>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/CadastrarEquipamentoServlet">Equipamentos</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Consulta de Equipamentos</li>
+                <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/CadastrarEquipamentoServlet" class="text-light text-decoration-none">Equipamentos</a></li>
+                    <li class="breadcrumb-item active text-secondary" aria-current="page">Consulta de Equipamentos</li>
                 </ol>
             </nav>
         </div>
-         <!-- Centro: Barra de Pesquisa Global -->
-        <div class="input-group search-container">
-            <input type="text" id="busca-global" class="form-control" placeholder="Pesquisar no sistema...">
-            <button id="btn-busca-global" class="btn btn-outline-secondary">
-                <i class="fas fa-search"></i>
-            </button>
-        </div>
-        
-        <div>
-            <a href="${pageContext.request.contextPath}/CadastrarEquipamentoServlet" class="btn btn-success">
+           
+        <!-- Linha Inferior: Grupo de Botões de Atalho Modernos -->
+        <div class="cabecalho-botoes-atalho">
+            <a href="${pageContext.request.contextPath}/CadastrarEquipamentoServlet" class="btn btn-success btn-moderno px-3 py-2 text-white">
                 <i class="fa fa-plus me-1"></i> Novo Equipamento
             </a>
+            <a href="${pageContext.request.contextPath}/EnvioEquipamentoServlet" class="btn btn-primary btn-moderno px-3 py-2 text-white">
+		        <i class="fas fa-external-link-alt me-1"></i> Envio Equipamentos
+		    </a>
+		    <!-- Atalho para Devolução -->
+		    <a href="${pageContext.request.contextPath}/DevolucaoEquipamentoServlet" class="btn btn-warning btn-moderno px-3 py-2 text-dark fw-semibold">
+		        <i class="fas fa-undo me-1"></i> Envio Equip. Devolução
+		    </a>
+		    <!-- Atalho para Recebimento -->
+		    <a href="${pageContext.request.contextPath}/RecebimentoServlet" class="btn btn-info btn-moderno px-3 py-2 text-white">
+		        <i class="fas fa-box-open me-1"></i> Recebimento / Devolução
+		    </a>
+		     <a href="${pageContext.request.contextPath}/ConsultaEnvioServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white">
+		        <i class="fas fa-search me-1"></i> Consulta Envio
+		    </a>
         </div>
     </div>
 
     <!-- Área de Filtros de Pesquisa -->
-    <div class="card p-4 mb-4">
+    <div class="card p-4 mb-4 shadow-sm">
         <div class="d-flex align-items-center mb-3 text-primary">
             <i class="fa fa-filter me-2"></i>
             <h5 class="mb-0 fw-bold">FILTROS DE PESQUISA</h5>
@@ -50,70 +61,81 @@
         <form id="formFiltroEquipamento">
             <div class="row g-3">
                 <div class="col-md-3">
-                    <label class="form-label">Produto (Catálogo)</label>
+                    <label class="form-label fw-bold small">Produto (Catálogo)</label>
                     <input type="text" class="form-control form-control-sm" id="filtroProduto" placeholder="Selecione o produto...">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">ID Sistema</label>
+                    <label class="form-label fw-bold small">ID Sistema</label>
                     <input type="text" class="form-control form-control-sm" id="filtroIdSistema" placeholder="Ex: EQ000154">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Patrimônio / Etiqueta</label>
+                    <label class="form-label fw-bold small">Patrimônio / Etiqueta</label>
                     <input type="text" class="form-control form-control-sm" id="filtroPatrimonio" placeholder="Digite patrimônio...">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">Número de Série</label>
+                    <label class="form-label fw-bold small">Número de Série</label>
                     <input type="text" class="form-control form-control-sm" id="filtroSerial" placeholder="Digite o número de série...">
                 </div>
                 
                 <div class="col-md-3">
-                    <label class="form-label">Origem (Filial)</label>
+                    <label class="form-label fw-bold small">Origem (Filial)</label>
                     <select class="form-select form-select-sm" id="filtroOrigem">
                         <option value="">Selecione...</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Departamento / Setor</label>
+                    <label class="form-label fw-bold small">Departamento / Setor</label>
                     <select class="form-select form-select-sm" id="filtroDepartamento">
                         <option value="">Todos os setores...</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Usuário Atual</label>
+                    <label class="form-label fw-bold small">Usuário Atual</label>
                     <input type="text" class="form-control form-control-sm" id="filtroUsuario" placeholder="Nome do usuário...">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Status</label>
+                    <label class="form-label fw-bold small">Status</label>
                     <select class="form-select form-select-sm" id="filtroStatus">
                         <option value="">Selecione...</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Situação</label>
+                    <label class="form-label fw-bold small">Situação</label>
                     <select class="form-select form-select-sm" id="filtroSituacao">
                         <option value="">Selecione...</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-				    <label class="form-label">Tipo de Produto</label>
+				    <label class="form-label fw-bold small">Tipo de Produto</label>
 				    <select class="form-select form-select-sm" id="filtroTipoProduto">
 				        <option value="">Todos os tipos...</option>
 				    </select>
 				</div>
-                <div class="col-12 d-flex justify-content-end gap-2 mt-3 pt-3 border-top">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limparFiltros()">
-                        <i class="fa fa-sync-alt me-1"></i> Limpar Filtros
-                    </button>
-                    <button type="submit" class="btn btn-primary btn-sm px-4" onclick="pesquisarEquipamentos(); return false;">
-                        <i class="fa fa-search me-1"></i> Pesquisar
-                    </button>
-                </div>
+                <div class="col-12 d-flex justify-content-between align-items-center mt-3 pt-3 border-top px-0">
+				    <!-- Barra de Pesquisa Global alinhada com a margem dos campos de cima -->
+				    <div class="input-group search-container" style="max-width: 700px;">
+				        <input type="text" id="busca-global" class="form-control form-control-sm" placeholder="Pesquisar no sistema...">
+				        <button id="btn-busca-global" class="btn btn-outline-secondary btn-sm" type="button">
+				            <i class="fas fa-search"></i>
+				        </button>
+				    </div>
+				
+				    <!-- Botões de Ação (Direita) -->
+				    <div class="d-flex gap-2">
+				        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limparFiltros()">
+				            <i class="fa fa-sync-alt me-1"></i> Limpar Filtros
+				        </button>
+				        <button type="submit" class="btn btn-primary btn-sm px-4" onclick="pesquisarEquipamentos(); return false;">
+				            <i class="fa fa-search me-1"></i> Pesquisar
+				        </button>
+				    </div>
+				</div>
             </div>
         </form>
     </div>
 
     <!-- Tabela de Resultados -->
-    <div class="card p-4">
+    <div class="card p-4 shadow-sm">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0 fw-bold text-primary-dark">
                 <i class="fa fa-list me-2"></i> EQUIPAMENTOS CADASTRADOS 
@@ -147,7 +169,7 @@
         </div>
 
         <!-- Rodapé da Paginação Integrado ao Layout.css -->
-        <div class="card-footer d-flex justify-content-between align-items-center">
+        <div class="card-footer d-flex justify-content-between align-items-center bg-white border-top">
             <div class="text-muted small" id="infoPaginacao">
                 Mostrando 0 registros
             </div>

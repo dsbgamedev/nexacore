@@ -3,7 +3,8 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore - Abertura de Chamado</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexacore | Abertura de Chamado</title>
     <script>
         var contextPath = "<%= request.getContextPath() %>";
     </script>
@@ -19,24 +20,39 @@
 </head>
 <body class="p-4 bg-light">
 
-    <!-- CABEÇALHO / BREADCRUMB -->
-    <div class="container-fluid mb-4 d-flex justify-content-between align-items-center">
-        <div>
-            <h4 class="page-title text-uppercase fw-bold"><i class="fa-solid fa-screwdriver-wrench me-2"></i> Abertura de Chamado de Manutenção</h4>
+<div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+
+    <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+    <div class="card-cabecalho-padrao tema-escuro ">
+        <!-- Linha Superior: Título e Breadcrumb -->
+        <div class="mb-3">
+            <h4 class="page-title text-uppercase fw-bold text-white mb-1">
+                <i class="fa-solid fa-screwdriver-wrench me-2"></i> Abertura de Chamado de Manutenção
+            </h4>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaChamadosServlet">Consulta Chamados</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Abertura de Chamado</li>
+                <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaChamadosServlet" class="text-light text-decoration-none">Consulta Chamados</a></li>
+                    <li class="breadcrumb-item active text-secondary" aria-current="page">Abertura de Chamado</li>
                 </ol>
             </nav>
         </div>
-        <button class="btn btn-outline-secondary btn-sm" id="btnHistoricoEquipamento" disabled>
-            <i class="fa-solid fa-clock-rotate-left me-1"></i> Histórico do Equipamento
-        </button>
+        
+        <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+        <div class="cabecalho-botoes-atalho ">
+            <button class="btn btn-outline-light btn-sm px-3 py-2" id="btnHistoricoEquipamento" disabled>
+                <i class="fa-solid fa-clock-rotate-left me-1"></i> Histórico do Equipamento
+            </button>
+            <a href="${pageContext.request.contextPath}/ConsultaChamadosServlet" class="btn btn-info btn-moderno px-3 py-2 text-white">
+		        <i class="fas fa-box-open me-1"></i> Consulta Chamados
+		    </a>
+            <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white btn-sm">
+                <i class="fa fa-plus me-1"></i> Menu
+            </a>
+        </div>
     </div>
 
-    <div class="container-fluid">
+    <div class="container-fluid px-0">
         <div class="card p-4 shadow-sm mb-4">
             <form id="formChamado">
                 
@@ -126,7 +142,6 @@
                         <label class="form-label">Responsável pela Abertura *</label>
                         <input type="text" class="form-control form-control-sm bg-light" name="solicitante" value="${sessionScope.usuarioLogado.username}" readonly required>                 
                     </div>
-                    <!-- ADICIONE ESTA LINHA LOGO ABAIXO OU AO LADO -->
 					<input type="hidden" name="responsavelTecnico" value="${sessionScope.usuarioLogado.username}">
                     <div class="col-md-3 mb-3">
 					    <label class="form-label">Departamento Solicitante *</label>
@@ -264,6 +279,7 @@
             </form>
         </div>
     </div>
+</div>
     
     <!-- HTML DOS MODAIS PADRÃO DO SISTEMA -->
     <div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
@@ -400,7 +416,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 	<script>
 	    var contextPath = "<%= request.getContextPath() %>";
-	    var usuarioPodeEditar = ${podeEditar}; // Recebe true/false direto do Servlet
+	    var usuarioPodeEditar = ${podeEditar};
 	</script>
     <script src="${pageContext.request.contextPath}/assets/js/manutencao-abertura.js"></script>   
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>

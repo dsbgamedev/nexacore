@@ -1,28 +1,51 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore - Envio de Equipamentos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexacore | Envio de Equipamentos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
 </head>
-<body>
+<body class="p-4 bg-light">
 
 <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
-    <!-- Cabeçalho da Página -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="page-title fw-bold text-primary-dark">ENVIO DE EQUIPAMENTOS</h4>
+   
+    <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+    <div class="card-cabecalho-padrao tema-escuro p-4 mb-4 shadow-sm border-0">
+        <!-- Linha Superior: Título e Breadcrumb -->
+        <div class="mb-3">
+            <h4 class="page-title fw-bold text-white mb-1">ENVIO DE EQUIPAMENTOS</h4>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                       <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaEnvioServlet">Consulta Enivos Equipamentos</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Envio</li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ConsultaEnvioServlet" class="text-light text-decoration-none">Consulta Envio Equipamentos</a></li>
+                    <li class="breadcrumb-item active text-secondary" aria-current="page">Envio</li>
                 </ol>
             </nav>
+        </div>
+        
+        <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+        <div class="cabecalho-botoes-atalho border-secondary pt-2 border-top d-flex flex-wrap gap-2">
+            <a href="${pageContext.request.contextPath}/ConsultaEquipamentosServlet" class="btn btn-success btn-moderno px-3 py-2 text-white">
+                <i class="fa fa-plus me-1"></i> Consulta Equipamento
+            </a>
+            <a href="${pageContext.request.contextPath}/DevolucaoEquipamentoServlet" class="btn btn-warning btn-moderno px-3 py-2 text-dark fw-semibold">
+                <i class="fas fa-undo me-1"></i> Envio Equip. Devolução
+            </a>
+            <a href="${pageContext.request.contextPath}/RecebimentoServlet" class="btn btn-info btn-moderno px-3 py-2 text-white">
+                <i class="fas fa-box-open me-1"></i> Recebimento / Devolução
+            </a>
+            <a href="${pageContext.request.contextPath}/ConsultaEnvioServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white">
+                <i class="fas fa-search me-1"></i> Consulta Envio
+            </a>
+            <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white">
+                <i class="fa fa-plus me-1"></i> Menu
+            </a>
         </div>
     </div>
 
@@ -53,17 +76,19 @@
                 </div>
             </div>
 
-            <!-- SEGUNDA LINHA: 4 CAMPOS -->
+            <!-- SEGUNDA LINHA: 4 CAMPOS (Transportadora Atualizada para Modal) -->
             <div class="row g-3 mb-3">
                 <div class="col-md-3">
-                    <label class="form-label fw-bold small">Transportadora *</label>
-                    <select class="form-select form-select-sm" id="transportadora" required>
-                        <option value="">Selecione...</option>
-                        <option value="Correios">Correios</option>
-                        <option value="Jadlog">Jadlog</option>
-                        <option value="Total Express">Total Express</option>
-                        <option value="Outra">Outra</option>
-                    </select>
+                    <label class="form-label fw-bold small">Transportadora (F1 p/ Completa)</label>
+                    <div class="input-group input-group-sm position-relative">
+                        <input type="hidden" id="transportadoraId" name="transportadoraId" required>
+                        <input type="text" class="form-control form-control-sm" id="transportadoraNome" placeholder="Digite ou clique na lupa (F1)..." autocomplete="off" required>
+                        <button class="btn btn-outline-secondary" type="button" id="btnAbrirModalTransportadora">
+                            <i class="fa fa-search"></i>
+                        </button>
+                        <!-- Dropdown de sugestões rápidas ao digitar -->
+                        <div id="sugestoesTransportadora" class="dropdown-menu w-100 shadow-sm" style="max-height: 200px; overflow-y: auto; display: none; position: absolute; top: 100%; z-index: 1000;"></div>
+                    </div>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-bold small">Nº da Nota Fiscal *</label>
@@ -166,6 +191,48 @@
     </div>
 </div>
 
+<!-- Modal de Seleção de Transportadoras -->
+<div class="modal fade" id="modalSelecionarTransportadora" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-truck me-2"></i>Selecionar Transportadora</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control form-control-sm" id="inputBuscaTransportadoraModal" placeholder="Digite para filtrar por Razão Social, Nome Fantasia ou CNPJ...">
+                </div>
+                <div class="table-responsive" style="max-height: 350px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle" style="font-size: 0.85rem;">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>ID</th>
+                                <th>Razão Social</th>
+                                <th>Nome Fantasia</th>
+                                <th>CNPJ</th>
+                                <th class="text-center" style="width: 90px;">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaModalTransportadorasBody">
+                            <!-- Preenchido via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between align-items-center">
+                <div class="small text-muted" id="paginacaoInfoTransportadora">Mostrando 0 de 0</div>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary" id="btnPaginaAnterior" onclick="mudarPaginaTransportadora(-1)">Anterior</button>
+                    <button type="button" class="btn btn-outline-secondary disabled" id="paginaAtualIndice">1</button>
+                    <button type="button" class="btn btn-outline-secondary" id="btnPaginaProxima" onclick="mudarPaginaTransportadora(1)">Próximo</button>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modais Padronizados do Sistema (Alert / Confirm) -->
 <div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
@@ -201,7 +268,6 @@
     const contextPath = "${pageContext.request.contextPath}";
     
     // Injeta a filial do usuário logado da sessão para travar na Origem
-    // Ajuste "filialId" para o nome exato do atributo guardado na sua sessão (ex: ${sessionScope.usuario.filialId})
     const usuarioFilialId = "${not empty sessionScope.usuario.filialId ? sessionScope.usuario.filialId : (not empty filialIdUsuario ? filialIdUsuario : '')}";
 </script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>

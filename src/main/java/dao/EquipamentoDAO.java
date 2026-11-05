@@ -377,6 +377,24 @@ public class EquipamentoDAO {
         }
         return lista;
     }
+	
+	public List<Map<String, Object>> listarTodasSituacoesParaFiltro() throws SQLException {
+		List<Map<String, Object>> lista = new ArrayList<>();
+	    String sql = "SELECT id, nome FROM situacao_equipamento ORDER BY nome";
+	    
+	    try (Connection conn = Conexao.conectar();
+	         PreparedStatement stmt = conn.prepareStatement(sql);
+	         ResultSet rs = stmt.executeQuery()) {
+	        
+	        while (rs.next()) {
+	            Map<String, Object> sit = new HashMap<>();
+	            sit.put("id", rs.getInt("id"));
+	            sit.put("nome", rs.getString("nome"));
+	            lista.add(sit);
+	        }
+	    }
+	    return lista;
+	}
     
 	public String gerarProximoIdSistema() throws SQLException {
         String sql = "SELECT id_sistema FROM equipamentos ORDER BY id_equipamento DESC LIMIT 1";

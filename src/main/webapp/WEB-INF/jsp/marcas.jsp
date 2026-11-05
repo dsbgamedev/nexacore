@@ -3,7 +3,8 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore - Marcas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexacore | Marcas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
@@ -14,26 +15,34 @@
 
     <!-- ================= VIEW 1: LISTAGEM E FILTROS ================= -->
     <div id="view-listagem">
-        <div class="container-fluid mb-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h4 class="page-title text-uppercase fw-bold">Marcas</h4>
+        <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+
+            <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+            <div class="card-cabecalho-padrao tema-escuro">
+                <!-- Linha Superior: Título e Breadcrumb -->
+                <div class="mb-3">
+                    <h4 class="page-title text-uppercase fw-bold text-white mb-1">Marcas</h4>
                     <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb mb-0">
-                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/FabricanteServlet">Fabricante</a></li>
-                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet">Cadastro Produto</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Marcas</li>
+                        <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/FabricanteServlet" class="text-light text-decoration-none">Fabricante</a></li>
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet" class="text-light text-decoration-none">Cadastro Produto</a></li>
+                            <li class="breadcrumb-item active text-secondary" aria-current="page">Marcas</li>
                         </ol>
                     </nav>
                 </div>
-                <button class="btn btn-success btn-sm" id="btn-novo">
-                    <i class="fa fa-plus me-1"></i> Nova Marca
-                </button>
+                
+                <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+                <div class="cabecalho-botoes-atalho">
+                    <button class="btn btn-success btn-moderno px-3 py-2 text-white btn-sm" id="btn-novo">
+                        <i class="fa fa-plus me-1"></i> Nova Marca
+                    </button>
+                    <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white btn-sm">
+                        <i class="fa fa-plus me-1"></i> Menu
+                    </a>
+                </div>
             </div>
-        </div>
 
-        <div class="container-fluid">
             <!-- Filtros de Pesquisa -->
             <div class="card p-4 mb-4 shadow-sm">
                 <div class="card-title fw-bold text-primary mb-3"><i class="fa fa-filter me-1"></i> Filtros de Pesquisa</div>
@@ -93,19 +102,34 @@
 
     <!-- ================= VIEW 2: CADASTRO / EDIÇÃO ================= -->
     <div id="view-formulario" style="display: none;">
-        <div class="container-fluid mb-4">
-            <h4 class="page-title text-uppercase fw-bold" id="form-titulo">Cadastro de Marca</h4>
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-                    <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet">Cadastro Produto</a></li>
-                    <li class="breadcrumb-item"><a href="#" id="link-voltar-breadcrumb">Marcas</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Gerenciamento</li>
-                </ol>
-            </nav>
-        </div>
+        <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
 
-        <div class="container-fluid">
+            <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
+            <div class="card-cabecalho-padrao tema-escuro">
+                <!-- Linha Superior: Título e Breadcrumb -->
+                <div class="mb-3">
+                    <h4 class="page-title text-uppercase fw-bold text-white mb-1" id="form-titulo">Cadastro de Marca</h4>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                            <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/ProdutoServlet" class="text-light text-decoration-none">Cadastro Produto</a></li>
+                            <li class="breadcrumb-item"><a href="#" id="link-voltar-breadcrumb" class="text-light text-decoration-none">Marcas</a></li>
+                            <li class="breadcrumb-item active text-secondary" aria-current="page">Gerenciamento</li>
+                        </ol>
+                    </nav>
+                </div>
+                
+                <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+                <div class="cabecalho-botoes-atalho">
+                    <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white btn-sm">
+                        <i class="fa fa-plus me-1"></i> Menu
+                    </a>
+                     <a href="${pageContext.request.contextPath}/MarcaServlet" class="btn btn-dark border border-secondary px-3 py-2 text-white btn-sm">
+                        <i class="fa fa-plus me-1"></i> Consulta Marca
+                    </a>
+                </div>
+            </div>
+
             <div class="card p-4 shadow-sm">
                 <div class="card-title fw-bold text-primary mb-3"><i class="fa fa-info-circle me-1"></i> Dados da Marca</div>
                 

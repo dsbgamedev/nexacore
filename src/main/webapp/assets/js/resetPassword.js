@@ -6,6 +6,52 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Lê o APP_CONTEXT_PATH do data attribute no body
     const APP_CONTEXT_PATH = document.body.dataset.appContextPath || '';
+	// Função local do Modal (Garante funcionamento autónomo sem dependências externas)
+	function showPasswordModal(title, message, type = 'info', callback = null) {
+        const modalTitle = document.getElementById('passwordModalLabel');
+        const modalBody = document.getElementById('passwordModalBody');
+        const modalHeader = document.getElementById('passwordModalHeader');
+        const okBtn = document.getElementById('modalOkBtn');
+        
+        if (!modalTitle || !modalBody || !modalHeader) return;
+
+        modalTitle.textContent = title;
+        modalBody.textContent = message;
+        
+        modalHeader.className = 'modal-header text-white';
+        if (type === 'success') {
+            modalHeader.classList.add('bg-success');
+        } else if (type === 'warning') {
+            modalHeader.classList.add('bg-warning', 'text-dark');
+        } else if (type === 'error' || type === 'danger') {
+            modalHeader.classList.add('bg-danger');
+        } else {
+            modalHeader.classList.add('bg-primary');
+        }
+
+        const modalElement = document.getElementById('passwordModal');
+        let modalInstance = bootstrap.Modal.getInstance(modalElement);
+        if (!modalInstance) {
+            modalInstance = new bootstrap.Modal(modalElement);
+        }
+
+        // Remove event listeners antigos do botão OK para evitar duplicações de callbacks
+        const newOkBtn = okBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+
+        newOkBtn.addEventListener('click', function() {
+            modalInstance.hide();
+            if (callback) callback();
+        });
+
+        // Se fechar no X ou clique fora
+        modalElement.addEventListener('hidden.bs.modal', function handler() {
+            modalElement.removeEventListener('hidden.bs.modal', handler);
+            if (callback) callback();
+        }, { once: true });
+
+        modalInstance.show();
+    }
 
     resetPasswordForm.addEventListener('submit', async function(event) {
         event.preventDefault();

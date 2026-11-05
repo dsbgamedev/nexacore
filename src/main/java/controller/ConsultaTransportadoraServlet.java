@@ -16,6 +16,8 @@ import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.google.gson.Gson;
+
 @WebServlet("/ConsultaTransportadoraServlet")
 public class ConsultaTransportadoraServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
@@ -30,6 +32,27 @@ public class ConsultaTransportadoraServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String acao = request.getParameter("acao");
         String idStr = request.getParameter("id");
+        
+     // =========================================================================
+        // 👇 NOVO: TRATAMENTO PARA RETORNAR JSON PURO AO MODAL DE ENVIO DE EQUIPAMENTOS
+        // =========================================================================
+        if ("listarJson".equals(acao)) {
+            response.setContentType("application/json;charset=UTF-8");
+            PrintWriter out = response.getWriter();
+            try {
+                TransportadoraDAO dao = new TransportadoraDAO();
+                List<Transportadora> lista = dao.listarComFiltros(null, null, "ATIVA"); // Ou listarTodas() dependendo do seu DAO
+                
+                Gson gson = new Gson();
+                out.write(gson.toJson(lista));
+            } catch (Exception e) {
+                e.printStackTrace();
+                response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                out.write("{\"erro\": \"Erro ao carregar transportadoras: " + e.getMessage() + "\"}");
+            }
+            return; // ⚠️ CRUCIAL: Interrompe o fluxo para não renderizar NENHUM HTML/JSP!
+        }
+        // =========================================================================
 
         // 1. Trata a requisição AJAX para exibir os detalhes no Modal de Visualização
         if ("detalhes".equals(acao) && idStr != null) {

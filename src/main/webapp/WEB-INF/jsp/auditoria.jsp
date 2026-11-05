@@ -28,15 +28,30 @@
         .avatar-circle { width: 32px; height: 32px; background-color: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; }
     </style>
 </head>
-<body>
-<div class="container-fluid py-4 px-4">
-    <h4 class="page-title fw-bold text-primary-dark">AUDITORIA NEXACORE</h4>
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb mb-4">
-           <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet">Home</a></li>
-           <li class="breadcrumb-item active" aria-current="page">Auditoria</li>
-        </ol>
-    </nav>    
+<body class="bg-light">
+
+<div class="container-fluid py-4 px-4" style="max-width: 1300px; margin: auto;">
+
+    <!-- Cabeçalho Padrão com Fundo Escuro Unificado -->
+    <div class="card-cabecalho-padrao tema-escuro">
+        <!-- Linha Superior: Título e Breadcrumb -->
+        <div class="mb-3">
+            <h4 class="page-title fw-bold text-white mb-1">AUDITORIA NEXACORE</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                   <li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/MenuServlet" class="text-light text-decoration-none">Home</a></li>
+                   <li class="breadcrumb-item active text-secondary" aria-current="page">Auditoria</li>
+                </ol>
+            </nav>    
+        </div>
+        
+        <!-- Linha Inferior: Grupo de Botões de Atalho Padronizados -->
+        <div class="cabecalho-botoes-atalho">
+            <a href="${pageContext.request.contextPath}/MenuServlet" class="btn btn-success btn-moderno px-3 py-2 text-white">
+                <i class="fa fa-plus me-1"></i> Menu
+            </a>
+        </div>
+    </div>
 
     <!-- Filtros de Pesquisa -->
     <div class="card card-custom p-4 mb-4">
@@ -191,6 +206,7 @@
         </div>
     </div>
 </div>
+
 <!-- ==========================================================
      MODAIS DO MODAL SERVICE (Alerta e Confirmação)
 ========================================================== -->
@@ -220,6 +236,7 @@
         </div>
     </div>
 </div>
+
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Configura o ContextPath global para uso nos arquivos JS externos -->

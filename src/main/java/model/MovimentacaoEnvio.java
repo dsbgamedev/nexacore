@@ -11,7 +11,9 @@ public class MovimentacaoEnvio {
     private Long destinoId;
     private String responsavel; // Quem criou / iniciou (ex: devolução/envio comum)
     private String responsavelEnvio;   // Novo: Quem efetivou o envio físico
-    private String transportadora;
+    // 👇 ADICIONE ESTE CAMPO PARA O ID DA TRANSPORTADORA (Chave Estrangeira) 👇
+    private Long idTransportadora;
+    private String transportadoraNome;
     private String codigoRastreio;
     private LocalDate dataPrevisaoEntrega;
     private String observacoes;
@@ -60,8 +62,12 @@ public class MovimentacaoEnvio {
     public String getResponsavelEnvio() { return responsavelEnvio; }
     public void setResponsavelEnvio(String responsavelEnvio) { this.responsavelEnvio = responsavelEnvio; }
 
-    public String getTransportadora() { return transportadora; }
-    public void setTransportadora(String transportadora) { this.transportadora = transportadora; }
+ // 👇 ADICIONE OS GETTER E SETTER DO ID DA TRANSPORTADORA 👇
+    public Long getIdTransportadora() { return idTransportadora; }
+    public void setIdTransportadora(Long idTransportadora) { this.idTransportadora = idTransportadora; }
+    
+    public String getTransportadoraNome() { return transportadoraNome; }
+    public void setTransportadoraNome(String transportadoraNome) { this.transportadoraNome = transportadoraNome;}
 
     public String getCodigoRastreio() { return codigoRastreio; }
     public void setCodigoRastreio(String codigoRastreio) { this.codigoRastreio = codigoRastreio; }
