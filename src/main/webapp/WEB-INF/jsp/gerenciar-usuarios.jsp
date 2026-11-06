@@ -118,6 +118,8 @@
 
 <!-- RODAPÉ DINÂMICO UNIFICADO -->
 <jsp:include page="/WEB-INF/jsp/footer.jsp" />
+<!-- LOGO EMPRESA NO LINK-->
+<script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
 <%@ include file="/WEB-INF/jsp/modal-service.jsp" %>
 
 <!-- Configura o ContextPath global para uso nos arquivos JS externos -->

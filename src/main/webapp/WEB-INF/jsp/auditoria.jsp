@@ -238,7 +238,9 @@
 </div>
 <!-- RODAPÉ DINÂMICO UNIFICADO -->
 <jsp:include page="/WEB-INF/jsp/footer.jsp" />
-
+<!-- LOGO EMPRESA NO LINK-->
+    <script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
+    
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Configura o ContextPath global para uso nos arquivos JS externos -->

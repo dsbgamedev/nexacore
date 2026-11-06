@@ -258,6 +258,8 @@
     </div>
     <!-- RODAPÉ DINÂMICO UNIFICADO -->
     <jsp:include page="/WEB-INF/jsp/footer.jsp" />
+    <!-- LOGO EMPRESA NO LINK-->
+    <script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
 
     <!-- Script para carregar endereços iniciais caso seja edição -->
     <script>

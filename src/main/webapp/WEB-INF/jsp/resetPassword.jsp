@@ -135,6 +135,8 @@
     </script>
 	<!-- RODAPÉ DINÂMICO UNIFICADO -->
     <jsp:include page="/WEB-INF/jsp/footer.jsp" />
+    <!-- LOGO EMPRESA NO LINK-->
+    <script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
     
     <!-- Script externo de redefinição -->
     <script src="${APP_CONTEXT_PATH}/assets/js/resetPassword.js"></script>

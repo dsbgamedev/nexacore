@@ -69,6 +69,8 @@
     </div>
 	<!-- RODAPÉ DINÂMICO UNIFICADO -->
     <jsp:include page="/WEB-INF/jsp/footer.jsp" />
+    <!-- LOGO EMPRESA NO LINK-->
+    <script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script> const contextPath = '${pageContext.request.contextPath}'; </script>

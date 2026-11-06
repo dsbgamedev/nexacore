@@ -130,6 +130,8 @@ if (mensagemErro == null) {
 	</div>
 	<!-- RODAPÉ DINÂMICO UNIFICADO -->
     <jsp:include page="/WEB-INF/jsp/footer.jsp" />
+    <!-- LOGO EMPRESA NO LINK-->
+    <script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
     
 	<!-- Passa o contextPath global para o arquivo JS externo utilizar -->
 	<script>

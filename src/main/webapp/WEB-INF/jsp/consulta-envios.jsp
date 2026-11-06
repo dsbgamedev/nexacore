@@ -257,7 +257,9 @@
 </div>
 <!-- RODAPÉ DINÂMICO UNIFICADO -->
 <jsp:include page="/WEB-INF/jsp/footer.jsp" />
-    
+ <!-- LOGO EMPRESA NO LINK-->
+<script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
+       
 <!-- SCRIPTS JS -->
 <script>
     const contextPath = '${pageContext.request.contextPath}';
