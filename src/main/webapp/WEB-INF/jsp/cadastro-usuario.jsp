@@ -255,7 +255,9 @@
         </div>
     </div>
 </div>
-
+<!-- RODAPÉ DINÂMICO UNIFICADO -->
+<jsp:include page="/WEB-INF/jsp/footer.jsp" />
+    
 <!-- Scripts e Injeção de Dados do Usuário Editado -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>

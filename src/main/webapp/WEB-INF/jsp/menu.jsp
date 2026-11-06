@@ -23,6 +23,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NexaCore - Sistema de Gestão de Equipamentos</title>
     
+    <link rel="manifest" href="${pageContext.request.contextPath}/manifest.json">
+    
     <!-- Bootstrap 5.3 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
@@ -684,16 +686,13 @@
 		           </div>
 		       </div>
 		   </div>
-
-            <!-- RODAPÉ -->
-            <footer class="mt-5 text-center text-muted small pb-3 d-flex justify-content-between border-top pt-3">
-                <span>NexaCore v1.0.0</span>
-                <span>© 2026 NexaCore. Todos os direitos reservados.</span>
-                <span>Suporte: <a href="mailto:suporte@nexacore.com.br">suporte@nexacore.com.br</a></span>
-            </footer>
+          <!-- RODAPÉ DINÂMICO UNIFICADO -->
+          <jsp:include page="/WEB-INF/jsp/footer.jsp" />
         </div>
     </main>
-
+	
+	<!-- Corrigido para incluir /assets/ -->
+    <script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
     <!-- Scripts Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- SweetAlert2 -->
@@ -701,6 +700,7 @@
     <!-- Script Externo -->
     <script src="<%=ctx%>/assets/js/menu.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+    
 </body>
 </html>
 

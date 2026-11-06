@@ -228,7 +228,8 @@
         </div>
     </div>
 </div>
-
+<!-- RODAPÉ DINÂMICO UNIFICADO -->
+<jsp:include page="/WEB-INF/jsp/footer.jsp" />
 <!-- Modais do Sistema (Organizados no final do body) -->
 <jsp:include page="modal-service.jsp" />
 

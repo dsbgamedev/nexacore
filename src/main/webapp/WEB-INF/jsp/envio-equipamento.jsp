@@ -260,6 +260,8 @@
         </div>
     </div>
 </div>
+<!-- RODAPÉ DINÂMICO UNIFICADO -->
+<jsp:include page="/WEB-INF/jsp/footer.jsp" />
 
 <!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

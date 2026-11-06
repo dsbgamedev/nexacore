@@ -133,7 +133,9 @@
             modalInstance.show();
         }
     </script>
-
+	<!-- RODAPÉ DINÂMICO UNIFICADO -->
+    <jsp:include page="/WEB-INF/jsp/footer.jsp" />
+    
     <!-- Script externo de redefinição -->
     <script src="${APP_CONTEXT_PATH}/assets/js/resetPassword.js"></script>
 </body>

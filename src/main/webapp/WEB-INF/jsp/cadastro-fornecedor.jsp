@@ -284,7 +284,9 @@
 	        </div>
     	</div>
 	</div>
-
+	<!-- RODAPÉ DINÂMICO UNIFICADO -->
+    <jsp:include page="/WEB-INF/jsp/footer.jsp" />
+    
     <script>
         window.NEXACORE_CONTEXT = '${pageContext.request.contextPath}';
         window.FORNECEDOR_ENDERECOS = <%= enderecosJson %>;

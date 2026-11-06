@@ -67,7 +67,9 @@
             </div>
         </div>
     </div>
-
+	<!-- RODAPÉ DINÂMICO UNIFICADO -->
+    <jsp:include page="/WEB-INF/jsp/footer.jsp" />
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script> const contextPath = '${pageContext.request.contextPath}'; </script>
     <script src="${pageContext.request.contextPath}/assets/js/sessoes.js"></script>

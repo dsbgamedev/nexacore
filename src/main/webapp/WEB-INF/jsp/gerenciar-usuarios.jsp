@@ -116,6 +116,8 @@
     </div>
 </div>
 
+<!-- RODAPÉ DINÂMICO UNIFICADO -->
+<jsp:include page="/WEB-INF/jsp/footer.jsp" />
 <%@ include file="/WEB-INF/jsp/modal-service.jsp" %>
 
 <!-- Configura o ContextPath global para uso nos arquivos JS externos -->

@@ -12,7 +12,7 @@ import java.util.List;
 public class LogDAO {
 
     public static void registrar(Integer usuarioId, String username, String acao, String modulo, String detalhes, String ip) {
-        String sql = "INSERT INTO logs_sistema (usuario_id, usuario_nome, acao, modulo, detalhes, ip_maquina) VALUES (?, ?, ?, ?, ?, ?)";
+     String sql = "INSERT INTO logs_sistema (usuario_id, usuario_nome, acao, modulo, detalhes, ip_maquina) VALUES (?, ?, ?, ?, ?, ?)";
         Connection conn = null;
         PreparedStatement ps = null;
         try {

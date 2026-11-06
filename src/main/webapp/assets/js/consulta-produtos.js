@@ -1,6 +1,8 @@
 let produtosGlobais = [];
 let colunaAtual = '';
 let direcaoAsc = true;
+let paginaAtual = 1;
+const itensPorPagina = 15;
 
 document.addEventListener("DOMContentLoaded", function() {
     carregarFiltros().then(() => {
@@ -94,7 +96,13 @@ function configurarEventosDinamicos() {
     });
 }
 
-async function pesquisarProdutos() {
+function pesquisarProdutos() {
+    // Sempre que realizar uma nova pesquisa, reinicia para a página 1
+    paginaAtual = 1;
+    executarPesquisaServidor();
+}
+
+async function executarPesquisaServidor() {
     const tbody = document.getElementById('tabela-produtos');
     if (!tbody) return;
 
@@ -110,13 +118,13 @@ async function pesquisarProdutos() {
     const ativo = getVal('filtro-ativo');
     const buscaGlobal = document.getElementById('busca-global') ? document.getElementById('busca-global').value.trim() : '';
 
-    // Verifica se absolutamente nenhum filtro ou busca global foi preenchido/selecionado
     const algumFiltroPreenchido = sku !== '' || marcaId !== '' || tipoId !== '' || modelo !== '' || ativo !== '' || buscaGlobal !== '';
     
     if (!algumFiltroPreenchido) {
         produtosGlobais = [];
         tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Utilize os filtros acima ou a busca global para consultar os produtos.</td></tr>';
-        return; // Interrompe a execução para não buscar nada no banco
+        renderizarPaginacao(0);
+        return;
     }
 
     tbody.innerHTML = '<tr><td colspan="9" class="text-center">Buscando...</td></tr>';
@@ -127,8 +135,7 @@ async function pesquisarProdutos() {
         tipoId: tipoId === 'TODOS' ? '' : tipoId,
         modelo: modelo,
         ativo: ativo,
-        busca: buscaGlobal,
-        limite: '15'
+        busca: buscaGlobal
     });
 
     try {
@@ -143,7 +150,13 @@ async function pesquisarProdutos() {
         console.error("Erro na pesquisa:", error);
         ModalService.error("Erro", "Falha ao consultar produtos.");
         tbody.innerHTML = '';
+        renderizarPaginacao(0);
     }
+}
+
+function mudarPagina(pagina) {
+    paginaAtual = pagina;
+    renderizarTabela();
 }
 
 function ordenarTabela(coluna) {
@@ -177,7 +190,6 @@ function ordenarTabela(coluna) {
         let strA = valA.toString().trim();
         let strB = valB.toString().trim();
 
-        // Tratamento inteligente para valores numéricos (como Modelos: 780, 3020, etc.)
         let numA = Number(strA);
         let numB = Number(strB);
 
@@ -203,21 +215,30 @@ function renderizarTabela() {
     tbody.innerHTML = '';
     if (!produtosGlobais || produtosGlobais.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" class="text-center">Nenhum produto encontrado.</td></tr>';
+        renderizarPaginacao(0);
         return;
     }
 
-    // Limita estritamente a exibição a no máximo 15 registros por página
-    const produtosLimitados = produtosGlobais.slice(0, 15);
+    const totalRegistros = produtosGlobais.length;
+    const totalPaginas = Math.ceil(totalRegistros / itensPorPagina);
+
+    if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+    if (paginaAtual < 1) paginaAtual = 1;
+
+    const inicio = (paginaAtual - 1) * itensPorPagina;
+    const fim = inicio + itensPorPagina;
+    const produtosLimitados = produtosGlobais.slice(inicio, fim);
 
     produtosLimitados.forEach(p => {
         let botoesAcao = `
-            <button type="button" class="btn btn-sm btn-outline-secondary me-1" title="Visualizar" onclick="visualizarDetalhesProduto(${p.id})">
-                <i class="fas fa-search"></i>
-            </button>`;
+            <div class="d-flex justify-content-center gap-1 text-nowrap">
+                <button type="button" class="btn btn-sm btn-outline-secondary" title="Visualizar" onclick="visualizarDetalhesProduto(${p.id})">
+                    <i class="fas fa-search"></i>
+                </button>`;
 
         if (typeof usuarioPodeEditar !== 'undefined' && usuarioPodeEditar) {
             botoesAcao += `
-                <a href="/nexacore/ProdutoServlet?id=${p.id}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
+                <a href="/nexacore/ProdutoServlet?id=${p.id}" class="btn btn-sm btn-outline-primary" title="Editar">
                     <i class="fas fa-pen"></i>
                 </a>`;
         }
@@ -228,6 +249,8 @@ function renderizarTabela() {
                     <i class="fas fa-trash-alt"></i>
                 </button>`;
         }
+
+        botoesAcao += `</div>`;
 
         const row = `<tr>
             <td>${p.sku || '-'}</td>
@@ -242,30 +265,95 @@ function renderizarTabela() {
                     ${p.ativo ? 'Ativo' : 'Inativo'}
                 </span>
             </td>
-            <td class="text-center">
+            <td class="text-center text-nowrap px-3">
                 ${botoesAcao}
             </td>
         </tr>`;
         tbody.innerHTML += row;
     });
+
+    renderizarPaginacao(totalRegistros);
+}
+
+function renderizarPaginacao(totalRegistros) {
+    const infoDiv = document.getElementById('paginacao-info');
+    const ulPaginacao = document.getElementById('paginacao-numeros');
+    
+    if (!infoDiv || !ulPaginacao) return;
+
+    if (totalRegistros === 0) {
+        infoDiv.textContent = 'Nenhum registro encontrado';
+        ulPaginacao.innerHTML = '';
+        return;
+    }
+
+    const totalPaginas = Math.ceil(totalRegistros / itensPorPagina);
+    const inicioRegistro = (paginaAtual - 1) * itensPorPagina + 1;
+    const fimRegistro = Math.min(paginaAtual * itensPorPagina, totalRegistros);
+
+    infoDiv.textContent = `Mostrando ${inicioRegistro} a ${fimRegistro} de ${totalRegistros} registros`;
+
+    let html = '';
+
+    // Botão Primeira
+    html += `<li class="page-item ${paginaAtual === 1 ? 'disabled' : ''}">
+        <button class="page-link" onclick="mudarPagina(1)" ${paginaAtual === 1 ? 'disabled' : ''}>Primeira</button>
+    </li>`;
+
+    // Botão Anterior
+    html += `<li class="page-item ${paginaAtual === 1 ? 'disabled' : ''}">
+        <button class="page-link" onclick="mudarPagina(${paginaAtual - 1})" ${paginaAtual === 1 ? 'disabled' : ''}>Anterior</button>
+    </li>`;
+
+    let inicioPagina = Math.max(1, paginaAtual - 2);
+    let fimPagina = Math.min(totalPaginas, paginaAtual + 2);
+
+    if (inicioPagina > 1) {
+        html += `<li class="page-item"><button class="page-link" onclick="mudarPagina(1)">1</button></li>`;
+        if (inicioPagina > 2) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+
+	for (let i = inicioPagina; i <= fimPagina; i++) {
+	        const isActive = i === paginaAtual;
+	        html += `<li class="page-item ${isActive ? 'active' : ''}">
+	            <button class="page-link ${isActive ? 'bg-primary text-white border-primary' : ''}" onclick="mudarPagina(${i})">${i}</button>
+	        </li>`;
+	    }
+
+    if (fimPagina < totalPaginas) {
+        if (fimPagina < totalPaginas - 1) {
+            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        html += `<li class="page-item"><button class="page-link" onclick="mudarPagina(${totalPaginas})">${totalPaginas}</button></li>`;
+    }
+
+    // Botão Próxima
+    html += `<li class="page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}">
+        <button class="page-link" onclick="mudarPagina(${paginaAtual + 1})" ${paginaAtual === totalPaginas ? 'disabled' : ''}>Próxima</button>
+    </li>`;
+
+    // Botão Última
+    html += `<li class="page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}">
+        <button class="page-link" onclick="mudarPagina(${totalPaginas})" ${paginaAtual === totalPaginas ? 'disabled' : ''}>Última</button>
+    </li>`;
+
+    ulPaginacao.innerHTML = html;
 }
 
 function limparFiltros() {
-    // Reseta todos os campos de texto para vazio
     document.querySelectorAll('.card .row input').forEach(el => el.value = '');
-    
-    // Reseta todos os selects para a primeira opção (que é o "Selecione...")
     document.querySelectorAll('.card .row select').forEach(el => el.selectedIndex = 0);
     
-    // Limpa também a barra de busca global
     const buscaGlobal = document.getElementById('busca-global');
     if (buscaGlobal) buscaGlobal.value = '';
     
-    // Limpa os dados globais e esvazia a tabela visualmente
     produtosGlobais = [];
     const tbody = document.getElementById('tabela-produtos');
     if (tbody) {
         tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Utilize os filtros acima ou a busca global para consultar os produtos.</td></tr>';
+        renderizarPaginacao(0);
     }
 }
 

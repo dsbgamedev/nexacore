@@ -128,12 +128,16 @@ if (mensagemErro == null) {
 			</div>
 		</main>
 	</div>
-
+	<!-- RODAPÉ DINÂMICO UNIFICADO -->
+    <jsp:include page="/WEB-INF/jsp/footer.jsp" />
+    
 	<!-- Passa o contextPath global para o arquivo JS externo utilizar -->
 	<script>
 		const contextPath = "<%=ctx%>";
 	</script>
 	<!-- SCRIPT EXTERNO PADRONIZADO -->
-	<script src="<%=ctx%>/assets/js/login.js"></script>
+	 <!-- NOVO: Inclui o script global de branding PRIMEIRO -->
+    <script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
+	<script src="<%=ctx%>/assets/js/login.js"></script>	
 </body>
 </html>

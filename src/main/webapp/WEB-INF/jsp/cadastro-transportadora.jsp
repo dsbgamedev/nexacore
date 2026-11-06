@@ -256,6 +256,8 @@
             </div>
         </div>
     </div>
+    <!-- RODAPÉ DINÂMICO UNIFICADO -->
+    <jsp:include page="/WEB-INF/jsp/footer.jsp" />
 
     <!-- Script para carregar endereços iniciais caso seja edição -->
     <script>

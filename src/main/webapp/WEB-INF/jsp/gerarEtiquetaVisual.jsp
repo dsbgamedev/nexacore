@@ -88,6 +88,8 @@
                  data-largura="${largura}"></svg>
         </div>
     </div>
-
+	<!-- RODAPÉ DINÂMICO UNIFICADO -->
+    <jsp:include page="/WEB-INF/jsp/footer.jsp" />
+    
 </body>
 </html>

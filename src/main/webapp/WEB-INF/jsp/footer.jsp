@@ -23,5 +23,6 @@
 
 <div class="versao-sistema" style="text-align: center; font-size: 11px; color: #666; margin-bottom: 10px;">
 <%--<footer style="margin-top: auto; padding: 20px; text-align: center; width: 100%;">--%>
-    NexaCore | Versão <%= VersionUtils.getVersao() %> | <%= formattedDate %>
+     NexaCore | Versão <%= VersionUtils.getVersao() %> | Build: <%= formattedDate %> | © 2026 NexaCore. Todos os direitos reservados. | Suporte: <a href="mailto:informatica@cbadiesel.com.br">informatica@cbadiesel.com.br</a>
+ <%--Cba Diesel Ltda. | Versão <%= VersionUtils.getVersao() %> | Build: <%= formattedDate %> | © 2026 NexaCore. Todos os direitos reservados. | Suporte: <a href="mailto:informatica@cbadiesel.com.br">informatica@cbadiesel.com.br</a>--%>
 </div>

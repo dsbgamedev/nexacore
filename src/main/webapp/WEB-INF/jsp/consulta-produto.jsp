@@ -115,12 +115,19 @@
                         <th style="cursor: pointer;" onclick="ordenarTabela('modelo')">Modelo <i class="fas fa-sort text-muted ms-1" id="sort-modelo"></i></th>
                         <th style="cursor: pointer;" onclick="ordenarTabela('descricaoResumida')">Descrição Resumida <i class="fas fa-sort text-muted ms-1" id="sort-descricaoResumida"></i></th>
                         <th style="cursor: pointer;" onclick="ordenarTabela('ativo')">Status <i class="fas fa-sort text-muted ms-1" id="sort-ativo"></i></th>
-                        <th class="text-center">Ações</th>
+                        <th class="text-center" style="width: 140px;">Ações</th>
                     </tr>
                 </thead>
                 <tbody id="tabela-produtos"></tbody>
             </table>
         </div>
+        <!-- Rodapé da Tabela / Paginação -->
+	    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top flex-wrap gap-2">
+	        <div id="paginacao-info" class="text-muted small"></div>
+	        <nav aria-label="Navegação de página">
+	            <ul class="pagination pagination-sm mb-0" id="paginacao-numeros"></ul>
+	        </nav>
+	    </div>
     </div>
 </div>
 
@@ -161,7 +168,8 @@
         </div>
     </div>
 </div>
-
+ <!-- RODAPÉ DINÂMICO UNIFICADO -->
+ <jsp:include page="/WEB-INF/jsp/footer.jsp" />
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     // O servidor substitui isso pelos booleanos true/false do Java

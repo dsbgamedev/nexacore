@@ -60,7 +60,16 @@ public class LoginServlet extends HttpServlet {
             PrintWriter out = response.getWriter();
             JsonObject brandingJson = new JsonObject();
 
-            String companyId = servletContext.getInitParameter("companyId");
+         // 1. Tenta ler o companyId da sessão do usuário logado
+            HttpSession session = request.getSession(false);
+            String companyId = (session != null) ? (String) session.getAttribute("companyId") : null;
+
+            // 2. Se não estiver na sessão, tenta ler pelo parâmetro global do servidor
+            if (companyId == null || companyId.isEmpty()) {
+                companyId = servletContext.getInitParameter("companyId");
+            }
+
+            // 3. Se ainda assim estiver vazio, assume o padrão "default"
             if (companyId == null || companyId.isEmpty()) {
                 companyId = "default";
             }
@@ -198,7 +207,8 @@ public class LoginServlet extends HttpServlet {
                 
                 HttpSession session = request.getSession();
                 session.setAttribute("usuarioLogado", usuarioCompleto);
-                
+                // AQUI VOCÊ DEFINE A EMPRESA QUEM QUISER:// Ou se fosse outra: ("companyId", "translog");
+                session.setAttribute("companyId", "cbadiesel"); // Identificador correspondente ao seu branding.properties
                 // --- REGISTRO DE LOG ---
                 try {
                     LogDAO.registrar(

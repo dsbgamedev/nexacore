@@ -255,7 +255,9 @@
         </div>
     </div>
 </div>
-
+<!-- RODAPÉ DINÂMICO UNIFICADO -->
+<jsp:include page="/WEB-INF/jsp/footer.jsp" />
+    
 <!-- SCRIPTS JS -->
 <script>
     const contextPath = '${pageContext.request.contextPath}';
