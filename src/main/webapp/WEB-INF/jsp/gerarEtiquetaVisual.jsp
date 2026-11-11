@@ -91,7 +91,7 @@
     <!-- LOGO EMPRESA NO LINK-->
     <script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
 	<!-- RODAPÉ DINÂMICO UNIFICADO -->
-    <jsp:include page="/WEB-INF/jsp/footer.jsp" />
+    <jsp:include page="/WEB-INF/jsp/layout/footer.jsp" />
     
 </body>
 </html>

@@ -685,7 +685,7 @@
 		       </div>
 		   </div>
           <!-- RODAPÉ DINÂMICO UNIFICADO -->
-          <jsp:include page="/WEB-INF/jsp/footer.jsp" />
+          <jsp:include page="/WEB-INF/jsp/layout/footer.jsp" />
         </div>
     </main>
 	
