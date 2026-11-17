@@ -28,6 +28,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let listaGlobalMarcas = [];
     let listaGlobalFabricantes = [];
+    
+    // Configurações de Paginação (15 itens por página)
+    let paginaAtual = 1;
+    const itensPorPagina = 15;
+    let listaFiltradaAtual = [];
 
     carregarFabricantesSelect();
     carregarMarcas();
@@ -36,21 +41,14 @@ document.addEventListener("DOMContentLoaded", function() {
     btnVoltar.addEventListener("click", (e) => { e.preventDefault(); fecharFormulario(); });
     linkVoltarBreadcrumb.addEventListener("click", (e) => { e.preventDefault(); fecharFormulario(); });
 	
-	// Habilitar a tecla Enter para navegar entre os campos (comportamento de Tab)
     const inputsFormulario = viewFormulario.querySelectorAll("input, select, textarea");
-    
     inputsFormulario.forEach((el, index) => {
         el.addEventListener("keydown", function(e) {
             if (e.key === "Enter") {
-                // Previne o comportamento padrão (como submeter o formulário sem querer)
                 e.preventDefault(); 
-                
-                // Pega o próximo elemento focável no formulário
                 const proximoElemento = inputsFormulario[index + 1];
-                
                 if (proximoElemento) {
                     proximoElemento.focus();
-                    // Se for um input de texto, seleciona o conteúdo para facilitar a digitação
                     if (proximoElemento.tagName === "INPUT" && proximoElemento.type === "text") {
                         proximoElemento.select();
                     }
@@ -104,11 +102,8 @@ document.addEventListener("DOMContentLoaded", function() {
 	function fecharFormulario() {
         viewFormulario.style.display = "none";
         viewListagem.style.display = "block";
-        
-        // Reseta os filtros para o estado inicial (vazios)
         filtroNome.value = "";
         filtroSituacao.value = "";
-        
         carregarMarcas();
     }
 
@@ -117,25 +112,45 @@ document.addEventListener("DOMContentLoaded", function() {
             const response = await fetch('/nexacore/api/marcas/listar');
             listaGlobalMarcas = await response.json();
             
-            // Inicia a tabela vazia aguardando o usuário pesquisar ou selecionar
+            // Inicia aguardando pesquisa do usuário, igual à estrutura anterior
             tabelaCorpo.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Utilize os filtros acima para realizar uma pesquisa.</td></tr>`;
-            contadorRegistros.textContent = `0 registro(s) encontrado(s)`;
+            contadorRegistros.textContent = `0 registros encontrados`;
+            const infoPaginacao = document.getElementById("contador-paginacao-info");
+            if(infoPaginacao) infoPaginacao.textContent = "Nenhum registro";
+            document.getElementById("paginacao-container").innerHTML = "";
         } catch (error) {
             console.error("Erro ao carregar marcas:", error);
             ModalService.error("Erro", "Não foi possível carregar a lista de marcas.");
         }
     }
 
-    function renderizarTabela(dados) {
-        tabelaCorpo.innerHTML = "";
-        contadorRegistros.textContent = `${dados.length} registro(s) encontrado(s)`;
+    function renderizarTabelaComPaginacao(dados) {
+        listaFiltradaAtual = dados;
+        const totalRegistros = dados.length;
+        contadorRegistros.textContent = `${totalRegistros} registros encontrados`;
 
-        if (dados.length === 0) {
+        if (totalRegistros === 0) {
             tabelaCorpo.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Nenhum registro encontrado.</td></tr>`;
+            document.getElementById("paginacao-container").innerHTML = "";
+            const infoPaginacao = document.getElementById("contador-paginacao-info");
+            if(infoPaginacao) infoPaginacao.textContent = "Nenhum registro";
             return;
         }
 
-        dados.forEach(m => {
+        const totalPaginas = Math.ceil(totalRegistros / itensPorPagina);
+        if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
+        const inicio = (paginaAtual - 1) * itensPorPagina;
+        const fim = Math.min(inicio + itensPorPagina, totalRegistros);
+        const itensPagina = dados.slice(inicio, fim);
+
+        const infoPaginacao = document.getElementById("contador-paginacao-info");
+        if(infoPaginacao) {
+            infoPaginacao.textContent = `Mostrando de ${inicio + 1} até ${fim} de ${totalRegistros} registros`;
+        }
+
+        tabelaCorpo.innerHTML = "";
+        itensPagina.forEach(m => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td>${m.idMarca}</td>
@@ -145,11 +160,98 @@ document.addEventListener("DOMContentLoaded", function() {
                 <td><span class="badge ${m.ativo ? 'bg-success' : 'bg-secondary'}">${m.ativo ? 'Ativo' : 'Inativo'}</span></td>
                 <td>${m.dataCadastro ? formatarData(m.dataCadastro) : '-'}</td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-outline-primary btn-editar" title="Editar" data-id="${m.idMarca}"><i class="fa fa-pen"></i></button>
+				    <button class="btn btn-sm btn-outline-secondary btn-detalhes me-1" title="Visualizar Detalhes" data-id="${m.idMarca}"><i class="fa fa-search"></i></button>
+                    <button class="btn btn-sm btn-outline-primary btn-editar me-1" title="Editar" data-id="${m.idMarca}"><i class="fa fa-pen"></i></button>
                     <button class="btn btn-sm btn-outline-danger btn-excluir-linha" title="Excluir" data-id="${m.idMarca}"><i class="fa fa-trash"></i></button>
                 </td>
             `;
             tabelaCorpo.appendChild(tr);
+        });
+
+        vincularEventosBotoesTabela();
+        renderizarControlesPaginacao(totalPaginas);
+    }
+
+    function renderizarControlesPaginacao(totalPaginas) {
+        const container = document.getElementById("paginacao-container");
+        if(!container) return;
+        container.innerHTML = "";
+
+        if (totalPaginas <= 1) return;
+
+        // Botão Primeira
+        const liPrimeira = document.createElement("li");
+        liPrimeira.className = `page-item ${paginaAtual === 1 ? 'disabled' : ''}`;
+        liPrimeira.innerHTML = `<a class="page-link" href="#">&laquo;&laquo; Primeira</a>`;
+        liPrimeira.onclick = (e) => { e.preventDefault(); if(paginaAtual > 1) { paginaAtual = 1; renderizarTabelaComPaginacao(listaFiltradaAtual); } };
+        container.appendChild(liPrimeira);
+
+        // Botão Anterior
+        const liAnterior = document.createElement("li");
+        liAnterior.className = `page-item ${paginaAtual === 1 ? 'disabled' : ''}`;
+        liAnterior.innerHTML = `<a class="page-link" href="#">Anterior</a>`;
+        liAnterior.onclick = (e) => { e.preventDefault(); if(paginaAtual > 1) { paginaAtual--; renderizarTabelaComPaginacao(listaFiltradaAtual); } };
+        container.appendChild(liAnterior);
+
+        // Intervalo numérico inteligente
+        let inicioPag = Math.max(1, paginaAtual - 2);
+        let fimPag = Math.min(totalPaginas, paginaAtual + 2);
+
+        if (inicioPag > 1) {
+            container.appendChild(criarBotaoPagina(1));
+            if (inicioPag > 2) container.appendChild(criarBotaoElipses());
+        }
+
+        for (let i = inicioPag; i <= fimPag; i++) {
+            container.appendChild(criarBotaoPagina(i));
+        }
+
+        if (fimPag < totalPaginas) {
+            if (fimPag < totalPaginas - 1) container.appendChild(criarBotaoElipses());
+            container.appendChild(criarBotaoPagina(totalPaginas));
+        }
+
+        // Botão Próximo
+        const liProximo = document.createElement("li");
+        liProximo.className = `page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}`;
+        liProximo.innerHTML = `<a class="page-link" href="#">Próximo</a>`;
+        liProximo.onclick = (e) => { e.preventDefault(); if(paginaAtual < totalPaginas) { paginaAtual++; renderizarTabelaComPaginacao(listaFiltradaAtual); } };
+        container.appendChild(liProximo);
+
+        // Botão Última
+        const liUltima = document.createElement("li");
+        liUltima.className = `page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}`;
+        liUltima.innerHTML = `<a class="page-link" href="#">Última &raquo;&raquo;</a>`;
+        liUltima.onclick = (e) => { e.preventDefault(); if(paginaAtual < totalPaginas) { paginaAtual = totalPaginas; renderizarTabelaComPaginacao(listaFiltradaAtual); } };
+        container.appendChild(liUltima);
+    }
+
+    function criarBotaoPagina(num) {
+        const li = document.createElement("li");
+        li.className = `page-item ${paginaAtual === num ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#">${num}</a>`;
+        li.onclick = (e) => {
+            e.preventDefault();
+            paginaAtual = num;
+            renderizarTabelaComPaginacao(listaFiltradaAtual);
+        };
+        return li;
+    }
+
+    function criarBotaoElipses() {
+        const li = document.createElement("li");
+        li.className = "page-item disabled";
+        li.innerHTML = `<a class="page-link" href="#">...</a>`;
+        return li;
+    }
+
+    function vincularEventosBotoesTabela() {
+        document.querySelectorAll('.btn-detalhes').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const id = parseInt(this.getAttribute('data-id'));
+                const marca = listaGlobalMarcas.find(item => item.idMarca === id);
+                if (marca) mostrarDetalhesMarcas(marca);
+            });
         });
 
         document.querySelectorAll('.btn-editar').forEach(btn => {
@@ -167,22 +269,34 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         });
     }
+	
+	async function mostrarDetalhesMarcas(m) {
+	       const conteudoHtml = `
+	           <div style="text-align: left; font-size: 14px;">
+	               <p class="mb-2"><strong>ID da Marca:</strong> ${m.idMarca}</p>
+	               <p class="mb-2"><strong>Nome da Marca:</strong> ${m.nomeMarca}</p>
+	               <p class="mb-2"><strong>Fabricante Vinculado:</strong> ${m.nomeFabricante || '-'}</p>
+	               <p class="mb-2"><strong>Logo URL:</strong> ${m.logoUrl ? `<a href="${m.logoUrl}" target="_blank">${m.logoUrl}</a>` : '-'}</p>
+	               <p class="mb-2"><strong>Situação:</strong> ${m.ativo ? 'Ativo' : 'Inativo'}</p>
+	               <p class="mb-0"><strong>Data de Cadastro:</strong> ${m.dataCadastro ? formatarData(m.dataCadastro) : '-'}</p>
+	           </div>
+	       `;
+
+	       if (typeof ModalService.info === 'function') {
+	           await ModalService.info("Detalhes da Marca", conteudoHtml);
+	       } else {
+	           await ModalService.alert("Detalhes da Marca", conteudoHtml);
+	       }
+	}
 
 	function realizarPesquisa() {
+        paginaAtual = 1; 
         const termo = filtroNome.value.toLowerCase().trim();
         const termoSituacao = filtroSituacao.value;
-
-        // Só bloqueia e limpa a tabela se AMBOS os campos estiverem vazios/não selecionados
-        if (termoSituacao === "" && termo === "") {
-            tabelaCorpo.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Utilize os filtros acima para realizar uma pesquisa.</td></tr>`;
-            contadorRegistros.textContent = `0 registro(s) encontrado(s)`;
-            return;
-        }
 
         const filtrados = listaGlobalMarcas.filter(m => {
             const matchNome = termo === "" || m.nomeMarca.toLowerCase().includes(termo) || (m.nomeFabricante && m.nomeFabricante.toLowerCase().includes(termo));
             
-            // Se o select estiver em "Selecione..." ("") ou "Todos" ("todos"), não restringe a situação
             let matchSit = true;
             if (termoSituacao === "true") {
                 matchSit = m.ativo === true;
@@ -193,7 +307,7 @@ document.addEventListener("DOMContentLoaded", function() {
             return matchNome && matchSit;
         });
 
-        renderizarTabela(filtrados);
+        renderizarTabelaComPaginacao(filtrados);
     }
 
     btnPesquisar.addEventListener("click", realizarPesquisa);
@@ -212,7 +326,10 @@ document.addEventListener("DOMContentLoaded", function() {
         filtroNome.value = "";
         filtroSituacao.value = ""; 
         tabelaCorpo.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Utilize os filtros acima para realizar uma pesquisa.</td></tr>`;
-        contadorRegistros.textContent = `0 registro(s) encontrado(s)`;
+        contadorRegistros.textContent = `0 registros encontrados`;
+        const infoPaginacao = document.getElementById("contador-paginacao-info");
+        if(infoPaginacao) infoPaginacao.textContent = "Nenhum registro";
+        document.getElementById("paginacao-container").innerHTML = "";
     });
 
     btnSalvar.addEventListener("click", () => executarSalvar(false));

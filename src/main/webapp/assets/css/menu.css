@@ -434,3 +434,117 @@ header.nexacore-topbar {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* --------------------------------------------------------------------------
+   ESTILOS PARA O MENU LATERAL EXPANSÍVEL (ACCORDION)
+   -------------------------------------------------------------------------- */
+.dropdown-toggle-title {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+    transition: color 0.2s ease;
+}
+
+.dropdown-toggle-title:hover {
+    color: #ffffff;
+}
+
+.toggle-icon {
+    font-size: 0.7rem;
+    transition: transform 0.3s ease;
+    margin-right: 1.2rem; /* Alinha visualmente com o espaçamento lateral */
+}
+
+/* Estado quando o menu está recolhido (collapsed) */
+.sidebar-dropdown-group.collapsed .sidebar-menu {
+    display: none;
+}
+
+.sidebar-dropdown-group.collapsed .toggle-icon {
+    transform: rotate(-90deg);
+}
+
+/* ==========================================================
+   MODO RECOLHIDO DA SIDEBAR (ESTILO OUTLOOK)
+   ========================================================== */
+
+/* Transição suave para a sidebar e para o conteúdo principal */
+aside.nexacore-sidebar {
+    transition: width 0.3s ease;
+}
+
+main.nexacore-main {
+    transition: margin-left 0.3s ease;
+}
+
+/* Largura da sidebar quando recolhida */
+aside.nexacore-sidebar.sidebar-collapsed {
+    width: 70px !important;
+}
+
+/* Adaptação automática da tela principal quando a sidebar encolhe */
+body.sidebar-is-collapsed main.nexacore-main {
+    margin-left: 70px !important;
+}
+
+/* Oculta os textos, categorias e elementos textuais quando recolhido */
+aside.nexacore-sidebar.sidebar-collapsed .logo-info,
+aside.nexacore-sidebar.sidebar-collapsed .menu-category,
+aside.nexacore-sidebar.sidebar-collapsed .sidebar-menu span,
+aside.nexacore-sidebar.sidebar-collapsed .toggle-icon,
+aside.nexacore-sidebar.sidebar-collapsed .user-details,
+aside.nexacore-sidebar.sidebar-collapsed .user-logout-icon {
+    display: none !important;
+}
+
+/* Centraliza os ícones principais na sidebar recolhida */
+aside.nexacore-sidebar.sidebar-collapsed .sidebar-menu a {
+    justify-content: center;
+    padding: 12px 0;
+}
+
+aside.nexacore-sidebar.sidebar-collapsed .sidebar-menu a i {
+    margin-right: 0 !important;
+    font-size: 1.25rem;
+}
+
+/* Ajuste do rodapé do usuário quando recolhido */
+aside.nexacore-sidebar.sidebar-collapsed .sidebar-user-footer {
+    justify-content: center;
+    padding: 1rem 0.5rem;
+}
+
+aside.nexacore-sidebar.sidebar-collapsed .user-avatar {
+    margin-right: 0;
+}
+
+/* Botão flutuante na bordinha da sidebar */
+.sidebar-toggle-btn {
+    position: absolute;
+    top: 18px;
+    right: -12px;
+    width: 26px;
+    height: 26px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    z-index: 1010;
+    transition: transform 0.3s ease;
+}
+
+.sidebar-toggle-btn:hover {
+    background-color: #0b5ed7;
+}
+
+/* Vira a setinha do botão quando recolhido */
+aside.nexacore-sidebar.sidebar-collapsed .sidebar-toggle-btn i {
+    transform: rotate(180deg);
+}

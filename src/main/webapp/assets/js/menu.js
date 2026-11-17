@@ -1,130 +1,13 @@
-document.addEventListener('DOMContentLoaded', () => {
-    if (typeof window.initGlobalBranding === 'function') {
-        window.initGlobalBranding();
-    } else {
-        console.warn('initGlobalBranding não encontrado.');
-    }
+// ==========================================================
+// FUNÇÕES GLOBAIS (Devem ficar fora do DOMContentLoaded)
+// ==========================================================
 
-    const APP_CONTEXT_PATH = document.body.dataset.appContextPath || '';
-    const inlineMessageContainer = document.getElementById('inlineMessageContainer');
+// Função para expandir e recolher as categorias do menu lateral (Accordion)
+function toggleSidebarMenu(element) {
+    const group = element.closest('.sidebar-dropdown-group');
+    group.classList.toggle('collapsed');
+}
 
-    function displayInlineMessage(message, type) {
-        if (!inlineMessageContainer) return;
-        inlineMessageContainer.innerHTML = ''; 
-        const p = document.createElement('p');
-        p.textContent = message;
-        p.className = 'message ' + type; 
-        inlineMessageContainer.appendChild(p);
-
-        setTimeout(() => {
-            p.style.opacity = '0';
-            p.style.transition = 'opacity 1s ease-out';
-            setTimeout(() => {
-                inlineMessageContainer.innerHTML = '';
-            }, 1000);
-        }, 5000);
-    }
-
-    const sessionMessage = document.body.dataset.sessionMessage;
-    if (sessionMessage && sessionMessage.trim() !== 'null' && sessionMessage.trim() !== '') {
-        displayInlineMessage(sessionMessage, 'warning');
-    }
-
-    // Lógica para expandir/recolher submenus no menu lateral
-    const toggleSubmenuLinks = document.querySelectorAll('.toggle-submenu');
-    toggleSubmenuLinks.forEach(link => {
-        link.addEventListener('click', function(event) {
-            if (this.getAttribute('href') === '#' || this.getAttribute('href') === '') {
-                event.preventDefault();
-            }
-            const parentLi = this.closest('.menu-item-with-submenu');
-            const submenu = parentLi.querySelector('.submenu');
-            if (submenu) {
-                parentLi.classList.toggle('active'); 
-                submenu.classList.toggle('active');
-            }
-        });
-    });
-
-    // Seletor de Unidade Ativa via AJAX
-    const selectUnidade = document.getElementById('selectUnidadeAtiva');
-    if (selectUnidade) {
-        selectUnidade.addEventListener('change', function() {
-            const unidadeId = this.value;
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    title: 'Alterando Unidade...',
-                    allowOutsideClick: false,
-                    didOpen: () => { Swal.showLoading(); }
-                });
-            }
-
-            const params = new URLSearchParams();
-            params.append('id', unidadeId);
-
-            fetch(`${APP_CONTEXT_PATH}/TrocarUnidadeServlet`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: params.toString()
-            })
-            .then(response => {
-                if (response.ok) {
-                    window.location.reload(true);
-                } else {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire('Erro', 'Não foi possível trocar a unidade.', 'error');
-                    } else {
-                        alert('Erro ao trocar unidade.');
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                if (typeof Swal !== 'undefined') Swal.fire('Erro', 'Erro de conexão.', 'error');
-            });
-        });
-    }
-
-	// --- Tratamento Global e Dinâmico de Erros via URL ---
-    const urlParams = new URLSearchParams(window.location.search);
-    const erroParam = urlParams.get('erro');
-
-    if (erroParam) {
-        let mensagem = "Ocorreu um erro na operação.";
-
-        // Regras dinâmicas baseadas no código do erro
-        if (erroParam.startsWith('sem_permissao')) {
-            mensagem = "Você não possui permissão para acessar esta funcionalidade.";
-            
-            // Tratamentos específicos se necessário
-            const modulo = urlParams.get('modulo');
-            if (modulo === 'manutencao_chamados') {
-                mensagem = "Seu usuário possui apenas permissão de consulta. O acesso à abertura de chamados está restrito.";
-            } else if (erroParam === 'sem_permissao_atributo') {
-                mensagem = "Acesso negado! Apenas Super Administradores podem acessar o módulo de atributos.";
-            } else if (erroParam === 'sem_permissao_empresa') {
-                mensagem = "Acesso negado! Apenas Super Administradores podem acessar o módulo de empresas.";
-            }
-        } 
-        // NOVO: Se o servlet mandar uma mensagem personalizada codificada na URL (ex: ?erro=custom&msg=Seu+texto)
-        else if (erroParam === 'custom' && urlParams.has('msg')) {
-            mensagem = decodeURIComponent(urlParams.get('msg').replace(/\+/g, ' '));
-        }
-
-		setTimeout(() => {
-		            if (typeof ModalService !== 'undefined') {
-		                ModalService.error("Atenção", mensagem).then(() => {
-		                    const novaUrl = window.location.pathname;
-		                    window.history.replaceState({}, document.title, novaUrl);
-		                });
-		            } else {
-		                alert(mensagem);
-		                const novaUrl = window.location.pathname;
-		                window.history.replaceState({}, document.title, novaUrl);
-		            }
-		        }, 300);
-    }
-});
 function abrirModalDetalhesChamado(idChamado) {
     const APP_CONTEXT_PATH = document.body.dataset.appContextPath || '';
 
@@ -200,25 +83,158 @@ function abrirModalGerenciarNoDashboard(chamado) {
         meuModal.show();
     }
 }
-// Formatar datas no padrão yyyy-mm-dd para dd/mm/aaaa em elementos com a classe .data-formatavel
+
+// ==========================================================
+// FUNÇÃO DE RECOLHER / EXPANDIR A SIDEBAR (ESTILO OUTLOOK)
+// ==========================================================
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const body = document.body;
+    
+    sidebar.classList.toggle('sidebar-collapsed');
+    body.classList.toggle('sidebar-is-collapsed');
+    
+    // Salva o estado atual no navegador para persistir entre as telas
+    const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+    localStorage.setItem('nexacore_sidebar_collapsed', isCollapsed);
+}
+
+// Restaura o estado salvo ao carregar qualquer página do sistema
+document.addEventListener("DOMContentLoaded", function() {
+    const isCollapsed = localStorage.getItem('nexacore_sidebar_collapsed') === 'true';
+    if (isCollapsed) {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            sidebar.classList.add('sidebar-collapsed');
+            document.body.classList.add('sidebar-is-collapsed');
+        }
+    }
+});
+
+
+// ==========================================================
+// EVENTOS EXECUTADOS APÓS O CARREGAMENTO DA PÁGINA
+// ==========================================================
 document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.initGlobalBranding === 'function') {
+        window.initGlobalBranding();
+    } else {
+        console.warn('initGlobalBranding não encontrado.');
+    }
+
+    const APP_CONTEXT_PATH = document.body.dataset.appContextPath || '';
+    const inlineMessageContainer = document.getElementById('inlineMessageContainer');
+
+    function displayInlineMessage(message, type) {
+        if (!inlineMessageContainer) return;
+        inlineMessageContainer.innerHTML = ''; 
+        const p = document.createElement('p');
+        p.textContent = message;
+        p.className = 'message ' + type; 
+        inlineMessageContainer.appendChild(p);
+
+        setTimeout(() => {
+            p.style.opacity = '0';
+            p.style.transition = 'opacity 1s ease-out';
+            setTimeout(() => {
+                inlineMessageContainer.innerHTML = '';
+            }, 1000);
+        }, 5000);
+    }
+
+    const sessionMessage = document.body.dataset.sessionMessage;
+    if (sessionMessage && sessionMessage.trim() !== 'null' && sessionMessage.trim() !== '') {
+        displayInlineMessage(sessionMessage, 'warning');
+    }
+
+    // Seletor de Unidade Ativa via AJAX
+    const selectUnidade = document.getElementById('selectUnidadeAtiva');
+    if (selectUnidade) {
+        selectUnidade.addEventListener('change', function() {
+            const unidadeId = this.value;
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Alterando Unidade...',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+            }
+
+            const params = new URLSearchParams();
+            params.append('id', unidadeId);
+
+            fetch(`${APP_CONTEXT_PATH}/TrocarUnidadeServlet`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload(true);
+                } else {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire('Erro', 'Não foi possível trocar a unidade.', 'error');
+                    } else {
+                        alert('Erro ao trocar unidade.');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                if (typeof Swal !== 'undefined') Swal.fire('Erro', 'Erro de conexão.', 'error');
+            });
+        });
+    }
+
+	// --- Tratamento Global e Dinâmico de Erros via URL ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const erroParam = urlParams.get('erro');
+
+    if (erroParam) {
+        let mensagem = "Ocorreu um erro na operação.";
+
+        if (erroParam.startsWith('sem_permissao')) {
+            mensagem = "Você não possui permissão para acessar esta funcionalidade.";
+            const modulo = urlParams.get('modulo');
+            if (modulo === 'manutencao_chamados') {
+                mensagem = "Seu usuário possui apenas permissão de consulta. O acesso à abertura de chamados está restrito.";
+            } else if (erroParam === 'sem_permissao_atributo') {
+                mensagem = "Acesso negado! Apenas Super Administradores podem acessar o módulo de atributos.";
+            } else if (erroParam === 'sem_permissao_empresa') {
+                mensagem = "Acesso negado! Apenas Super Administradores podem acessar o módulo de empresas.";
+            }
+        } 
+        else if (erroParam === 'custom' && urlParams.has('msg')) {
+            mensagem = decodeURIComponent(urlParams.get('msg').replace(/\+/g, ' '));
+        }
+
+		setTimeout(() => {
+            if (typeof ModalService !== 'undefined') {
+                ModalService.error("Atenção", mensagem).then(() => {
+                    const novaUrl = window.location.pathname;
+                    window.history.replaceState({}, document.title, novaUrl);
+                });
+            } else {
+                alert(mensagem);
+                const novaUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, novaUrl);
+            }
+        }, 300);
+    }
+
+    // Formatar datas no padrão yyyy-mm-dd para dd/mm/aaaa em elementos com a classe .data-formatavel
     document.querySelectorAll('.data-formatavel').forEach(td => {
         const textoOriginal = td.textContent.trim();
         if (textoOriginal && textoOriginal.length >= 10) {
             const partes = textoOriginal.substring(0, 10).split('-');
             if (partes.length === 3) {
-                // Mantém o restante do texto caso venha hora junto (ex: yyyy-mm-dd hh:mm:ss)
                 const hora = textoOriginal.length > 10 ? textoOriginal.substring(10) : '';
                 td.textContent = `${partes[2]}/${partes[1]}/${partes[0]}${hora}`;
             }
         }
     });
-});
-// --- Carregamento Assíncrono do Dashboard via API (Evita travamento no MenuServlet) ---
-document.addEventListener('DOMContentLoaded', () => {
-    const APP_CONTEXT_PATH = document.body.dataset.appContextPath || '';
-    
-    // Faz a requisição em segundo plano para o endpoint otimizado
+
+    // --- Carregamento Assíncrono do Dashboard via API ---
     fetch(`${APP_CONTEXT_PATH}/api/dashboard`)
         .then(response => {
             if (!response.ok) {
@@ -227,7 +243,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return response.json();
         })
         .then(data => {
-            // 1. Atualiza contadores do dashboard se os elementos existirem na tela
             const elTransito = document.getElementById('totalEmTransito');
             if (elTransito) elTransito.textContent = data.totalEmTransito ?? 0;
 
@@ -237,9 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const elAguardando = document.getElementById('totalAguardandoRecebimento');
             if (elAguardando) elAguardando.textContent = data.totalAguardandoRecebimento ?? 0;
 
-            // 2. Se houver tabela ou lista de movimentações recentes, você pode preenchê-la aqui dinamicamente
             if (Array.isArray(data.listaMovimentacoesRecentes) && data.listaMovimentacoesRecentes.length > 0) {
-                // Exemplo de gancho caso queira popular uma tabela no menu.jsp via JS
                 window.listaMovimentacoesGlobal = data.listaMovimentacoesRecentes;
             }
         })

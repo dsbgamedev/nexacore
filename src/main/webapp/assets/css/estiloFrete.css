@@ -1,0 +1,260 @@
+/* =========================================================
+   ESTILOS UNIFICADOS - CONSULTA E LANÇAMENTO DE FRETES (NEXACORE)
+   ========================================================= */
+
+:root {
+    --sidebar-width: 250px;
+}
+
+body {
+    margin: 0; 
+    padding: 0;
+    background-color: #f8f9fa;
+    min-height: 100vh;
+}
+
+.container-fluid {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* =========================================================
+   BANNER ESCURO E CARDS (PADRÃO NEXACORE IMAGEM 4)
+   ========================================================= */
+
+.nexacore-header-banner {
+    background-color: #0f172a;
+    color: #ffffff;
+    padding: 1.5rem 2rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.nexacore-header-banner .breadcrumb-text {
+    color: #94a3b8;
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.nexacore-card, .card {
+    position: relative;
+    z-index: 1;
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.nexacore-card {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.nexacore-section-title {
+    color: #0d47a1;
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* =========================================================
+   TABELA RESPONSIVA E ESTILIZAÇÃO UNIFICADA
+   ========================================================= */
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 20px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background-color: #ffffff;
+}
+
+#tabelaFretes,
+#tabelaFretesLancados {
+    width: 100% !important;
+    table-layout: auto;
+    border-collapse: collapse;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+#tabelaFretes th, 
+#tabelaFretes td,
+#tabelaFretesLancados th,
+#tabelaFretesLancados td {
+    padding: 8px 10px !important;
+    vertical-align: middle !important;
+    font-size: 0.82rem;
+    white-space: nowrap;
+}
+
+#tabelaFretes th,
+#tabelaFretesLancados th {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    text-align: left;
+    border-color: #1e293b !important;
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+}
+
+#tabelaFretes th.text-end,
+#tabelaFretesLancados th.text-end {
+    text-align: right !important;
+}
+
+#tabelaFretes tbody tr:nth-child(even),
+#tabelaFretesLancados tbody tr:nth-child(even) { 
+    background-color: #f8fafc; 
+}
+
+#tabelaFretes tbody tr:hover,
+#tabelaFretesLancados tbody tr:hover { 
+    background-color: #f1f5f9; 
+}
+
+/* Destaque da coluna de Porcentagem (%) */
+#tabelaFretes td:nth-last-child(2),
+#tabelaFretesLancados td:nth-last-child(2) { 
+    font-weight: 600;
+    color: #0d6efd; 
+}
+
+/* Rodapé / Totais */
+#tabelaFretes tfoot,
+#tabelaFretesLancados tfoot {
+    display: table-row-group;
+}
+
+#tabelaFretes tfoot .table-primary,
+#tabelaFretesLancados tfoot .table-primary {
+    background-color: #e2e8f0 !important;
+    border-top: 2px solid #cbd5e1;
+    font-weight: bold;
+    color: #1e293b;
+}
+
+/* =========================================================
+   ELEMENTOS DE FORMULÁRIO, FILTROS E AUTOCOMPLETE
+   ========================================================= */
+
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 5px;
+    font-size: 0.85rem;
+}
+
+.form-control, .form-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+#listaSugestoes {
+    position: absolute;
+    z-index: 1050;
+    width: calc(100% - 1.5rem);
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 6px;
+}
+
+/* =========================================================
+   PAGINAÇÃO E CAMADAS (Z-INDEX)
+   ========================================================= */
+
+#paginacaoContainer {
+    position: relative !important;
+    z-index: 9999 !important;
+    margin-top: 25px !important;
+    margin-bottom: 20px !important;
+    display: flex !important;
+    justify-content: center !important;
+    clear: both !important;
+}
+
+#paginacaoContainer .pagination {
+    position: relative;
+    z-index: 10000;
+    background-color: #ffffff;
+    padding: 5px 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+#paginacaoContainer .pagination .page-item.active .page-link {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+    z-index: 3;
+}
+
+#paginacaoContainer .pagination .page-item .page-link {
+    color: #0d6efd;
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+}
+
+#paginacaoContainer .pagination .page-item .page-link:hover {
+    background-color: #e9ecef;
+    color: #0a58ca;
+}
+
+/* =========================================================
+   ESTILO DO CAMPO % FRETE (TRAVADO VS DESTRAVADO)
+   ========================================================= */
+
+#formFrete .btn,
+#btnLimparCancelar,
+#btnSalvarAtualizar,
+#btnLimparPesquisa {
+    width: auto !important;
+    min-width: auto !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 14px !important;
+    font-size: 0.85rem !important;
+}
+
+#containerPorcentagem {
+    display: block !important;
+}
+
+#labelTravaMatriz {
+    display: inline-block !important;
+}
+
+/* 1. ESTADO TRAVADO (Readonly - Exclusivo da Matriz ID 7): Fundo cinza claro e texto verde forte */
+#porcentagemFrete[readonly] {
+    background-color: #e9ecef !important;
+    color: #198754 !important;
+    font-weight: 700 !important;
+}
+
+/* 2. ESTADO EDITÁVEL (Filiais ou Matriz com o checkbox "Alterar" marcado): Fundo branco e texto padrão livre para digitação */
+#porcentagemFrete:not([readonly]) {
+    background-color: #ffffff !important;
+    color: #212529 !important;
+    font-weight: 600 !important;
+}

@@ -4,14 +4,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexacore | Fabricantes</title>
+    <title>Fabricantes - Nexacore</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/menu.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/cadastro-produto.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/fabricante-marca.css">
 </head>
-<body class="p-4 bg-light">
+<body class="p-4 bg-light" data-app-context-path="${pageContext.request.contextPath}">
+
+<!-- 1. INCLUI O MENU LATERAL DA PASTA DE LAYOUT -->
+    <jsp:include page="/WEB-INF/jsp/layout/sidebar.jsp" />
+
+    <!-- CONTEÚDO PRINCIPAL DENTRO DO LAYOUT -->
+    <main id="main-content" class="nexacore-main">
+        
+        <!-- 2. INCLUI A TOPBAR DA PASTA DE LAYOUT -->
+        <jsp:include page="/WEB-INF/jsp/layout/topbar.jsp" />
+
 
     <!-- ================= VIEW 1: LISTAGEM E FILTROS ================= -->
     <div id="view-listagem">
@@ -95,6 +107,15 @@
                             <!-- Preenchido via JavaScript -->
                         </tbody>
                     </table>
+                </div>
+                <!-- Rodapé com Paginação de 4 em 4 -->
+                <div class="d-flex justify-content-between align-items-center pt-3 border-top mt-3">
+                    <span id="contador-paginacao-info" class="text-muted small">Nenhum registro</span>
+                    <nav aria-label="Paginação">
+                        <ul id="paginacao-container" class="pagination pagination-sm mb-0">
+                            <!-- Injetado via JS -->
+                        </ul>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -277,6 +298,7 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+    <script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/fabricante.js"></script>
 </body>
 </html>

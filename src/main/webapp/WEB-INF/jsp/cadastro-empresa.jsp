@@ -1,19 +1,39 @@
-<%@ page language="java" contentType="text/html;charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%
+    if (session.getAttribute("usuarioLogado") == null) {
+        response.sendRedirect(request.getContextPath() + "/LoginServlet?message=session_expired");
+        return;
+    }
+%>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore | Cadastro de Empresa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Empresa - Nexacore</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/menu.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
 </head>
-<body class="bg-light py-4">
+<body class="nexacore-layout" data-app-context-path="${pageContext.request.contextPath}">
+
+<!-- 1. INCLUI O MENU LATERAL DA PASTA DE LAYOUT -->
+    <jsp:include page="/WEB-INF/jsp/layout/sidebar.jsp" />
+
+    <!-- CONTEÚDO PRINCIPAL DENTRO DO LAYOUT -->
+    <main id="main-content" class="nexacore-main">
+        
+        <!-- 2. INCLUI A TOPBAR DA PASTA DE LAYOUT -->
+        <jsp:include page="/WEB-INF/jsp/layout/topbar.jsp" />
+
 
 <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
 
-    <!-- Cabeçalho Padrão Unificado -->
     <!-- Cabeçalho Padrão Unificado com Fundo Escuro -->
     <div class="card-cabecalho-padrao tema-escuro">
         <!-- Linha Superior: Título e Breadcrumb -->
@@ -354,6 +374,7 @@
     const contextPath = '${pageContext.request.contextPath}';
 </script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>   
+<script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/empresa.js"></script>
 </body>
 </html>

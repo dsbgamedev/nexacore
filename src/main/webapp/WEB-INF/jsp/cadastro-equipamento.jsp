@@ -3,17 +3,27 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore - Cadastro de Equipamento</title>
+    <title>Novo Equipamento - Nexacore -</title>
     <!-- ADICIONE ESTE BLOCO LOGO NO INÍCIO -->
     <script>
         var contextPath = "<%= request.getContextPath() %>";
     </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/menu.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
 </head>
-<body class="p-4 bg-light">
+<body class="nexacore-layout" data-app-context-path="${pageContext.request.contextPath}">
+	<!-- 1. INCLUI O MENU LATERAL DA PASTA DE LAYOUT -->
+    <jsp:include page="/WEB-INF/jsp/layout/sidebar.jsp" />
+
+    <!-- CONTEÚDO PRINCIPAL DENTRO DO LAYOUT -->
+    <main id="main-content" class="nexacore-main">
+        
+        <!-- 2. INCLUI A TOPBAR DA PASTA DE LAYOUT -->
+        <jsp:include page="/WEB-INF/jsp/layout/topbar.jsp" />
 
 <div class="container-fluid mb-4" style="max-width: 1300px; margin: auto;">
     
@@ -304,7 +314,7 @@
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
-   
+    <script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/equipamento.js"></script>
 </body>
 </html>

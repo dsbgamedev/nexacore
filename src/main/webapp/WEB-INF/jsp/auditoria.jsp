@@ -7,15 +7,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexaCore - Sistema de Gestão de Equipamentos</title>
+    <title>Auditoria - NexaCore</title>
     
     <!-- Bootstrap 5.3 & Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    
     <!-- FontAwesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
     
     <!-- CSS Globais e do Layout -->
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/menu.css">
+     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/auditoria.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
     
@@ -28,7 +31,16 @@
         .avatar-circle { width: 32px; height: 32px; background-color: #0d6efd; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; }
     </style>
 </head>
-<body class="bg-light">
+<body class="p-4 bg-light" data-context-path="${pageContext.request.contextPath}">
+   <!-- 1. INCLUI O MENU LATERAL DA PASTA DE LAYOUT -->
+    <jsp:include page="/WEB-INF/jsp/layout/sidebar.jsp" />
+
+    <!-- CONTEÚDO PRINCIPAL DENTRO DO LAYOUT -->
+    <main id="main-content" class="nexacore-main">
+        
+        <!-- 2. INCLUI A TOPBAR DA PASTA DE LAYOUT -->
+        <jsp:include page="/WEB-INF/jsp/layout/topbar.jsp" />
+
 
 <div class="container-fluid py-4 px-4" style="max-width: 1300px; margin: auto;">
 
@@ -113,72 +125,80 @@
         </div>
 
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light text-uppercase fs-7 text-muted">
-                    <tr>
-                        <th class="py-3">Data/Hora</th>
-                        <th>Usuário</th>
-                        <th>Módulo</th>
-                        <th>Ação</th>
-                        <th>Entidade / Registro</th>
-                        <th>IP Origem</th>
-                        <th>Sucesso</th>
-                        <th class="text-center">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <c:forEach var="audit" items="${listaAuditoria}">
-                        <tr>
-                            <td><fmt:formatDate value="${audit.dataHora}" pattern="dd/MM/yyyy HH:mm:ss"/></td>
-                            <td>
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="avatar-circle">
-                                        <c:choose>
-                                            <c:when test="${not empty audit.usuarioNome and fn:length(audit.usuarioNome) gt 0}">
-                                                ${fn:toUpperCase(fn:substring(audit.usuarioNome, 0, 1))}
-                                            </c:when>
-                                            <c:otherwise>U</c:otherwise>
-                                        </c:choose>
-                                    </div>
-                                    <div>
-                                        <div class="fw-semibold text-dark small">${audit.usuarioNome}</div>
-                                        <div class="text-muted" style="font-size: 0.75rem;">ID: ${audit.usuarioId}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td><i class="fa-solid fa-cube text-muted me-1"></i> ${audit.modulo}</td>
-                            <td>
+    <table class="table table-hover align-middle mb-0 tabela-auditoria">
+        <thead class="table-light text-uppercase fs-7 text-muted">
+			    <tr>
+			        <th class="py-3">Data/Hora</th>
+			        <th>Usuário</th>
+			        <th>Módulo</th>
+			        <th>Ação</th>
+			        <th>Entidade / Registro</th>
+			        <th>IP Origem</th>
+			        <th>Sucesso</th>
+			        <th class="text-center">Ações</th>
+			    </tr>
+			</thead>
+        <tbody>
+            <c:forEach var="audit" items="${listaAuditoria}">
+                <tr>
+                    <td><fmt:formatDate value="${audit.dataHora}" pattern="dd/MM/yyyy HH:mm:ss"/></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="avatar-circle">
                                 <c:choose>
-                                    <c:when test="${audit.acao == 'CRIAR'}"><span class="badge badge-acao bg-criar">CRIAR</span></c:when>
-                                    <c:when test="${audit.acao == 'EDITAR'}"><span class="badge badge-acao bg-editar">EDITAR</span></c:when>
-                                    <c:when test="${audit.acao == 'EXCLUIR'}"><span class="badge badge-acao bg-excluir">EXCLUIR</span></c:when>
-                                    <c:otherwise><span class="badge badge-acao bg-secondary">${audit.acao}</span></c:otherwise>
+                                    <c:when test="${not empty audit.usuarioNome and fn:length(audit.usuarioNome) gt 0}">
+                                        ${fn:toUpperCase(fn:substring(audit.usuarioNome, 0, 1))}
+                                    </c:when>
+                                    <c:otherwise>U</c:otherwise>
                                 </c:choose>
-                            </td>
-                            <td>
-                                <div class="small fw-semibold text-dark">${audit.entidade}</div>
-                                <div class="text-muted" style="font-size: 0.75rem;">ID: ${audit.registroId}</div>
-                            </td>
-                            <td class="small font-monospace">${audit.ipOrigem}</td>
-                            <td><span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fa-solid fa-check me-1"></i> Sim</span></td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-light text-primary border me-1" onclick="verDetalhes(${audit.id})" title="Ver Detalhes">
-                                    <i class="fa-regular fa-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-light text-danger border" onclick="excluirLog(${audit.id})" title="Excluir Registro">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    </c:forEach>
-                    <c:if test="${empty listaAuditoria}">
-                        <tr>
-                            <td colspan="8" class="text-center py-4 text-muted">Nenhum registro de auditoria encontrado.</td>
-                        </tr>
-                    </c:if>
-                </tbody>
-            </table>
-        </div>
+                            </div>
+                            <div>
+                                <div class="fw-semibold text-dark small">${audit.usuarioNome}</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">ID: ${audit.usuarioId}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><i class="fa-solid fa-cube text-muted me-1"></i> ${audit.modulo}</td>
+                    <td>
+                        <c:choose>
+                            <c:when test="${audit.acao == 'CRIAR'}"><span class="badge badge-acao bg-criar">CRIAR</span></c:when>
+                            <c:when test="${audit.acao == 'EDITAR'}"><span class="badge badge-acao bg-editar">EDITAR</span></c:when>
+                            <c:when test="${audit.acao == 'EXCLUIR'}"><span class="badge badge-acao bg-excluir">EXCLUIR</span></c:when>
+                            <c:otherwise><span class="badge badge-acao bg-secondary">${audit.acao}</span></c:otherwise>
+                        </c:choose>
+                    </td>
+                    <td>
+                        <div class="small fw-semibold text-dark">${audit.entidade}</div>
+                        <div class="text-muted" style="font-size: 0.75rem;">ID: ${audit.registroId}</div>
+                    </td>
+                    <td class="small font-monospace d-none d-lg-table-cell">${audit.ipOrigem}</td>
+                    <td class="d-none d-md-table-cell"><span class="badge bg-success-subtle text-success border border-success-subtle"><i class="fa-solid fa-check me-1"></i> Sim</span></td>
+                    <td class="text-center">
+                        <div class="d-flex justify-content-center gap-1">
+                            <!-- Ver Detalhes -->
+                            <button class="btn btn-sm btn-light text-primary border" onclick="verDetalhes(${audit.id})" title="Ver Detalhes">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                            <!-- Editar (Caso aplicável) -->
+                            <button class="btn btn-sm btn-light text-warning border" onclick="editarLog(${audit.id})" title="Editar Registro">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <!-- Excluir -->
+                            <button class="btn btn-sm btn-light text-danger border" onclick="excluirLog(${audit.id})" title="Excluir Registro">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </c:forEach>
+            <c:if test="${empty listaAuditoria}">
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-muted">Nenhum registro de auditoria encontrado.</td>
+                </tr>
+            </c:if>
+        </tbody>
+    </table>
+</div>
     </div>
 </div>
 
@@ -246,6 +266,7 @@
 <!-- Configura o ContextPath global para uso nos arquivos JS externos -->
 <script> const contextPath = '${pageContext.request.contextPath}'; </script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+<script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/auditoria.js"></script>
 </body>
 </html>

@@ -6,12 +6,7 @@
     String ctx = request.getContextPath();
     Usuario usuario = (Usuario) session.getAttribute("usuarioLogado");
     String nomeUsuario = (usuario != null) ? usuario.getUsername() : "Usuário";
-    String unidadeAtiva = (usuario != null && usuario.getUnidadeAtivaNome() != null) ? usuario.getUnidadeAtivaNome() : "Filial Padrão";
 %>
-<%--
-    Verifica se o usuário está logado. Se não, redireciona para a página de login.
-    Esta lógica é crucial para a segurança e é feita antes de qualquer renderização do corpo da página.
---%>
 <c:if test="${empty sessionScope.usuarioLogado}">
     <c:redirect url="${pageContext.request.contextPath}/LoginServlet?message=session_expired"/>
 </c:if>
@@ -27,7 +22,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     
-    <!-- CSS Globais e do Layout (Apenas os corretos para o painel) -->
+    <!-- CSS Globais e do Layout -->
     <link rel="stylesheet" href="<%=request.getContextPath()%>/assets/css/menu.css">
     <link rel="stylesheet" href="<%=request.getContextPath()%>/assets/css/global.css">
     <link rel="stylesheet" href="<%=request.getContextPath()%>/assets/css/layout.css">
@@ -35,225 +30,15 @@
 <body class="nexacore-layout" data-app-context-path="<%=ctx%>" data-session-message="${sessionScope.mensagemSessao}">
 <div id="inlineMessageContainer"></div>
 
-    <%-- CONFIGURAÇÃO DE VARIÁVEIS DE PERMISSÃO ROBUSTA --%>
-    <c:set var="perfilLogado" value="${fn:toLowerCase(sessionScope.usuarioLogado.perfil)}" />
-    <c:set var="isSuperAdmin" value="${fn:contains(perfilLogado, 'super')}" />
-    <c:set var="isAdmin" value="${fn:contains(perfilLogado, 'admin')}" />
-    <c:set var="hasFullAccess" value="${isSuperAdmin or isAdmin}" />
-    <%-- Mantém como objeto de coleção/lista vindo da sessão --%>
-    <c:set var="listaModulos" value="${sessionScope.usuarioLogado.modulosPermitidos}" />
-    
-    <%-- Processamento seguro da lista de módulos com delimitadores de vírgula --%>
-    <% 
-        model.Usuario userLogado = (model.Usuario) session.getAttribute("usuarioLogado");
-        java.util.List<String> listaMod = (userLogado != null) ? userLogado.getModulosPermitidos() : null;
-        String modulosStr = "";
-        if (listaMod != null && !listaMod.isEmpty()) {
-            StringBuilder sb = new StringBuilder(",");
-            for (String m : listaMod) {
-                if (m != null) {
-                    sb.append(m.toLowerCase().trim()).append(",");
-                }
-            }
-            modulosStr = sb.toString();
-        }
-        request.setAttribute("modulosStr", modulosStr);
-    %>
-
-    <%-- Controle granular flexível (ajustado para corresponder exatamente às chaves) --%>
-    <c:set var="canSeeEquipamentos" value="${hasFullAccess or fn:contains(modulosStr, ',equipamento,') or fn:contains(modulosStr, ',equipamentos,')}" />
-    <c:set var="canSeeProdutos" value="${hasFullAccess or fn:contains(modulosStr, ',produto,') or fn:contains(modulosStr, ',produtos,')}" />
-    <c:set var="canSeeTransportadoras" value="${hasFullAccess or fn:contains(modulosStr, ',transportadora,') or fn:contains(modulosStr, ',transportadoras,')}" />
-    <c:set var="canSeeFornecedores" value="${hasFullAccess or fn:contains(modulosStr, ',fornecedor,') or fn:contains(modulosStr, ',fornecedores,')}" />
-    <%--<c:set var="canSeeMovimentacao" value="${hasFullAccess or fn:contains(modulosStr, ',movimentacao,')}" /> --%>
-    <%-- MOVIMENTAÇÕES (Aceita tanto envio quanto recebimento) --%>
-    <c:set var="canSeeMovimentacao" value="${hasFullAccess or fn:contains(modulosStr, ',movimentacao,') or fn:contains(modulosStr, ',movimentacoes,') or fn:contains(modulosStr, ',movimentacao_envio,') or fn:contains(modulosStr, ',movimentacao_recebimento,')}" />
-    <c:set var="canSeeManutencao" value="${hasFullAccess or fn:contains(modulosStr, ',manutencao,') or fn:contains(modulosStr, ',manutencao_chamados,')}" />
-    <c:set var="canSeeFabricantes" value="${hasFullAccess or fn:contains(modulosStr, ',fabricante,') or fn:contains(modulosStr, ',fabricantes,')}" />
-    <c:set var="canSeeMarcas" value="${hasFullAccess or fn:contains(modulosStr, ',marca,') or fn:contains(modulosStr, ',marcas,')}" />
-    <%--<c:set var="canSeeEmpresas" value="${hasFullAccess or fn:contains(modulosStr, ',empresa,') or fn:contains(modulosStr, ',filial,') or fn:contains(modulosStr, ',filiais,')}" /> --%>
-    <%--<c:set var="canSeeAtributos" value="${hasFullAccess or fn:contains(modulosStr, ',atributo,') or fn:contains(modulosStr, ',atributos,')}" />--%>
-    <c:set var="canSeeEmpresas" value="${isSuperAdmin}" />
-    <c:set var="canSeeAtributo" value="${isSuperAdmin}" /> 
-    <c:set var="canSeeAuditoria" value="${isSuperAdmin}" />  
-    <c:set var="canSeeSessoes" value="${isSuperAdmin}" /> 
-    <c:set var="canSeeUsuarios" value="${hasFullAccess or fn:contains(modulosStr, ',usuario,') or fn:contains(modulosStr, ',usuarios,')}" />
-     <c:set var="canSeeGerenciarUsuarios" value="${hasFullAccess or fn:contains(modulosStr, ',usuario,') or fn:contains(modulosStr, ',usuarios,')}" />
-     <%-- Variáveis granulares para ações de escrita (Inserir/Editar) --%>
-    <c:set var="canWriteEquipamentos" value="${hasFullAccess or usuarioLogado.temPermissao('equipamentos', 'INSERIR') or usuarioLogado.temPermissao('equipamentos', 'EDITAR')}" />
-    <c:set var="canWriteProdutos" value="${hasFullAccess or usuarioLogado.temPermissao('produtos', 'INSERIR') or usuarioLogado.temPermissao('produtos', 'EDITAR')}" />
-    <c:set var="canWriteManutencao" value="${hasFullAccess or usuarioLogado.temPermissao('manutencao_chamados', 'INSERIR') or usuarioLogado.temPermissao('manutencao_chamados', 'EDITAR')}" />
-     <c:set var="canWriteTransportadoras" value="${hasFullAccess or usuarioLogado.temPermissao('transportadoras', 'INSERIR') or usuarioLogado.temPermissao('transportadoras', 'EDITAR')}" />
-    
-   
-    <!-- SIDEBAR LATERAL ESQUERDA -->
-    <aside id="sidebar" class="nexacore-sidebar">
-        <div class="sidebar-brand">
-            <div class="logo-symbol">N</div>
-            <div class="logo-info">
-                <span class="logo-name">NEXACORE</span>
-                <span class="logo-sub">Sistema de Gestão</span>
-            </div>
-        </div>
-
-        <div class="sidebar-menu-container">
-            <span class="menu-category">PRINCIPAL</span>
-            <ul class="sidebar-menu">
-                <%-- Alterado de /jsp/menu.jsp para o Servlet correspondente --%>
-                <li><a href="<%=ctx%>/MenuServlet" class="active"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-            </ul>
-            
-            <%-- EQUIPAMENTOS --%>
-            <c:if test="${canSeeEquipamentos or canSeeProdutos}">
-                <span class="menu-category">EQUIPAMENTOS</span>
-                <ul class="sidebar-menu">
-                	<c:if test="${canSeeEquipamentos}">
-                        <li><a href="<%=ctx%>/ConsultaEquipamentosServlet"><i class="bi bi-cpu"></i> Consulta de Equipamentos</a></li>
-                        <c:if test="${canWriteEquipamentos}">
-                            <li><a href="<%=ctx%>/CadastrarEquipamentoServlet"><i class="bi bi-plus-circle"></i> Novo Equipamento</a></li>
-                        </c:if>
-                    </c:if>
-                    <c:if test="${canSeeProdutos}">
-                        <c:if test="${canWriteProdutos}">
-                            <li><a href="<%=ctx%>/ProdutoServlet"><i class="bi bi-plus-circle"></i> Novo Produto</a></li>                  
-                        </c:if>
-                        <li><a href="<%=ctx%>/ConsultaProdutoServlet"><i class="bi bi-box-seam"></i> Consulta de Produtos</a></li>                  
-                    </c:if>
-                </ul>
-            </c:if>
-            
-            <%-- TRANSPORTADORAS --%>
-            <c:if test="${canSeeTransportadoras}">
-                <span class="menu-category">TRASNPORTADORA</span>
-                <ul class="sidebar-menu">
-                    <%-- NOVO LINK DE TRANSPORTADORAS --%>
-		            <c:if test="${canSeeTransportadoras}">
-		                <li><a href="<%=ctx%>/TransportadoraServlet"><i class="bi bi-truck"></i> Transportadoras</a></li>
-		            </c:if>
-                    <li><a href="<%=ctx%>/ConsultaTransportadoraServlet"><i class="bi bi-list-check"></i> Consultar Transportadoras </a></li>
-                </ul>
-            </c:if>
-            
-            <%-- FORNECEDORES --%>
-            <c:if test="${canSeeFornecedores}">
-                <span class="menu-category">FORNECEDORES</span>
-                <ul class="sidebar-menu">
-                    <li><a href="<%=ctx%>/ConsultaFornecedorServlet"><i class="bi bi-shop"></i> Consulta de Fornecedores</a></li>
-                    <li><a href="<%=ctx%>/FornecedorServlet"><i class="bi bi-plus-circle"></i> Cadastrar Fornecedor</a></li>
-                </ul>
-            </c:if>
-
-            <%-- MOVIMENTAÇÕES --%>
-            <c:if test="${canSeeMovimentacao}">
-                <span class="menu-category">MOVIMENTAÇÕES</span>
-                <ul class="sidebar-menu">
-                    <li><a href="<%=ctx%>/EnvioEquipamentoServlet"><i class="bi bi-arrow-up-right-circle"></i> Envios</a></li>
-                    <li><a href="<%=ctx%>/ConsultaEnvioServlet"><i class="bi bi-search"></i> Consulta de Envios</a></li>
-                    <li><a href="<%=ctx%>/DevolucaoEquipamentoServlet"><i class="bi bi-arrow-return-left"></i> Devolução de Equipamento</a></li>
-                    <li><a href="<%=ctx%>/RecebimentoServlet"><i class="bi bi-arrow-down-left-circle"></i> Recebimentos/Devoluções</a></li>
-                </ul>
-            </c:if>
-
-            <%-- MANUTENÇÕES --%>
-            <c:if test="${canSeeManutencao}">
-                <span class="menu-category">MANUTENÇÕES</span>
-                <ul class="sidebar-menu">
-                    <c:if test="${canWriteManutencao}">
-                        <li><a href="<%=ctx%>/ManutencaoServlet"><i class="bi bi-tools"></i> Abrir Chamado</a></li>
-                    </c:if>
-                    <li><a href="<%=ctx%>/ConsultaChamadosServlet"><i class="bi bi-list-check"></i> Consulta de Chamados</a></li>
-                </ul>
-            </c:if>
-
-            <%-- CADASTROS E GERENCIAMENTOS--%>
-            <c:if test="${canSeeFabricantes or canSeeMarcas or canSeeEmpresas or canSeeAtributos or canSeeUsuarios or canSeeGerenciarUsuarios}">
-                <span class="menu-category">CADASTROS</span>
-                <ul class="sidebar-menu">           	
-                    <c:if test="${canSeeFabricantes}">
-                        <li><a href="<%=ctx%>/FabricanteServlet"><i class="bi bi-building"></i> Fabricantes</a></li>
-                    </c:if>
-                    <c:if test="${canSeeMarcas}">
-                        <li><a href="<%=ctx%>/MarcaServlet"><i class="bi bi-tag"></i> Marcas</a></li>
-                    </c:if>
-                    <c:if test="${canSeeEmpresas}">
-                        <li><a href="<%=ctx%>/CadastrarEmpresaServlet"><i class="bi bi-grid"></i> Empresas</a></li>
-                    </c:if>
-                    <c:if test="${canSeeAtributo}">
-                        <li><a href="<%=ctx%>/AtributoServlet"><i class="bi bi-list-nested"></i> Atributos</a></li>
-                    </c:if>
-                    <c:if test="${canSeeUsuarios}">
-                        <li><a href="<%=ctx%>/CadastrarUsuarioServlet"><i class="bi bi-people"></i> Usuários</a></li>
-                    </c:if>
-                    <c:if test="${canSeeGerenciarUsuarios}">
-                        <li><a href="<%=ctx%>/GerenciarUsuariosServlet"><i class="bi bi-people"></i>Gerenciar Usuários</a></li>
-                    </c:if>
-                </ul>
-            </c:if>
-            
-            <%-- AUDITORIA --%>
-             <c:if test="${canSeeAuditoria}">
-             <span class="menu-category">AUDITORIA</span>
-                <ul class="sidebar-menu">
-                	<c:if test="${canSeeAuditoria}">
-                        <li><a href="<%=ctx%>/AuditoriaServlet"><i class="bi bi-cpu"></i> Consulta Auditoria</a></li>
-                    </c:if>  
-                </ul>       
-            </c:if>
-            
-            <%-- SEÇÃO DE GERENCIAMENTO DE SESSÕES (Visível apenas para Administradores) --%>
-             <c:if test="${canSeeSessoes}">
-             <span class="menu-category">GERENCIAR SESSÕES</span>
-              <ul class="sidebar-menu">
-                <c:if test="${canSeeSessoes}">
-                  <li><a href="<%=ctx%>/AdminSessoesServlet"><i class="bi bi-cpu"></i> GERENCIAR SESSÕES </a></li>
-                 </c:if>  
-              </ul>       
-            </c:if>
-             
-            <span class="menu-category">CONFIGURAÇÕES</span>
-            <ul class="sidebar-menu">
-                <li><a href="<%=ctx%>/ConfiguracoesServlet"><i class="bi bi-gear"></i> Configurações</a></li>
-            </ul>
-        </div>
-
-        <!-- USER FOOTER NA SIDEBAR -->
-        <div class="sidebar-user-footer">
-            <div class="user-avatar"><%= nomeUsuario.substring(0, Math.min(nomeUsuario.length(), 2)).toUpperCase() %></div>
-            <div class="user-details">
-                <span class="user-name"><%= nomeUsuario %></span>
-                <span class="user-branch">Filial: <%= unidadeAtiva %></span>
-            </div>
-            <a href="<%=ctx%>/LogoutServlet" class="user-logout-icon" title="Sair"><i class="bi bi-box-arrow-right"></i></a>
-        </div>
-    </aside>
+    <!-- 1. INCLUI A SIDEBAR MODULARIZADA -->
+    <jsp:include page="/WEB-INF/jsp/layout/sidebar.jsp" />
 
     <!-- CONTEÚDO PRINCIPAL -->
     <main id="main-content" class="nexacore-main">
-        <!-- TOPBAR -->
-        <header class="nexacore-topbar">
-            <button id="sidebarToggle" class="btn-toggle"><i class="bi bi-list"></i></button>
-            <div class="topbar-right">
-                <div class="topbar-icon-badge" title="Notificações">
-                    <i class="bi bi-bell"></i>
-                    <span class="badge-count">3</span>
-                </div>
-                <div class="topbar-icon-badge" title="Ajuda">
-                    <i class="bi bi-question-circle"></i>
-                </div>
-                <div class="topbar-branch-selector d-flex align-items-center">
-                    <i class="bi bi-building-check me-1"></i>
-                    <span class="me-2">Filial Atual:</span>
-				                   <select id="selectUnidadeAtiva" class="form-select form-select-sm w-auto d-inline-block">
-				   <c:forEach var="unidade" items="${sessionScope.usuarioLogado.unidadesPermitidasObjetos}">
-				       <%-- Alterado de unidade.codigo para unidade.id --%>
-				       <option value="${unidade.id}" ${unidade.id == sessionScope.usuarioLogado.unidadeAtivaId ? 'selected' : ''}>
-				           ${unidade.nome}
-				       </option>
-				   </c:forEach>
-				</select>
-				                </div>
-            </div>
-        </header>
+        
+        <!-- 2. INCLUI A TOPBAR MODULARIZADA -->
+        <jsp:include page="/WEB-INF/jsp/layout/topbar.jsp" />
+
         <!-- DASHBOARD CONTAINER -->
         <div class="dashboard-container container-fluid p-4">
             <div class="row mb-4">
@@ -296,9 +81,7 @@
 					<div class="stat-icon bg-yellow-light text-warning"><i class="bi bi-tools"></i></div>
 						<div class="stat-info">
 						<span class="stat-label">Em Manutenção</span>
-						<!-- Exibe a quantidade dinâmica enviada pelo Servlet -->
 						<h3 class="stat-value">${empty totalEmManutencao ? 0 : totalEmManutencao}</h3>
-						<!-- Redireciona ao clicar para a tela de Consulta de Chamados -->
 						<a href="<%=ctx%>/ConsultaChamadosServlet" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
 						</div>
 					</div>
@@ -309,7 +92,6 @@
 							<div class="stat-info">
 							<span class="stat-label">Total Em Trânsito</span>
 							<h3 class="stat-value">${empty totalEmTransito ? 0 : totalEmTransito}</h3>
-							<!-- Redireciona ao clicar para a tela de Consulta de Envio -->
 							<a href="<%=ctx%>/ConsultaEnvioServlet" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
                         </div>
                     </div>
@@ -320,7 +102,6 @@
 				        <div class="stat-info">
 				            <span class="stat-label">Recebidos Hoje</span>
 				            <h3 class="stat-value">${empty totalRecebidosHoje ? 0 : totalRecebidosHoje}</h3>
-				            <!-- Redireciona para a tela de recebimento/consulta -->
 				            <a href="<%=ctx%>/ConsultaEnvioServlet" class="stat-link">Ver detalhes <i class="bi bi-chevron-right"></i></a>
 				        </div>
 				    </div>
@@ -329,7 +110,6 @@
 
             <!-- ACESSO RÁPIDO E AVISOS -->
             <div class="row g-4 mb-4">
-                <!-- Acesso Rápido -->
                 <div class="col-lg-8">
                     <div class="card-section p-4 h-100">
                         <h5 class="fw-bold mb-3">Acesso Rápido</h5>
@@ -394,59 +174,50 @@
                     </div>
                 </div>
 					
-			<!-- Avisos e Pendências Dinâmicos -->
-			<div class="col-lg-4">
-			    <div class="card-section p-4 h-100">
-			        <div class="d-flex justify-content-between align-items-center mb-3">
-			            <h5 class="fw-bold mb-0">Avisos e Pendências</h5>
-			            <a href="#" class="small text-decoration-none">Ver todos</a>
-			        </div>
-			        <ul class="list-unstyled notification-list mb-0">
-			            
-			            <!-- Item 1: Equipamentos em Manutenção -->
-			            <li class="notification-item">
-			                <i class="bi bi-tools text-warning"></i>
-			                <div>
-			                    <strong>${empty totalEquipamentosManutencao ? 0 : totalEquipamentosManutencao} equipamentos em manutenção</strong>
-			                    <span>Aguardando atendimento ou finalização</span>
-			                </div>
-			            </li>
-			            
-			            <!-- Item 2: Aguardando Recebimento -->
-			            <li class="notification-item">
-			                <i class="bi bi-truck text-info"></i>
-			                <div>
-			                    <strong>${empty totalAguardandoRecebimento ? 0 : totalAguardandoRecebimento} movimentações aguardando recebimento</strong>
-			                    <span>Verifique e confirme os recebimentos pendentes</span>
-			                </div>
-			            </li>
-			            
-			            <!-- Item 3: Em Trânsito -->
-			            <li class="notification-item">
-			                <i class="bi bi-info-circle text-primary"></i>
-			                <div>
-			                    <strong>${empty totalEmTransito ? 0 : totalEmTransito} equipamentos em trânsito</strong>
-			                    <span>Acompanhe os envios em andamento</span>
-			                </div>
-			            </li>
-			            
-			            <!-- Item 4: Manutenções Vencidas -->
-			            <li class="notification-item">
-			                <i class="bi bi-calendar-x text-danger"></i>
-			                <div>
-			                    <strong>${empty totalChamadosVencidos ? 0 :totalChamadosVencidos} manutenções vencidas</strong>
-			                    <span>Chamados com prazo ultrapassado</span>
-			                </div>
-			            </li>
-			            
-			        </ul>
-			    </div>
-			</div>	
+				<!-- Avisos e Pendências Dinâmicos -->
+				<div class="col-lg-4">
+				    <div class="card-section p-4 h-100">
+				        <div class="d-flex justify-content-between align-items-center mb-3">
+				            <h5 class="fw-bold mb-0">Avisos e Pendências</h5>
+				            <a href="#" class="small text-decoration-none">Ver todos</a>
+				        </div>
+				        <ul class="list-unstyled notification-list mb-0">
+				            <li class="notification-item">
+				                <i class="bi bi-tools text-warning"></i>
+				                <div>
+				                    <strong>${empty totalEquipamentosManutencao ? 0 : totalEquipamentosManutencao} equipamentos em manutenção</strong>
+				                    <span>Aguardando atendimento ou finalização</span>
+				                </div>
+				            </li>
+				            <li class="notification-item">
+				                <i class="bi bi-truck text-info"></i>
+				                <div>
+				                    <strong>${empty totalAguardandoRecebimento ? 0 : totalAguardandoRecebimento} movimentações aguardando recebimento</strong>
+				                    <span>Verifique e confirme os recebimentos pendentes</span>
+				                </div>
+				            </li>
+				            <li class="notification-item">
+				                <i class="bi bi-info-circle text-primary"></i>
+				                <div>
+				                    <strong>${empty totalEmTransito ? 0 : totalEmTransito} equipamentos em trânsito</strong>
+				                    <span>Acompanhe os envios em andamento</span>
+				                </div>
+				            </li>
+				            <li class="notification-item">
+				                <i class="bi bi-calendar-x text-danger"></i>
+				                <div>
+				                    <strong>${empty totalChamadosVencidos ? 0 : totalChamadosVencidos} manutenções vencidas</strong>
+				                    <span>Chamados com prazo ultrapassado</span>
+				                </div>
+				            </li>
+				        </ul>
+				    </div>
+				</div>
+            </div>
 
             <!-- TABELAS RECENTES -->
-            <div class="row g-4">
-                 <!-- Chamados Abertos -->
-                <!-- Equipamentos em Manutenção (Card da Esquerda) -->
+            <div class="row g-4 mb-4">
+                <!-- Equipamentos em Manutenção -->
                 <div class="col-lg-6">
                     <div class="card-section p-4 h-100">
                        <div class="d-flex justify-content-between align-items-center mb-3">
@@ -477,11 +248,9 @@
                                             <c:forEach var="equip" items="${listaEquipamentosEmManutencao}">
                                                 <tr>
                                                     <td><strong class="text-danger">EQ-${equip.idEquipamento}</strong></td>
-                                                    <td><span class="text-truncate-custom" title="${equip.patrimonio }"> ${empty equip.patrimonio ? '-' : equip.patrimonio}</span></td>
+                                                    <td><span class="text-truncate-custom" title="${equip.patrimonio}"> ${empty equip.patrimonio ? '-' : equip.patrimonio}</span></td>
                                                     <td><span class="text-truncate-custom" title="${equip.nomeProduto}">${equip.nomeProduto}</span></td>
-                                                    <td>
-                                                       <span class="badge bg-danger-subtle text-danger px-2 py-1">Pendente Chamado</span>
-                                                    </td>
+                                                    <td><span class="badge bg-danger-subtle text-danger px-2 py-1">Pendente Chamado</span></td>
                                                     <td class="text-center">
                                                         <a href="<%=ctx%>/ManutencaoServlet" class="btn btn-sm btn-outline-danger" title="Abrir Chamado Agora">
                                                             <i class="bi bi-tools"></i>
@@ -501,6 +270,7 @@
                         </div>
                     </div>
                 </div>
+
                 <!-- Chamados Abertos -->
                 <div class="col-lg-6"> 
                     <div class="card-section p-4 h-100">
@@ -514,7 +284,7 @@
                                     <tr>
                                         <th>ID Chamado</th>
                                         <th>Status</th>
-                                        <th class="text-center">Vizualizar</th>
+                                        <th class="text-center">Visualizar</th>
                                         <th>Equipamento</th>
                                         <th>Problema</th>
                                         <th>Abertura</th>                 
@@ -550,15 +320,15 @@
                                                             <i class="bi bi-eye"></i>
                                                         </button>
                                                     </td>
-                                                    <td> <span class="text-truncate-custom" title="${chamado.nomeEquipamento}"> ${chamado.nomeEquipamento}</span> </td>                                         			     
-                                                    <td><span class="text-truncate-custom" title="${chamado.tipoProblema}">${chamado.tipoProblema}</span> </td>                                            
+                                                    <td><span class="text-truncate-custom" title="${chamado.nomeEquipamento}">${chamado.nomeEquipamento}</span></td>                                         			     
+                                                    <td><span class="text-truncate-custom" title="${chamado.tipoProblema}">${chamado.tipoProblema}</span></td>                                            
                                                     <td class="data-formatavel">${chamado.dataAbertura}</td>                      
                                                 </tr>
                                             </c:forEach>
                                         </c:when>
                                         <c:otherwise>
                                             <tr>
-                                                <td colspan="5" class="text-center text-muted py-3">Nenhum chamado aberto no momento.</td>
+                                                <td colspan="6" class="text-center text-muted py-3">Nenhum chamado aberto no momento.</td>
                                             </tr>
                                         </c:otherwise>
                                     </c:choose>
@@ -567,9 +337,12 @@
                         </div>
                     </div>
                 </div>
-               
+            </div>
+
+            <!-- SEGUNDA LINHA DE TABELAS RECENTES -->
+            <div class="row g-4">
                 <!-- Movimentações Recentes -->
-				<div class="col-lg-6">
+				<div class="col-12">
 				    <div class="card-section p-4 h-100">
 				        <div class="d-flex justify-content-between align-items-center mb-3">
 				            <h5 class="fw-bold mb-0">Movimentações Recentes</h5>
@@ -615,91 +388,87 @@
 				    </div>
 				</div>            
             </div>
-              
-             <!-- MODAL DE GERENCIAR/VISUALIZAR CHAMADO -->
-           <div class="modal fade" id="modalGerenciarChamado" tabindex="-1" aria-hidden="true">
-               <div class="modal-dialog modal-lg modal-dialog-centered">
-                   <div class="modal-content">
-                       <div class="modal-header bg-primary text-white">
-                           <h5 class="modal-title"><i class="bi bi-tools me-2"></i> Gerenciar Chamado de Manutenção</h5>
-                           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                       </div>
-                       <div class="modal-body">
-                           <div class="row mb-3">
-                               <div class="col-md-4">
-                                   <strong>Equipamento:</strong>
-                                   <p id="modalEquipamento" class="text-muted mb-0">-</p>
-                               </div>
-                               <div class="col-md-4">
-                                   <strong>Solicitante:</strong>
-                                   <p id="modalSolicitante" class="text-muted mb-0">-</p>
-                               </div>
-                               <div class="col-md-4">
-                                   <strong>Data Abertura:</strong>
-                                   <p id="modalDataAbertura" class="text-muted mb-0">-</p>
-                               </div>
-                           </div>
-                           <div class="mb-3">
-                               <strong>Descrição do Problema Relatado:</strong>
-                               <textarea id="modalDescricao" class="form-control bg-light" rows="2" readonly></textarea>
-                           </div>
-                           <div class="row mb-3">
-                               <div class="col-md-6">
-                                   <label class="form-label"><strong>Status Atual do Chamado *</strong></label>
-                                   <input type="text" id="modalStatus" class="form-control" readonly />
-                               </div>
-                               <div class="col-md-6">
-                                   <label class="form-label"><strong>Técnico Responsável</strong></label>
-                                   <input type="text" id="modalTecnico" class="form-control" readonly />
-                               </div>
-                           </div>
-                           <div class="row mb-3">
-                               <div class="col-md-6">
-                                   <label class="form-label"><strong>Diagnóstico Técnico</strong></label>
-                                   <textarea id="modalDiagnostico" class="form-control" rows="3" readonly></textarea>
-                               </div>
-                               <div class="col-md-6">
-                                   <label class="form-label"><strong>Solução Realizada</strong></label>
-                                   <textarea id="modalSolucao" class="form-control" rows="3" readonly></textarea>
-                               </div>
-                           </div>
-                       </div>
-                       <div class="modal-footer">
-                           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                       </div>
-                   </div>
-               </div>
-           </div>       
-            <!-- ==========================================================
-         	NEXACORE - MODAL SERVICE (Modais Globais)
-		   ========================================================== -->
-		   <div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-		       <div class="modal-dialog modal-dialog-centered">
-		           <div class="modal-content-custom" id="alertBox">
-		               <h3 id="alertTitle"></h3>
-		               <p id="alertMessage"></p>
-		               <div class="modal-buttons">
-		                   <button type="button" class="btn-confirmar" id="alertOkBtn">OK</button>
-		               </div>
-		           </div>
-		       </div>
-		   </div>
-          <!-- RODAPÉ DINÂMICO UNIFICADO -->
-          <jsp:include page="/WEB-INF/jsp/layout/footer.jsp" />
+
         </div>
+
+        <!-- 3. INCLUI O RODAPÉ MODULARIZADO -->
+        <jsp:include page="/WEB-INF/jsp/layout/footer.jsp" />
     </main>
 	
-	<!-- Corrigido para incluir /assets/ -->
+    <!-- MODAL DE GERENCIAR/VISUALIZAR CHAMADO -->
+    <div class="modal fade" id="modalGerenciarChamado" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-tools me-2"></i> Gerenciar Chamado de Manutenção</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <strong>Equipamento:</strong>
+                            <p id="modalEquipamento" class="text-muted mb-0">-</p>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Solicitante:</strong>
+                            <p id="modalSolicitante" class="text-muted mb-0">-</p>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Data Abertura:</strong>
+                            <p id="modalDataAbertura" class="text-muted mb-0">-</p>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Descrição do Problema Relatado:</strong>
+                        <textarea id="modalDescricao" class="form-control bg-light" rows="2" readonly></textarea>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Status Atual do Chamado *</strong></label>
+                            <input type="text" id="modalStatus" class="form-control" readonly />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Técnico Responsável</strong></label>
+                            <input type="text" id="modalTecnico" class="form-control" readonly />
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Diagnóstico Técnico</strong></label>
+                            <textarea id="modalDiagnostico" class="form-control" rows="3" readonly></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Solução Realizada</strong></label>
+                            <textarea id="modalSolucao" class="form-control" rows="3" readonly></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ALERTA GLOBAL -->
+    <div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content-custom" id="alertBox">
+                <h3 id="alertTitle"></h3>
+                <p id="alertMessage"></p>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-confirmar" id="alertOkBtn">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
     <script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
-    <!-- Scripts Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- Script Externo -->
     <script src="<%=ctx%>/assets/js/menu.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
     
 </body>
 </html>
-
-        

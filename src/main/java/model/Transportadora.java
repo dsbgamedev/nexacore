@@ -45,7 +45,24 @@ public class Transportadora {
     public List<TransportadoraEndereco> getEnderecos() { return enderecos; }
     public void setEnderecos(List<TransportadoraEndereco> enderecos) { this.enderecos = enderecos; }
    // Método auxiliar para a View (JSP)
-    public String getStatusBadgeClass() {if ("ATIVA".equalsIgnoreCase(this.status)) 
-    {return "bg-success";}return "bg-secondary";}
+   //  public String getStatusBadgeClass() {if ("ATIVA".equalsIgnoreCase(this.status)) 
+   // {return "bg-success";}return "bg-secondary";}
+   // Métodos auxiliares para a View (JSP / Expression Language)
+    public Long getId() {
+        return this.idTransportadora;
+    }
+
+    public String getNome() {
+        return (this.nomeFantasia != null && !this.nomeFantasia.trim().isEmpty()) 
+               ? this.nomeFantasia 
+               : this.razaoSocial;
+    }
+
+    public String getStatusBadgeClass() {
+        if ("ATIVA".equalsIgnoreCase(this.status)) {
+            return "bg-success";
+        }
+        return "bg-secondary";
+    }
     
 }

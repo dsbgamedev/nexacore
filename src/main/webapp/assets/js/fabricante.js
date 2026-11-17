@@ -37,13 +37,18 @@ document.addEventListener("DOMContentLoaded", function() {
 
     let listaGlobalFabricantes = [];
 
+    // Configurações de Paginação (Limitado a 4 por página)
+    let paginaAtual = 1;
+    const itensPorPagina = 15;
+    let listaFiltradaAtual = [];
+
     carregarFabricantes();
 
     btnNovo.addEventListener("click", () => abrirFormulario());
     btnVoltar.addEventListener("click", (e) => { e.preventDefault(); fecharFormulario(); });
     linkVoltarBreadcrumb.addEventListener("click", (e) => { e.preventDefault(); fecharFormulario(); });
 	
-	// --- ORDENAÇÃO POR COLUNAS AO CLICAR NO CABEÇALHO ---
+    // --- ORDENAÇÃO POR COLUNAS AO CLICAR NO CABEÇALHO ---
     let colunaAtualOrdenacao = "";
     let ordemAscendente = true;
 
@@ -97,24 +102,19 @@ document.addEventListener("DOMContentLoaded", function() {
             return 0;
         });
 
-        renderizarTabela(filtrados);
+        paginaAtual = 1;
+        renderizarTabelaComPaginacao(filtrados);
     }
 
-	// Habilitar a tecla Enter para navegar entre os campos (comportamento de Tab)
+    // Habilitar a tecla Enter para navegar entre os campos
     const inputsFormulario = viewFormulario.querySelectorAll("input, select, textarea");
-    
     inputsFormulario.forEach((el, index) => {
         el.addEventListener("keydown", function(e) {
             if (e.key === "Enter") {
-                // Previne o comportamento padrão (como submeter o formulário sem querer)
                 e.preventDefault(); 
-                
-                // Pega o próximo elemento focável no formulário
                 const proximoElemento = inputsFormulario[index + 1];
-                
                 if (proximoElemento) {
                     proximoElemento.focus();
-                    // Se for um input de texto, seleciona o conteúdo para facilitar a digitação
                     if (proximoElemento.tagName === "INPUT" && proximoElemento.type === "text") {
                         proximoElemento.select();
                     }
@@ -138,53 +138,41 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 
-	// --- MÁSCARA E BUSCA AUTOMÁTICA DE CEP ---
-	    inputCep.addEventListener("input", function(e) {
-	        let valor = e.target.value.replace(/\D/g, '');
-	        
-	        if (valor.length > 8) {
-	            valor = valor.slice(0, 8);
-	        }
+    // Máscara e busca de CEP
+    inputCep.addEventListener("input", function(e) {
+        let valor = e.target.value.replace(/\D/g, '');
+        if (valor.length > 8) valor = valor.slice(0, 8);
+        if (valor.length > 5) {
+            e.target.value = valor.replace(/^(\d{5})(\d{1,3})$/, "$1-$2");
+        } else {
+            e.target.value = valor;
+        }
+        if (valor.length === 8) buscarCepViaApi(valor);
+    });
 
-	        // Aplica a máscara 00000-000
-	        if (valor.length > 5) {
-	            e.target.value = valor.replace(/^(\d{5})(\d{1,3})$/, "$1-$2");
-	        } else {
-	            e.target.value = valor;
-	        }
+    inputCep.addEventListener("blur", function() {
+        let cep = inputCep.value.replace(/\D/g, '');
+        if (cep.length === 8) buscarCepViaApi(cep);
+    });
 
-	        // Se completou os 8 dígitos, faz a consulta automaticamente na API do ViaCEP
-	        if (valor.length === 8) {
-	            buscarCepViaApi(valor);
-	        }
-	    });
-
-	    inputCep.addEventListener("blur", function() {
-	        let cep = inputCep.value.replace(/\D/g, '');
-	        if (cep.length === 8) {
-	            buscarCepViaApi(cep);
-	        }
-	    });
-
-	    async function buscarCepViaApi(cep) {
-	        try {
-	            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-	            const data = await response.json();
-	            
-	            if (!data.erro) {
-	                inputLogradouro.value = data.logradouro || "";
-	                inputBairro.value = data.bairro || "";
-	                inputCidade.value = data.localidade || "";
-	                inputEstado.value = data.uf || "";
-	                inputNumero.focus();
-	            } else {
-	                await ModalService.error("CEP não encontrado", "O CEP informado não foi localizado na base nacional.");
-	            }
-	        } catch (error) {
-	            console.error("Erro ao consultar CEP:", error);
-	            await ModalService.error("Erro de Conexão", "Não foi possível consultar o CEP no momento.");
-	        }
-	    }
+    async function buscarCepViaApi(cep) {
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            const data = await response.json();
+            if (!data.erro) {
+                inputLogradouro.value = data.logradouro || "";
+                inputBairro.value = data.bairro || "";
+                inputCidade.value = data.localidade || "";
+                inputEstado.value = data.uf || "";
+                inputNumero.focus();
+            } else {
+                await ModalService.error("CEP não encontrado", "O CEP informado não foi localizado na base nacional.");
+            }
+        } catch (error) {
+            console.error("Erro ao consultar CEP:", error);
+            await ModalService.error("Erro de Conexão", "Não foi possível consultar o CEP no momento.");
+        }
+    }
 
     function abrirFormulario(fab = null) {
         viewListagem.style.display = "none";
@@ -230,11 +218,8 @@ document.addEventListener("DOMContentLoaded", function() {
     function fecharFormulario() {
         viewFormulario.style.display = "none";
         viewListagem.style.display = "block";
-        
-        // Limpa os filtros ao retornar para a listagem
         filtroNome.value = "";
-        filtroSituacao.value = "";
-        
+        filtroSituacao.value = "true"; // Mantém o comportamento original do select
         carregarFabricantes();
     }
 
@@ -242,27 +227,40 @@ document.addEventListener("DOMContentLoaded", function() {
         try {
             const response = await fetch('/nexacore/api/fabricantes/listar');
             listaGlobalFabricantes = await response.json();
-            
-            // Inicia a tabela vazia aguardando o usuário pesquisar ou selecionar
-            //tabelaCorpo.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Utilize os filtros acima para realizar uma pesquisa.</td></tr>`;
-            //contadorRegistros.textContent = `0 registro(s) encontrado(s)`;
-			realizarPesquisa();
+            realizarPesquisa();
         } catch (error) {
             console.error("Erro ao carregar fabricantes:", error);
             ModalService.error("Erro", "Não foi possível carregar a lista de fabricantes.");
         }
     }
 
-    function renderizarTabela(dados) {
-        tabelaCorpo.innerHTML = "";
-        contadorRegistros.textContent = `${dados.length} registro(s) encontrado(s)`;
+    function renderizarTabelaComPaginacao(dados) {
+        listaFiltradaAtual = dados;
+        const totalRegistros = dados.length;
+        contadorRegistros.textContent = `${totalRegistros} registro(s) encontrado(s)`;
 
-        if (dados.length === 0) {
+        if (totalRegistros === 0) {
             tabelaCorpo.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Nenhum registro encontrado.</td></tr>`;
+            document.getElementById("paginacao-container").innerHTML = "";
+            const infoPaginacao = document.getElementById("contador-paginacao-info");
+            if(infoPaginacao) infoPaginacao.textContent = "Nenhum registro";
             return;
         }
 
-		dados.forEach(f => {
+        const totalPaginas = Math.ceil(totalRegistros / itensPorPagina);
+        if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
+        const inicio = (paginaAtual - 1) * itensPorPagina;
+        const fim = Math.min(inicio + itensPorPagina, totalRegistros);
+        const itensPagina = dados.slice(inicio, fim);
+
+        const infoPaginacao = document.getElementById("contador-paginacao-info");
+        if(infoPaginacao) {
+            infoPaginacao.textContent = `Mostrando de ${inicio + 1} até ${fim} de ${totalRegistros} registros`;
+        }
+
+        tabelaCorpo.innerHTML = "";
+        itensPagina.forEach(f => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td>${f.idFabricante}</td>
@@ -282,6 +280,83 @@ document.addEventListener("DOMContentLoaded", function() {
             tabelaCorpo.appendChild(tr);
         });
 
+        vincularEventosBotoesTabela();
+        renderizarControlesPaginacao(totalPaginas);
+    }
+
+    function renderizarControlesPaginacao(totalPaginas) {
+        const container = document.getElementById("paginacao-container");
+        if(!container) return;
+        container.innerHTML = "";
+
+        if (totalPaginas <= 1) return;
+
+        // Botão Primeira
+        const liPrimeira = document.createElement("li");
+        liPrimeira.className = `page-item ${paginaAtual === 1 ? 'disabled' : ''}`;
+        liPrimeira.innerHTML = `<a class="page-link" href="#">&laquo;&laquo; Primeira</a>`;
+        liPrimeira.onclick = (e) => { e.preventDefault(); if(paginaAtual > 1) { paginaAtual = 1; renderizarTabelaComPaginacao(listaFiltradaAtual); } };
+        container.appendChild(liPrimeira);
+
+        // Botão Anterior
+        const liAnterior = document.createElement("li");
+        liAnterior.className = `page-item ${paginaAtual === 1 ? 'disabled' : ''}`;
+        liAnterior.innerHTML = `<a class="page-link" href="#">Anterior</a>`;
+        liAnterior.onclick = (e) => { e.preventDefault(); if(paginaAtual > 1) { paginaAtual--; renderizarTabelaComPaginacao(listaFiltradaAtual); } };
+        container.appendChild(liAnterior);
+
+        let inicioPag = Math.max(1, paginaAtual - 2);
+        let fimPag = Math.min(totalPaginas, paginaAtual + 2);
+
+        if (inicioPag > 1) {
+            container.appendChild(criarBotaoPagina(1));
+            if (inicioPag > 2) container.appendChild(criarBotaoElipses());
+        }
+
+        for (let i = inicioPag; i <= fimPag; i++) {
+            container.appendChild(criarBotaoPagina(i));
+        }
+
+        if (fimPag < totalPaginas) {
+            if (fimPag < totalPaginas - 1) container.appendChild(criarBotaoElipses());
+            container.appendChild(criarBotaoPagina(totalPaginas));
+        }
+
+        // Botão Próximo
+        const liProximo = document.createElement("li");
+        liProximo.className = `page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}`;
+        liProximo.innerHTML = `<a class="page-link" href="#">Próximo</a>`;
+        liProximo.onclick = (e) => { e.preventDefault(); if(paginaAtual < totalPaginas) { paginaAtual++; renderizarTabelaComPaginacao(listaFiltradaAtual); } };
+        container.appendChild(liProximo);
+
+        // Botão Última
+        const liUltima = document.createElement("li");
+        liUltima.className = `page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}`;
+        liUltima.innerHTML = `<a class="page-link" href="#">Última &raquo;&raquo;</a>`;
+        liUltima.onclick = (e) => { e.preventDefault(); if(paginaAtual < totalPaginas) { paginaAtual = totalPaginas; renderizarTabelaComPaginacao(listaFiltradaAtual); } };
+        container.appendChild(liUltima);
+    }
+
+    function criarBotaoPagina(num) {
+        const li = document.createElement("li");
+        li.className = `page-item ${paginaAtual === num ? 'active' : ''}`;
+        li.innerHTML = `<a class="page-link" href="#">${num}</a>`;
+        li.onclick = (e) => {
+            e.preventDefault();
+            paginaAtual = num;
+            renderizarTabelaComPaginacao(listaFiltradaAtual);
+        };
+        return li;
+    }
+
+    function criarBotaoElipses() {
+        const li = document.createElement("li");
+        li.className = "page-item disabled";
+        li.innerHTML = `<a class="page-link" href="#">...</a>`;
+        return li;
+    }
+
+    function vincularEventosBotoesTabela() {
         document.querySelectorAll('.btn-detalhes').forEach(btn => {
             btn.addEventListener('click', function() {
                 const id = parseInt(this.getAttribute('data-id'));
@@ -331,31 +406,25 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     function realizarPesquisa() {
+        paginaAtual = 1;
         const termo = filtroNome.value.toLowerCase().trim();
         const termoSituacao = filtroSituacao.value;
-
-        // Só bloqueia e limpa a tabela se AMBOS os campos estiverem vazios/não selecionados
-        if (termoSituacao === "" && termo === "") {
-            tabelaCorpo.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Utilize os filtros acima para realizar uma pesquisa.</td></tr>`;
-            contadorRegistros.textContent = `0 registro(s) encontrado(s)`;
-            return;
-        }
 
         const filtrados = listaGlobalFabricantes.filter(f => {
             const matchNome = termo === "" || f.razaoSocial.toLowerCase().includes(termo) || (f.cnpj && f.cnpj.toLowerCase().includes(termo));
             
-            // Se o select estiver em "Selecione..." ("") ou "Todos" ("todos"), não restringe a situação
             let matchSit = true;
             if (termoSituacao === "true") {
                 matchSit = f.ativo === true;
             } else if (termoSituacao === "false") {
                 matchSit = f.ativo === false;
             }
+            // Se for "todos" ou "" (vazio), exibe tudo sem filtrar situação
 
             return matchNome && matchSit;
         });
 
-        renderizarTabela(filtrados);
+        renderizarTabelaComPaginacao(filtrados);
     }
 
     btnPesquisar.addEventListener("click", realizarPesquisa);
@@ -372,9 +441,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
     btnLimparFiltros.addEventListener("click", () => {
         filtroNome.value = "";
-        filtroSituacao.value = ""; 
-        tabelaCorpo.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Utilize os filtros acima para realizar uma pesquisa.</td></tr>`;
-        contadorRegistros.textContent = `0 registro(s) encontrado(s)`;
+        filtroSituacao.value = "true"; 
+        realizarPesquisa();
     });
 
     btnSalvar.addEventListener("click", () => executarSalvar(false));

@@ -195,6 +195,65 @@ public class TransportadoraDAO {
     }
     
     /**
+     * Busca transportadoras por termo para o Autocomplete da tela de Fretes.
+     */
+    public List<Transportadora> listarItens(String status, int offset, int limite, String termo, String orderBy, String orderDir) throws SQLException {
+        List<Transportadora> lista = new ArrayList<>();
+        StringBuilder sql = new StringBuilder("SELECT id_transportadora, razao_social, nome_fantasia, cnpj, status FROM transportadoras WHERE 1=1");
+        List<Object> parametros = new ArrayList<>();
+
+        if (termo != null && !termo.trim().isEmpty()) {
+            // Busca flexível por Razão Social, Nome Fantasia ou CNPJ (removendo formatação)
+            sql.append(" AND (LOWER(razao_social) LIKE ? OR LOWER(nome_fantasia) LIKE ? OR REGEXP_REPLACE(cnpj, '[^0-9]', '', 'g') LIKE ?)");
+            String termoLike = "%" + termo.toLowerCase().trim() + "%";
+            String termoLimpo = "%" + termo.replaceAll("\\D", "") + "%";
+            
+            parametros.add(termoLike);
+            parametros.add(termoLike);
+            parametros.add(termoLimpo);
+        }
+
+        if (status != null && !status.trim().isEmpty()) {
+            sql.append(" AND status = ?");
+            parametros.add(status);
+        }
+
+        // Ordenação segura
+        String coluna = "razao_social";
+        if ("nome".equalsIgnoreCase(orderBy) || "razaoSocial".equalsIgnoreCase(orderBy)) {
+            coluna = "razao_social";
+        }
+        String direcao = ("DESC".equalsIgnoreCase(orderDir)) ? "DESC" : "ASC";
+        
+        sql.append(" ORDER BY ").append(coluna).append(" ").append(direcao);
+        sql.append(" LIMIT ? OFFSET ?");
+        
+        parametros.add(limite);
+        parametros.add(offset);
+
+        try (Connection conn = Conexao.conectar();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            
+            for (int i = 0; i < parametros.size(); i++) {
+                ps.setObject(i + 1, parametros.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Transportadora t = new Transportadora();
+                    t.setIdTransportadora(rs.getLong("id_transportadora"));
+                    t.setRazaoSocial(rs.getString("razao_social"));
+                    t.setNomeFantasia(rs.getString("nome_fantasia"));
+                    t.setCnpj(rs.getString("cnpj"));
+                    t.setStatus(rs.getString("status"));
+                    lista.add(t);
+                }
+            }
+        }
+        return lista;
+    }
+    
+    /**
      * Busca todos os tipos de endereço disponíveis na base de dados.
      */
     public List<Map<String, Object>> listarTiposEndereco() {
@@ -294,6 +353,7 @@ public class TransportadoraDAO {
         return t;
     }
     
+   
     /**
      * Lista as filiais vinculadas/atendidas por uma transportadora para exibição e edição.
      */

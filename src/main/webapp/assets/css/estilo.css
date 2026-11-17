@@ -1,0 +1,1728 @@
+/*===== GLOBAL BASE ===== */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+img,
+table,
+input,
+select,
+textarea {
+    max-width: 100%;
+}
+
+/* EVITA ZOOM AUTOMÁTICO NO CELULAR */
+input,
+select,
+textarea,
+button {
+    font-size: 16px;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #f4f7fb;
+    height: 100%;
+    width: 100%;
+    /*overflow-x: hidden;*/
+    overflow-x: auto;
+    overflow-y: auto;
+
+    /* ROLAGEM SUAVE */
+    scroll-behavior: smooth;
+}
+
+/* Classe para centralizar conteúdo vertical e horizontalmente para cadastro/login */
+/* ESTILO AJUSTADO AQUI PARA ACOMODAR O LOGO ACIMA DA CAIXA DE LOGIN */
+.container-full-screen-center {
+    display: flex;
+    flex-direction: column; /* Organiza os itens (logo e box) em coluna */
+    justify-content: center; /* Centraliza verticalmente o conjunto */
+    align-items: center; /* Centraliza horizontalmente os itens */
+    min-height: 100vh;
+    background-color: #e0f2f7; /* Azul claro */
+    width: 100%;
+    padding: 20px;
+}
+
+/* ===== FORM BOX GERAL ===== */
+.box {
+	background: #ffffff;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow:
+        0 4px 6px rgba(0,0,0,0.04),
+        0 10px 20px rgba(0,0,0,0.06);
+    width: 100%;
+    margin: 15px auto;
+    border: 1px solid #edf2f7;
+    /*transition: all 0.3s ease;*/
+    transition: background-color 0.1s ease, transform 0.1s ease;
+}
+
+.box:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 8px 20px rgba(0,0,0,0.08),
+        0 15px 35px rgba(0,0,0,0.08);
+}
+
+/* Alinha o texto das labels à esquerda dentro de qualquer .box */
+.box label {
+    text-align: left;
+    display: block; /* Mantém block por padrão para formulários gerais */
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.box h2 {
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.box h3 {
+    margin-bottom: 10px;
+    text-align: center;
+    color: #1e40af; /* Azul para os subtítulos dos grupos de campos */
+}
+
+/* ===== CAMPOS DE FORMULÁRIO NA BOX GERAL (APLICADO A SELECTS E INPUTS DE TEXTO) ===== */
+.box input[type="text"],
+.box input[type="password"],
+.box input[type="email"],
+.box input[type="date"],
+.box input[type="number"],
+.box select,
+.box textarea {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+}
+
+.box input[type="text"]:focus,
+.box input[type="password"]:focus,
+.box input[type="email"]:focus,
+.box input[type="date"]:focus,
+.box input[type="number"]:focus,
+.box select:focus,
+.box textarea:focus {
+    outline: none;
+    border-color: #2563eb; /* Azul no foco */
+    box-shadow: 0 0 4px #1976d2;
+}
+
+/* Removendo as setas de incremento/decremento de input type="number" */
+.box input[type="number"]::-webkit-outer-spin-button,
+.box input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.box input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+/* ==========================================================================
+   AJUSTE ESPECÍFICO PARA A TELA DE LOGIN (NÃO AFETA CADASTROS)
+   ========================================================================== */
+
+/* Aplica o espaçamento (gap) na base centralizadora que já existe no topo */
+.container-full-screen-center {
+    gap: 10px; 
+}
+
+/* Garante que o logo fique sempre à frente de qualquer animação */
+.container-full-screen-center img,
+.logo-container-login {
+    position: relative;
+    z-index: 10;
+}
+
+/* Define tamanho máximo, altura mínima e desativa o efeito hover apenas no login */
+.box.box-login {
+    max-width: 450px; 
+    min-height: 400px; 
+    margin: 0 auto;
+    padding: 35px; 
+    position: relative;
+    z-index: 1;
+}
+
+.box.box-login:hover {
+    transform: none; /* Cancela o movimento de subir do CSS geral */
+    z-index: 1;
+    /* Mantém a sombra original estática */
+    box-shadow:
+        0 4px 6px rgba(0,0,0,0.04),
+        0 10px 20px rgba(0,0,0,0.06);
+}
+
+/* RESERVA DE ESPAÇO: Evita que a caixa mude de tamanho com alertas (verdes/vermelhos) */
+.box-login .message-container {
+    min-height: 10px; 
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Estilo para as mensagens de erro */
+.box-login .message.error {
+    color: #dc2626;      
+    background: #fef2f2; 
+    border: 1px solid #fee2e2;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 100%;
+    text-align: center;
+    margin: 0;
+}
+
+/* Alinhamento e estilo do link "Esqueci minha senha" */
+.box-login .link-wrapper {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 0;
+}
+
+.box-login .link-wrapper a {
+    color: #2563eb;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.box-login .link-wrapper a:hover {
+    color: #1e40af;
+    text-decoration: underline;
+}
+
+/* Botão "Entrar" - Estilizado de forma isolada e precisa */
+.box-login input[type="submit"]#btnLogin {
+    width: 100%;
+    padding: 12px;
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none; 
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 15px;
+    margin-bottom: 5px;
+    display: block;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    -webkit-appearance: none; 
+}
+
+.box-login input[type="submit"]#btnLogin:hover {
+    background-color: #1e40af;
+}
+
+.box-login input[type="submit"]#btnLogin:active {
+    transform: scale(0.98); /* Efeito sutil de clique apenas no botão */
+}
+
+/* Garante que o body seja uma coluna flexível que empurra o rodapé para baixo */
+body.container-full-screen-center {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #e0f2f7;
+}
+
+/* O wrapper agora é uma coluna para centralizar o Logo E o Formulário juntos */
+.content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column; /* Importante: empilha os elementos verticalmente */
+    justify-content: center; /* Centraliza verticalmente o grupo logo+login */
+    align-items: center;     /* Centraliza horizontalmente o grupo logo+login */
+    width: 100%;
+    gap: 20px;               /* Espaço entre o logo e o box de login */
+}
+
+/* ==========================================================================
+   CLASSES UTILITÁRIAS / GLOBAIS
+   ========================================================================== */
+
+/* Força o texto a aparecer em maiúsculo na tela enquanto o usuário digita */
+.maiusculo {
+    text-transform: uppercase;
+}
+
+/* Ajuste fino no botão de submit dentro do login para seguir o padrão dos inputs */
+#btnLogin {
+    width: 100%;
+    padding: 12px;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s ease;
+}
+
+#btnLogin:hover {
+    background-color: #1e40af;
+}
+
+/* Garante que o container do logo fique sempre à frente, mesmo no hover da box */
+.container-full-screen-center img,
+.logo-container-login {
+    position: relative;
+    z-index: 10; /* Camada alta para ficar na frente de tudo */
+}
+
+/* Força a box de login a ficar em uma camada inferior à do logo */
+.box.box-login {
+    max-width: 450px; 
+    min-height: 400px; 
+    margin: 0 auto;
+    padding: 35px; 
+    position: relative;
+    z-index: 1; /* Camada baixa */
+}
+
+/* Garante que mesmo quando passar o mouse, a box não mude de camada */
+.box.box-login:hover {
+    z-index: 1; 
+}
+
+/* Estilos para os grupos de campos específicos (Computador, Nobreak, Impressora) */
+.field-group {
+    display: none; /* Começa oculto por padrão */
+    margin-top: 20px;
+    border-top: 1px solid #eee; /* Linha divisória */
+    padding-top: 20px;
+}
+
+.field-group.active {
+    display: block;
+}
+
+/* Classe para ocultar elementos */
+.hidden {
+    display: none !important;
+}
+
+/* Ajuste para a linha de datas */
+.form-row-dates {
+    display: flex;
+    gap: 20px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.form-group-date {
+    flex: 1;
+    min-width: 200px;
+}
+
+.form-group-date label {
+    margin-bottom: 5px;
+}
+
+/* ===== BOTÕES & INPUTS GERAIS (Submit, Button, Reset) ===== */
+input[type="submit"],
+input[type="button"],
+input[type="reset"],
+button {
+    width: 100%; /* Valor padrão para botões fora de grupos específicos */
+    padding: 12px;
+    background-color: #2196f3; /* Azul padrão para botões */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.3s ease;
+    font-size: 1em;
+}
+
+input[type="submit"]:hover,
+input[type="button"]:hover,
+input[type="reset"]:hover,
+button:hover {
+    background-color: #1976d2; /* Azul mais escuro no hover */
+}
+
+/* Estilo específico para o botão de salvar senha no login.jsp */
+.btn-salvar-senha {
+    background-color: #4CAF50; /* Verde, mantido se for uma função específica */
+    color: white;
+}
+.btn-salvar-senha:hover {
+    background-color: #45a049;
+}
+
+/* Container para os botões de ação em formulários (Salvar, Limpar, Voltar/Menu) */
+/* Aplicado para cadastroProdutos.jsp e outros formulários */
+.form-buttons-container {
+    display: flex; /* Habilita flexbox */
+    justify-content: center; /* Centraliza os itens horizontalmente */
+    gap: 10px; /* Espaçamento entre os botões */
+    margin-top: 20px;
+    width: 100%;
+    flex-wrap: wrap; /* Permitir que os botões quebrem a linha se a tela for muito pequena */
+    overflow-x: auto; /* permite scroll horizontal se os botões não couberem na linha */
+    padding-bottom: 5px;
+}
+
+/* Ajustes para os botões dentro do container do formulário */
+.form-buttons-container input[type="submit"],
+.form-buttons-container input[type="button"],
+.form-buttons-container button {
+    width: auto; /* Deixa a largura ser determinada pelo conteúdo/flexbox */
+    padding: 10px 15px;
+    margin-top: 0; /* Remove a margem superior que pode causar quebra de linha */
+    flex-shrink: 0; /* Impede que os botões diminuam além de seu min-width */
+    min-width: 150px; /* Garante uma largura mínima para cada botão */
+}
+
+/* Cores específicas para os botões de formulário */
+.form-buttons-container .btn-salvar {
+    background-color: #4CAF50; /* Verde para Salvar */
+    color: white;
+}
+.form-buttons-container .btn-salvar:hover {
+    background-color: #45a049;
+}
+
+.form-buttons-container .btn-limpar {
+    background-color: #f44336; /* Vermelho para Limpar */
+    color: white;
+}
+.form-buttons-container .btn-limpar:hover {
+    background-color: #da190b;
+}
+
+.form-buttons-container .btn-menu {
+    background-color: #607D8B; /* Cinza azulado para Voltar/Menu */
+    color: white;
+}
+.form-buttons-container .btn-menu:hover {
+    background-color: #455A64;
+}
+
+/* ALINHAMENTO DO CHECKBOX: Ajuste para form-group que contém checkboxes */
+.form-group.checkbox-group {
+    display: flex; /* Garante que o checkbox e a label fiquem na mesma linha */
+    flex-direction: row; /* Alinha o checkbox e a label horizontalmente */
+    align-items: center; /* Centraliza verticalmente os itens (checkbox e label) */
+    gap: 30px; /* Espaçamento entre o checkbox e a label */
+    min-width: unset; /* Remove largura mínima para flexibilidade */
+    flex: unset; /* Remove flex-grow para não esticar o grupo desnecessariamente */
+}
+
+.form-group.checkbox-group input[type="checkbox"] {
+    margin-top: 0; /* Remove margem superior que pode empurrar o checkbox */
+    width: auto; /* Permite que o checkbox tenha sua largura natural */
+    transform: scale(1.2); /* Aumenta um pouco o tamanho do checkbox para melhor visualização */
+    margin-right: 0; /* Remove margem extra à direita do checkbox */
+}
+
+.form-group.checkbox-group label {
+    margin-bottom: 0; /* Remove margem inferior da label */
+    display: inline-block; /* Permite que a label se ajuste ao conteúdo */
+    font-weight: normal; /* Deixa o texto da label com peso normal, se você quiser */
+}
+
+/* ===== FORM BUSCA E BOTÕES (Específicos da Consulta) ===== */
+.form-busca {
+    display: flex; /* Torna o contêiner flexível */
+    flex-direction: row; /* Alinha os itens filhos (grupos de filtro/pesquisa) em linha */
+    flex-wrap: wrap; /* Permite que os itens quebrem a linha em telas menores */
+    gap: 15px; /* Espaçamento entre os grupos de input */
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    align-items: center; /* Alinha verticalmente no centro */
+    justify-content: flex-start; /* Alinha ao início */
+}
+
+/* Ajuste para que os grupos de input internos fiquem lado a lado */
+.form-busca-input-group {
+    display: flex; /* Torna este grupo flexível */
+    align-items: center; /* Alinha verticalmente label e input/select */
+    gap: 10px; /* Espaçamento entre label e input/select */
+    flex-wrap: nowrap; /* Impede quebra de linha entre label e input/select */
+    flex-grow: 1; /* Permite que o grupo cresça */
+    min-width: 250px; /* Largura mínima para o grupo */
+}
+
+/* Estilo para o LABEL dentro do grupo de busca */
+.form-busca-input-group label {
+    white-space: nowrap; /* Impede quebra de linha no label */
+    margin: 0; /* Remove margens padrão */
+    font-weight: bold;
+    flex-shrink: 0; /* Impede que o label encolha */
+    display: inline-block; /* Garante que o label se comporte como inline-block */
+}
+
+/* Estilo para o SELECT de tipo de item que tem a classe 'botao-tabela-selecao' */
+.form-busca-input-group select.botao-tabela-selecao {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+    height: 40px;
+    min-width: 150px;
+    max-width: 250px; /* Mantém um max-width para o select */
+    flex-grow: 1; /* Permite que o select cresça */
+    flex-shrink: 0;
+    margin: 0;
+    background-color: #fff;
+    width: auto;
+    cursor: pointer;
+}
+
+/* Estilo para o campo de texto de filtro */
+.form-busca-input-group input[type="text"]#searchBar {
+    flex-grow: 1; /* Permite que o campo de pesquisa ocupe o espaço restante */
+    min-width: 180px;
+    max-width: none; /* Permite que ocupe o espaço disponível */
+    margin: 0;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+    height: 40px;
+    flex-shrink: 1;
+}
+
+/* Ajuste para o botão "Limpar Filtro" dentro de .form-busca */
+button#clearSearchButton {
+    width: auto;
+    padding: 10px 15px;
+    margin: 0;
+    font-size: 0.95em;
+    flex-shrink: 0;
+    min-width: 120px;
+    height: 40px;
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    
+}
+button#clearSearchButton:hover {
+    background-color: #1976d2;
+}
+
+/* Estilo para a classe 'ativo' no SELECT */
+.form-busca-input-group select.botao-tabela-selecao.ativo {
+    background-color: #e3f2fd; /* Um azul claro */
+    border-color: #90caf9;
+    box-shadow: 0 0 5px rgba(33, 150, 243, 0.2);
+}
+
+/* ===== Mensagens de Ação (Sucesso/Erro/Aviso) - Para o Login e outras páginas ===== */
+.message-container {
+    width: 100%;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.message-container p {
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-weight: bold;
+    margin: 0;
+}
+
+/* Classes de mensagem combinadas com .message */
+.message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.message.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+}
+
+.message.info { /* Adicionado para a mensagem 'not_logged_in' */
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* Mensagem inicial da tabela, antes de carregar dados */
+.mensagem-tabela-inicial {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* PADRONIZADO: Estilo para botões desabilitados */
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+    background-color: #cccccc !important;
+    color: #888888 !important;
+    cursor: not-allowed !important;
+    opacity: 0.6 !important;
+}
+
+/* ESTILO BOTAO ESPECIFICO PARA EXPORTAR PDF EXEL*/
+/* Estilos para os botões de exportação */
+.export-buttons {
+    display: flex;
+    gap: 5px; /* Espaço entre os botões */
+    margin-bottom: 15px; /* Espaçamento abaixo dos botões */
+    justify-content: flex-start; /* Alinha à esquerda */
+    padding-left: 10px; /* Pequeno padding à esquerda */
+}
+
+.export-buttons button {
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 4px;
+
+    transition: background-color 0.1s ease, border-color 0.1s ease;
+}
+
+.export-buttons button:hover {
+    background-color: #e9e9e9;
+    border-color: #a0a0a0;
+    opacity: 1;
+}
+
+.export-buttons button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    background-color: #f0f0f0;
+    border-color: #eee;
+}
+
+.export-buttons button img {
+
+    width: auto;
+    height: auto;
+
+    max-width: 32px;
+    max-height: 32px;
+
+    object-fit: contain;
+    display: block;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+	width: 250px;
+    background: linear-gradient(180deg, #0f172a, #1e3a8a);
+    color: white;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    padding: 25px 15px;
+    overflow-y: auto;
+    z-index: 900;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+    border-top-right-radius: 25px;
+    border-bottom-right-radius: 25px;
+}
+
+.sidebar h2 {
+	margin-bottom: 30px;
+    font-size: 28px;
+    font-weight: 700;
+    padding-bottom: 15px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.15);   
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar li {
+    margin-bottom: 5px;
+}
+
+.sidebar a {
+	color: white;
+    text-decoration: none;
+    padding: 14px 16px;
+    border-radius: 12px;
+    transition: background-color 0.1s ease, transform 0.1s ease;
+    /*transition: all 0.3s ease;*/
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.sidebar a:last-child {
+    border-bottom: none;
+}
+
+.sidebar a:hover {
+    background: rgba(255,255,255,0.12);
+    transform: translateX(5px);
+}
+
+/* Estilos para a scrollbar do sidebar (apenas para Webkit - Chrome/Safari) */
+.sidebar::-webkit-scrollbar {
+    width: 8px;
+}
+.sidebar::-webkit-scrollbar-track {
+    background: #1976d2;
+}
+.sidebar::-webkit-scrollbar-thumb {
+    background-color: #2196f3;
+    border-radius: 10px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background-color: #555;
+}
+
+/* ===== MENU EXPANSÍVEL (SUBMENU) STYLES - CRÍTICO PARA O MENU.JSP ===== */
+.sidebar ul.submenu {
+    list-style: none;
+    padding-left: 15px; /* Recuo para sub-abas */
+    max-height: 0; /* Começa colapsado */
+    overflow: hidden;
+    transition: max-height 0.1s ease-out; /* Transição suave */
+}
+
+.sidebar ul.submenu.active { 
+    max-height: 1000px; /* Aumentado para acomodar mais itens, ajuste se necessário */
+}
+
+.sidebar ul.submenu li a {
+    padding: 10px 12px 10px 25px; /* Ajusta padding para sub-itens */
+    font-size: 0.95em;
+    background-color: rgba(0, 0, 0, 0.1); /* Um pouco mais escuro para sub-itens */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar ul.submenu li:last-child a {
+    border-bottom: none;
+}
+
+.sidebar ul.submenu li a:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Estilo para o item pai do menu que tem submenu (seta de expansão) */
+.sidebar .menu-item-with-submenu > a {
+    position: relative;
+}
+
+.sidebar .menu-item-with-submenu > a::after {
+    content: '▼'; /* Seta para baixo */
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7em;
+    transition: transform 0.1s ease;
+}
+
+.sidebar .menu-item-with-submenu.active > a::after {
+    content: '▲'; /* Seta para cima quando ativo */
+    transform: translateY(-50%) rotate(180deg); /* Gira a seta */
+}
+
+/* ===== CONTEÚDO PRINCIPAL (à direita do Sidebar) ===== */
+.content {
+	 margin-left: 250px;
+    padding: 40px 20px;
+    background: #f4f7fb;
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    width: auto;
+    overflow-x: hidden;
+}
+
+/* Estilos para o cabeçalho visual do conteúdo principal */
+.main-content-header {
+	width: 100%;
+    text-align: center;
+    margin-bottom: 25px;
+    padding: 25px;
+    background: white;
+    border-radius: 24px;
+    box-shadow:
+        0 4px 6px rgba(0,0,0,0.04),
+        0 10px 20px rgba(0,0,0,0.06);
+    border: 1px solid #edf2f7;
+}
+
+/* NOVO: Estilo para o título principal da página (Consulta de Itens, Bem-vindo, admin!) */
+.page-title {
+	font-size: 2.3rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    margin-bottom: 10px;
+    letter-spacing: -1px;
+}
+
+/* Centraliza o conteúdo (H1 e P) do menu.jsp */
+/* Removido o seletor h1:first-of-type para usar a nova classe .page-title */
+.content h1 + p {
+    margin-bottom: auto;
+    text-align: center;
+    width: 100%;
+}
+
+/* Sobrescreve o .box para a tela de consulta e gerenciamento de usuários */
+.content-consulta .box {
+    margin: 0 auto;
+    max-width: none;  /*REMOVIDO O MAX-WIDTH PARA PERMITIR QUE A TABELA SE EXPANDA */
+    text-align: left;
+    width: 100%;
+    min-width: unset;  /*Remove o min-width para permitir que ele se ajuste */
+}
+
+/* Estilos para o CONTEÚDO principal que fica ao lado da sidebar simplificada */
+.content-full {
+	margin-left: 250px;
+    padding: 20px;
+    background: #f4f7fb;
+
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    width: auto;
+    overflow-x: hidden;
+}
+
+/* ===== ESTILOS ESPECÍFICOS PARA CADASTRO DE USUÁRIO (cadastroUsuario.jsp) ===== */
+.form-grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* 2 ou 3 colunas responsivas */
+    gap: 20px; /* Espaçamento entre os campos */
+    margin-bottom: 30px;
+}
+
+.form-grid-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.permissoes-table-container {
+    margin-top: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden; /* Garante que as bordas arredondadas funcionem */
+}
+
+.permissoes-table-header {
+    background-color: #f2f2f2;
+    padding: 10px 15px;
+    font-weight: bold;
+    border-bottom: 1px solid #ddd;
+    text-align: center;
+}
+
+.permissoes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Colunas para módulos */
+    gap: 10px;
+    padding: 15px;
+}
+
+.permissoes-grid-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 5px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.permissoes-grid-item label {
+    margin-top: 5px;
+    font-weight: normal;
+}
+
+.permissoes-grid-item input[type="checkbox"] {
+    transform: scale(1.2); /* Aumenta o tamanho do checkbox */
+    margin-bottom: 5px;
+}
+
+/* Ajustes para o .box no cadastroUsuario.jsp para melhor espaçamento */
+.content-cadastro-usuario .box {
+    padding: 30px; /* Aumenta o padding interno do box */
+}
+
+.permissoes-explanation {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+
+/* ===== TABELA DE CONSULTA E GERENCIAMENTO ===== */
+.tabela-scroll {
+	width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    -webkit-overflow-scrolling: touch;
+
+    border: 1px solid #ddd;
+    border-radius: 8px;
+
+    margin-top: 20px;
+    position: relative;
+    background: white;
+}
+
+/* NOVO: Wrapper para o conteúdo da tabela para aplicar o fade */
+.table-content-wrapper {
+    transition: opacity 0.02s ease-in-out; /* Transição MUITO rápida */
+}
+
+.table-content-wrapper.loading-fade {
+    opacity: 0.3; /* Opacidade reduzida durante o carregamento */
+    pointer-events: none; /* Desabilita cliques enquanto está carregando/fading */
+}
+
+
+/* Estilos para a scrollbar da tabela (apenas para Webkit - Chrome/Safari) */
+.tabela-scroll::-webkit-scrollbar {
+    height: 10px; /* Aumenta a altura da scrollbar horizontal para ser mais visível */
+}
+.tabela-scroll::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+.tabela-scroll::-webkit-scrollbar-thumb {
+    background-color: #888;
+    border-radius: 10px;
+}
+.tabela-scroll::-webkit-scrollbar-thumb:hover {
+    background-color: #555;
+}
+
+
+.tabela {
+    font-size: 0.8em;
+    width: 100%; /* Garante que a tabela tente ocupar 100% do seu contêiner */
+    border-collapse: collapse;
+    table-layout: auto; /* MUDANÇA CRÍTICA: Permite que as colunas se ajustem ao conteúdo */
+    margin: 0;
+    border: none;
+}
+
+/* Estilos para as setas de ordenação (ADICIONADO AQUI) */
+.sortable-header {
+    cursor: pointer;
+    position: relative;
+    padding-right: 20px; /* Espaço para a seta */
+}
+.sortable-header .sort-icon {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8em;
+    color: #ccc; /* Cor padrão para setas não ativas */
+}
+.sortable-header.asc .sort-icon.up {
+    color: #007bff; /* Cor para seta ascendente ativa */
+}
+.sortable-header.desc .sort-icon.down {
+    color: #007bff; /* Cor para seta descendente ativa */
+}
+/* Esconder a seta não ativa quando uma está ativa */
+.sortable-header.asc .sort-icon.down,
+.sortable-header.desc .sort-icon.up {
+    display: none;
+}
+
+/* Larguras mínimas para cada tipo de tabela */
+/* AUMENTADO MIN-WIDTH PARA GARANTIR SCROLL HORIZONTAL */
+.tabela.tabela-computadores {
+   /*min-width: 1800px;*/
+   min-width: 1400px;
+}
+
+.tabela.tabela-nobreaks {
+    /*min-width: 1600px;*/
+        min-width: 1400px;
+}
+
+.tabela.tabela-impressoras {
+ /*min-width: 1700px;*/
+     min-width: 1400px;
+}
+
+.tabela.tabela-impressora_etiqueta {
+    /*min-width: 1700px;*/
+        min-width: 1400px;
+}
+
+.tabela.tabela-todos {
+    /*min-width: 1800px;/* AUMENTADO SIGNIFICATIVAMENTE para todas as 23 colunas */
+        min-width: 1400px;
+}
+
+/* NOVO: Larguras para Impressora Etiqueta */
+.tabela-impressora_etiqueta th:nth-child(1), .tabela-impressora_etiqueta td:nth-child(1) { width: 40px; min-width: 40px; text-align: center; } /* Checkbox */
+.tabela-impressora_etiqueta th:nth-child(2), .tabela-impressora_etiqueta td:nth-child(2) { width: 60px; min-width: 60px; } /* ID */
+.tabela-impressora_etiqueta th:nth-child(3), .tabela-impressora_etiqueta td:nth-child(3) { width: 180px; min-width: 150px; } /* Origem */
+.tabela-impressora_etiqueta th:nth-child(4), .tabela-impressora_etiqueta td:nth-child(4) { width: 280px; min-width: 220px; } /* Numero Etiqueta */
+.tabela-impressora_etiqueta th:nth-child(5), .tabela-impressora_etiqueta td:nth-child(5) { width: 280px; min-width: 220px; } /* Nome */
+.tabela-impressora_etiqueta th:nth-child(6), .tabela-impressora_etiqueta td:nth-child(6) { width: 150px; min-width: 120px; } /* Status */
+.tabela-impressora_etiqueta th:nth-child(7), .tabela-impressora_etiqueta td:nth-child(7) { width: 200px; min-width: 180px; } /* Endereço IP */
+.tabela-impressora_etiqueta th:nth-child(8), .tabela-impressora_etiqueta td:nth-child(8) { width: 220px; min-width: 200px; } /* Setor */
+.tabela-impressora_etiqueta th:nth-child(9), .tabela-impressora_etiqueta td:nth-child(9) { width: 280px; min-width: 220px; } /* Número Série */
+.tabela-impressora_etiqueta th:nth-child(10), .tabela-impressora_etiqueta td:nth-child(10) { width: 220px; min-width: 200px; } /* Equipamento */
+.tabela-impressora_etiqueta th:nth-child(11), .tabela-impressora_etiqueta td:nth-child(11) { width: 400px; min-width: 350px; } /* Observação */
+.tabela-impressora_etiqueta th:nth-child(12), .tabela-impressora_etiqueta td:nth-child(12) { width: 180px; min-width: 150px; } /* Data Envio */
+
+/* NOVO: Larguras para Entidades (Clientes e Fornecedores) - AJUSTADO AQUI */
+.tabela.tabela-entidades {
+    min-width: 1500px;
+}
+.tabela-entidades th:nth-child(1), .tabela-entidades td:nth-child(1) { width: 40px; min-width: 40px; text-align: center; } /* Checkbox */
+.tabela-entidades th:nth-child(2), .tabela-entidades td:nth-child(2) { width: 60px; min-width: 60px; } /* ID */
+/* >>>>> AJUSTES PARA ORIGEM TIPO E ORIGEM DETALHE <<<<< */
+.tabela-entidades th:nth-child(3), .tabela-entidades td:nth-child(3) {
+    width: 90px; /* AJUSTADO: Largura preferencial */
+    min-width: 130px; /* AJUSTADO: Largura mínima */
+    white-space: normal; /* Permite que o texto quebre linha */
+    word-wrap: break-word; /* Garante que palavras longas quebrem */
+    /* REMOVIDO: overflow: hidden; text-overflow: ellipsis; para permitir auto-ajuste de altura */
+}
+ .tabela-entidades th:nth-child(4), .tabela-entidades td:nth-child(4) {
+    width: 130px; /* AJUSTADO: Largura preferencial */
+    min-width: 160px; /* AJUSTADO: Largura mínima */
+    white-space: normal; /* Permite que o texto quebre linha */
+    word-wrap: break-word; /* Garante que palavras longas quebrem */
+    /* REMOVIDO: overflow: hidden; text-overflow: ellipsis; para permitir auto-ajuste de altura */
+} /* Origem Detalhe */
+/* >>>>> FIM DOS AJUSTES PARA ORIGEM TIPO E ORIGEM DETALHE <<<<< */
+.tabela-entidades th:nth-child(5), .tabela-entidades td:nth-child(5) { width: 400px; min-width: 250px; } /* Nome / Razão Social - Levemente reduzido */
+.tabela-entidades th:nth-child(6), .tabela-entidades td:nth-child(6) { width: 180px; min-width: 150px; } /* CNPJ / CPF - Reduzido */
+.tabela-entidades th:nth-child(7), .tabela-entidades td:nth-child(7) { width: 180px; min-width: 150px; } /* CONTATO PRINCIPAL */
+.tabela-entidades th:nth-child(8), .tabela-entidades td:nth-child(8) { width: 180px; min-width: 150px; } /* Telefone Fixo */
+.tabela-entidades th:nth-child(9), .tabela-entidades td:nth-child(9) { width: 140px; min-width: 120px; } /* Telefone Celular - Reduzido */
+.tabela-entidades th:nth-child(10), .tabela-entidades td:nth-child(10) { width: 160px; min-width: 130px; } /* Email Principal - Reduzido */
+.tabela-entidades th:nth-child(11), .tabela-entidades td:nth-child(11) { width: 250px; min-width: 250px; } /* Endereço */
+.tabela-entidades th:nth-child(12), .tabela-entidades td:nth-child(12) { width: 260px; min-width: 120px; } /* CEP */
+.tabela-entidades th:nth-child(13), .tabela-entidades td:nth-child(13) { width: 140px; min-width: 120px; } /* Cidade - Reduzido */
+.tabela-entidades th:nth-child(14), .tabela-entidades td:nth-child(14) { width: 60px; min-width: 60px; } /* UF */
+.tabela-entidades th:nth-child(15), .tabela-entidades td:nth-child(15) { width: 90px; min-width: 80px; } /* Papel - Reduzido */
+.tabela-entidades th:nth-child(16), .tabela-entidades td:nth-child(16) { width: 90px; min-width: 80px; } /* Observação Geral Entidade */
+.tabela-entidades th:nth-child(17), .tabela-entidades td:nth-child(17) { width: 180px; min-width: 160px; } /* Tipo Fornecimento - Reduzido */
+.tabela-entidades th:nth-child(18), .tabela-entidades td:nth-child(18) { width: 90px; min-width: 80px; } /* Observação Especifica Fornecedor */
+.tabela-entidades th:nth-child(19), .tabela-entidades td:nth-child(19) { width: 140px; min-width: 120px; } /* Data Cadastro - Reduzido */
+
+
+/* Larguras para a Tabela de Usuários */
+.tabela.tabela-usuarios th:nth-child(1), .tabela.tabela-usuarios td:nth-child(1) { width: 40px; min-width: 40px; text-align: center; } /* Checkbox */
+.tabela.tabela-usuarios th:nth-child(2), .tabela.tabela-usuarios td:nth-child(2) { width: 60px; min-width: 60px; } /* ID */
+.tabela.tabela-usuarios th:nth-child(3), .tabela.tabela-usuarios td:nth-child(3) { width: 150px; min-width: 120px; } /* Usuário */
+.tabela.tabela-usuarios th:nth-child(4), .tabela.tabela-usuarios td:nth-child(4) { width: 250px; min-width: 200px; } /* Email */
+.tabela.tabela-usuarios th:nth-child(5), .tabela.tabela-usuarios td:nth-child(5) { width: 120px; min-width: 100px; } /* Perfil */
+.tabela.tabela-usuarios th:nth-child(6), .tabela.tabela-usuarios td:nth-child(6) { width: 150px; min-width: 120px; } /* Ações */
+
+
+.tabela th,
+.tabela td {
+	 max-width: 250px;
+    border: 1px solid #ddd; /* Mantido para visualização de bordas */
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+/* Estilos para cabeçalhos da tabela (<th>) */
+.tabela th {
+	top: 0;
+	position: sticky;
+	z-index: 2;
+    background-color: #1976d2; /* Azul escuro do sidebar */
+    color: white;
+    font-weight: bold;
+    border-bottom: 2px solid #1565C0; /* Azul mais escuro */
+    padding: 12px 15px;
+    white-space: nowrap; /* IMPEDE QUEBRA DE LINHA NO CABEÇALHO */
+    overflow: hidden;
+    text-overflow: ellipsis; /* ADICIONA "..." SE CORTADO */
+    font-size: 1em;
+    height: 40px;
+}
+
+/* Estilos para todas as células de dados da tabela (<td>) */
+.tabela td {
+    border: 1px solid #ddd;
+    padding: 10px 15px;
+    text-align: left;
+    vertical-align: middle;
+    font-size: 0.9em;
+    line-height: 1.3;
+}
+
+/* Estilos para o conteúdo rolável dentro da célula (AJUSTADO AQUI) */
+.scrollable-cell-content {
+    max-height: 80px; /* Altura máxima antes de rolar (AJUSTADO PARA 80px) */
+    overflow-y: auto; /* Adiciona barra de rolagem vertical se o conteúdo exceder */
+    white-space: pre-wrap;
+    word-wrap: break-word; /* Garante que palavras longas sejam quebradas */
+    padding-right: 5px; /* Espaço para a barra de rolagem */
+    /* Para Firefox */
+    scrollbar-width: thin; /* Exibe uma barra de rolagem mais fina */
+    scrollbar-color: #aaa #f1f1f1; /* Cor do thumb e da track */
+}
+
+/* Estilos para a scrollbar da célula (apenas para Webkit - Chrome/Safari) */
+.scrollable-cell-content::-webkit-scrollbar {
+    width: 6px;
+}
+.scrollable-cell-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+.scrollable-cell-content::-webkit-scrollbar-thumb {
+    background-color: #aaa;
+    border-radius: 10px;
+}
+.scrollable-cell-content::-webkit-scrollbar-thumb:hover {
+    background-color: #888;
+}
+
+/* =======================================================
+   LINHAS INATIVAS
+======================================================= */
+.tabela tr.inativo {
+    background: #fff1f1 !important;
+    color: #b42318;
+    opacity: 0.92;
+}
+
+.tabela tr.inativo td {
+    border-color: #f5c2c7;
+}
+
+.tabela tr.inativo:hover {
+    background: #ffe2e2 !important;
+}
+
+/* Efeito Zebra para melhor legibilidade */
+.tabela tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+.tabela tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+.tabela tr:hover {
+    background-color: #e3f2fd; /* Azul claro ao passar o mouse */
+    cursor: pointer;
+}
+
+.tabela tr.selecionado {
+    background-color: #bbdefb; /* Azul mais intenso para linha selecionada */
+    font-weight: normal;
+}
+
+/* Alinha o checkbox no cabeçalho */
+.tabela th input[type="checkbox"] {
+    vertical-align: middle;
+    margin: 0;
+    padding: 0;
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+/* Alinha os checkboxes das linhas de dados */
+.tabela td input[type="checkbox"] {
+    vertical-align: middle;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+/* --- ESTILOS ESPECÍFICOS PARA TABELA DE COMPUTADORES --- */
+/* Note: Aqui, o nth-child(1) é o checkbox. Se não houver checkbox, ajuste a contagem. */
+.tabela-computadores th:nth-child(1), .tabela-computadores td:nth-child(1) { width: 40px; min-width: 40px; text-align: center; } /* Checkbox */
+.tabela-computadores th:nth-child(2), .tabela-computadores td:nth-child(2) { width: 60px; min-width: 60px; } /* ID */
+.tabela-computadores th:nth-child(3), .tabela-computadores td:nth-child(3) { width: 200px; min-width: 180px; } /* Origem */
+.tabela-computadores th:nth-child(4), .tabela-computadores td:nth-child(4) { width: 250px; min-width: 220px; } /* Numero Etiqueta */
+.tabela-computadores th:nth-child(5), .tabela-computadores td:nth-child(5) { width: 220px; min-width: 200px; } /* Nome CPU */
+.tabela-computadores th:nth-child(6), .tabela-computadores td:nth-child(6) { width: 280px; min-width: 250px; } /* Colaborador */
+.tabela-computadores th:nth-child(7), .tabela-computadores td:nth-child(7) { width: 250px; min-width: 220px; } /* Departamento */
+/* === LARGURAS ESPECÍFICAS PARA OS TH/TD QUE CONTÊM O CONTEÚDO TRUNCADO === */
+
+/* Computadores */
+.tabela-computadores th:nth-child(8), .tabela-computadores td:nth-child(8) { width: 280px; min-width: 250px; } /* Descrição Equip. */
+.tabela-computadores th:nth-child(9), .tabela-computadores td:nth-child(9) { width: 280px; min-width: 250px; } /* Sistema Operacional */
+.tabela-computadores th:nth-child(10), .tabela-computadores td:nth-child(10) { width: 180px; min-width: 160px; } /* Atendente */
+.tabela-computadores th:nth-child(11), .tabela-computadores td:nth-child(11) { width: 200px; min-width: 180px; } /* Status Atend. */
+.tabela-computadores th:nth-child(12), .tabela-computadores td:nth-child(12) { width: 350px; min-width: 300px; } /* Observacao */
+.tabela-computadores th:nth-child(13), .tabela-computadores td:nth-child(13) { width: 180px; min-width: 150px; } /* Data Chegada */
+.tabela-computadores th:nth-child(14), .tabela-computadores td:nth-child(14) { width: 180px; min-width: 150px; } /* Data Envio */
+
+
+/* Nobreaks */
+/* Note: Aqui, o nth-child(1) é o checkbox. Se não houver checkbox, ajuste a contagem. */
+.tabela-nobreaks th:nth-child(1), .tabela-nobreaks td:nth-child(1) { width: 40px; min-width: 40px; text-align: center; } /* Checkbox */
+.tabela-nobreaks th:nth-child(2), .tabela-nobreaks td:nth-child(2) { width: 60px; min-width: 60px; } /* ID */
+.tabela-nobreaks th:nth-child(3), .tabela-nobreaks td:nth-child(3) { width: 200px; min-width: 180px; } /* Origem */
+.tabela-nobreaks th:nth-child(4), .tabela-nobreaks td:nth-child(4) { width: 200px; min-width: 180px; } /* Numero Etiqueta */
+.tabela-nobreaks th:nth-child(5), .tabela-nobreaks td:nth-child(5) { width: 200px; min-width: 180px; } /* Nome */
+.tabela-nobreaks th:nth-child(6), .tabela-nobreaks td:nth-child(6) { width: 150px; min-width: 120px; } /* Status */
+.tabela-nobreaks th:nth-child(7), .tabela-nobreaks td:nth-child(7) { width: 200px; min-width: 180px; } /* Colaborador */
+.tabela-nobreaks th:nth-child(8), .tabela-nobreaks td:nth-child(8) { width: 220px; min-width: 190px; } /* Departamento */
+.tabela-nobreaks th:nth-child(9), .tabela-nobreaks td:nth-child(9) { width: 450px; min-width: 400px; } /* Modelo */
+.tabela-nobreaks th:nth-child(10), .tabela-nobreaks td:nth-child(10) { width: 200px; min-width: 180px; } /* Numero Série */
+.tabela-nobreaks th:nth-child(11), .tabela-nobreaks td:nth-child(11) { width: 350px; min-width: 300px; } /* Observacao */
+.tabela-nobreaks th:nth-child(12), .tabela-nobreaks td:nth-child(12) { width: 150px; min-width: 120px; } /* Data Envio */
+
+
+/* Impressoras */
+/* Note: Aqui, o nth-child(1) é o checkbox. Se não houver checkbox, ajuste a contagem. */
+.tabela-impressoras th:nth-child(1), .tabela-impressoras td:nth-child(1) { width: 40px; min-width: 40px; text-align: center; } /* Checkbox */
+.tabela-impressoras th:nth-child(2), .tabela-impressoras td:nth-child(2) { width: 60px; min-width: 60px; } /* ID */
+.tabela-impressoras th:nth-child(3), .tabela-impressoras td:nth-child(3) { width: 200px; min-width: 180px; } /* Origem */
+.tabela-impressoras th:nth-child(4), .tabela-impressoras td:nth-child(4) { width: 200px; min-width: 180px; } /* Nome */
+.tabela-impressoras th:nth-child(5), .tabela-impressoras td:nth-child(5) { width: 200px; min-width: 170px; } /* Endereço IP */
+.tabela-impressoras th:nth-child(6), .tabela-impressoras td:nth-child(6) { width: 250px; min-width: 220px; } /* Setor */
+.tabela-impressoras th:nth-child(7), .tabela-impressoras td:nth-child(7) { width: 280px; min-width: 250px; } /* Número Série */
+.tabela-impressoras th:nth-child(8), .tabela-impressoras td:nth-child(8) { width: 250px; min-width: 220px; } /* Equipamento */
+.tabela-impressoras th:nth-child(9), .tabela-impressoras td:nth-child(9) { width: 280px; min-width: 220px; } /* Observação */
+.tabela-impressoras th:nth-child(10), .tabela-impressoras td:nth-child(10) { width: 220px; min-width: 200px; } /* Login */
+.tabela-impressoras th:nth-child(11), .tabela-impressoras td:nth-child(11) { width: 220px; min-width: 200px; } /* Senha*/
+.tabela-impressoras th:nth-child(12), .tabela-impressoras td:nth-child(12) { width: 180px; min-width: 150px; } /* Data Envio */
+
+
+/* ===== PAGINAÇÃO ===== */
+.pagination {
+    margin-top: 25px;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap; /* Permitir quebra de linha se não houver espaço */
+    overflow-x: auto; /* permite scroll horizontal se a paginação não couber */
+    padding-bottom: 5px;
+    min-width: unset; /* Remove o min-width anterior para permitir flexibilidade */
+}
+
+/* Container para os números das páginas */
+.pagination-numbers {
+    display: flex;
+    gap: 5px; /* Espaçamento entre os botões de número de página */
+    flex-wrap: wrap;
+    justify-content: center; /* Centraliza os números das páginas */
+}
+
+/* Ajuste para os botões "Anterior" e "Próxima" dentro de .pagination */
+.pagination button {
+    width: auto; /* Permite que a largura seja determinada pelo conteúdo */
+    padding: 8px 12px;
+    margin: 0; /* Remove margem superior padrão de 'button' */
+    font-size: 0.9em;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+.pagination button:hover:not(:disabled) {
+    background-color: #e0e0e0;
+    border-color: #a0a0a0;
+}
+
+.pagination-link {
+    display: inline-block;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    text-decoration: none;
+    color: #333;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+    flex-shrink: 0;
+    cursor: pointer; /* Garante que o cursor de ponteiro apareça */
+}
+
+.pagination-link:hover {
+    background-color: #e0e0e0;
+    border-color: #a0a0a0;
+}
+
+.pagination-link.current-page {
+    background-color: #2196f3; /* Azul para página atual */
+    color: white;
+    border-color: #2196f3;
+    font-weight: bold;
+    cursor: default;
+}
+
+.pagination-link.current-page:hover {
+    background-color: #2196f3;
+    border-color: #2196f3;
+}
+
+.pagination-ellipsis {
+    padding: 8px 5px;
+    color: #6c757d;
+    flex-shrink: 0;
+}
+
+/* ===== BOTÕES DE AÇÃO (Excluir, Novo, Editar) na consulta.jsp e gerenciarUsuarios.jsp ===== */
+.botoes-acao-group {
+    display: flex; /* Adiciona flexbox */
+    justify-content: flex-start; /* Alinha ao início */
+    gap: 10px; /* Espaçamento entre os botões */
+    margin-top: 20px;
+    width: 100%;
+    flex-wrap: wrap; /* Permitir quebra de linha se os botões não couberem */
+    overflow-x: auto; /* permite scroll horizontal se os botões não couberem */
+    padding-bottom: 5px;
+}
+
+.botoes-acao-group button {
+    width: auto; /* Deixa a largura ser determinada pelo conteúdo/flexbox */
+    padding: 10px 20px;
+    margin: 0; /* Remove margem superior que tinha causado quebra de linha antes */
+    font-size: 0.95em;
+    flex-shrink: 0; /* Impede que os botões diminuam abaixo do seu conteúdo */
+    min-width: 120px; /* Garante uma largura mínima para cada botão */
+    max-width: 180px; /* Limita a largura máxima, se necessário */
+}
+
+.btn-excluir {
+    background-color: #f44336; /* Vermelho */
+}
+.btn-excluir:hover {
+    background-color: #da190b;
+}
+
+.btn-novo {
+    background-color: #4CAF50; /* Verde */
+}
+.btn-novo:hover {
+    background-color: #45a049;
+}
+
+.btn-editar {
+    background-color: #ffc107; /* Amarelo (laranja-claro) */
+    color: #212529;
+}
+.btn-editar:hover {
+    background-color: #e0a800;
+}
+
+/* Estilo para quando um botão está desabilitado no grupo de ação */
+.botoes-acao-group button:disabled {
+    background-color: #cccccc;
+    color: #888888;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* ===== BOTÕES DE AÇÃO DENTRO DAS CÉLULAS DA TABELA (EDITAR/EXCLUIR USUÁRIOS) ===== */
+.tabela-acao-btns {
+    display: flex;
+    justify-content: center; /* Centraliza os botões dentro da célula */
+    gap: 5px; /* Espaço menor entre os botões */
+    flex-wrap: wrap; /* Permite que os botões quebrem a linha se a célula for muito pequena */
+    align-items: center;
+    height: 100%; /* Garante que o container ocupe a altura da célula */
+}
+
+.tabela-acao-btns .btn-edit,
+.tabela-acao-btns .btn-delete {
+    width: auto; /* Deixa a largura ser determinada pelo conteúdo */
+    padding: 6px 10px; /* Padding menor */
+    font-size: 0.8em; /* Tamanho da fonte menor */
+    margin: 0; /* Remove margens extras */
+    flex-shrink: 0; /* Impede que os botões encolham demais */
+    min-width: 60px; /* Largura mínima para botões menores */
+    border-radius: 4px; /* Borda mais suave */
+}
+
+.tabela-acao-btns .btn-edit {
+    background-color: #2196f3; /* Azul para Editar */
+}
+.tabela-acao-btns .btn-edit:hover {
+    background-color: #1976d2;
+}
+
+.tabela-acao-btns .btn-delete {
+    background-color: #f44336; /* Vermelho para Excluir */
+}
+.tabela-acao-btns .btn-delete:hover {
+    background-color: #da190b;
+}
+
+/* ===== MODAL GERAL (para confirmar exclusão, etc.) ===== */
+/* Este bloco .modal foi removido, pois o modal.jsp usa .modal-overlay */
+/* e os estilos abaixo são os corretos para ele. */
+
+/* ESTILO CORRIGIDO PARA O BACKGROUND ESCURO DO MODAL (alertModal/confirmModal) */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5); /* Fundo semi-transparente */
+    z-index: 1001; /* Z-index: Ajustado para ficar acima da sidebar e modal de edição */
+    display: flex; /* Adicionado para centralizar o conteúdo do modal */
+    justify-content: center;
+    align-items: center;
+
+    /* Propriedades para control de visibilidade via classe 'active' e transição */
+    visibility: hidden; /* Começa invisível */
+    opacity: 0; /* Começa transparente */
+    transition: visibility 0s 0.3s, opacity 0.3s ease-in-out; /* Transição de opacidade, e visibilidade após a transição */
+}
+
+/* ESTADO ATIVO DO MODAL-OVERLAY */
+.modal-overlay.active {
+    visibility: visible; /* Torna visível */
+    opacity: 1; /* Torna opaco */
+    transition-delay: 0s; /* Garante que a visibilidade mude imediatamente quando 'active' é adicionado */
+}
+
+.modal-content {
+    background-color: #fefefe;
+    padding: 30px;
+    border: 1px solid #888;
+    width: 90%;
+    max-width: 400px; /* Tamanho ajustado para pop-up de mensagem */
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    text-align: center;
+    position: relative; /* Para posicionar o botão de fechar */
+    /* Adicionado para transição de entrada/saída */
+    transform: translateY(-20px);
+    opacity: 0;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.modal-overlay.active .modal-content {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+    color: #333;
+}
+
+.modal-content p {
+    font-size: 1.1em;
+    color: #555;
+    margin-bottom: 25px;
+}
+
+/* O close-button no modal.jsp não tem uma classe específica, então vamos usar o ID ou ser mais genéricos */
+/* Se você adicionar uma classe 'modal-close-button' no modal.jsp, pode usar: .modal-close-button */
+/* Por enquanto, vou usar o ID para o botão de fechar do alertModal, e não há um para o confirmModal */
+/* Se você quiser um 'X' para fechar, adicione ao modal.jsp e estilize aqui. */
+
+
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.modal-buttons button {
+    width: 100px; /* Largura fixa para botões do modal */
+    padding: 10px 15px;
+    margin-top: 0; /* Remove margem superior padrão */
+    font-size: 1em;
+    border-radius: 6px;
+    transition: background-color 0.3s ease;
+}
+
+/* Cores para os botões do modal */
+.modal-buttons .btn-confirmar {
+    background-color: #2196f3; /* Azul padrão */
+    color: white;
+}
+.modal-buttons .btn-confirmar:hover {
+    background-color: #1976d2;
+}
+
+.modal-buttons .btn-cancelar {
+    background-color: #f44336; /* Vermelho para cancelar */
+    color: white;
+}
+.modal-buttons .btn-cancelar:hover {
+    background-color: #da190b;
+}
+
+/* Estilos para o título e mensagem do modal por tipo */
+.modal-content.success h3 { color: #4CAF50; }
+.modal-content.success p { color: #4CAF50; }
+.modal-content.success { border: 2px solid #4CAF50; }
+
+.modal-content.error h3 { color: #f44336; }
+.modal-content.error p { color: #f44336; }
+.modal-content.error { border: 2px solid #f44336; }
+
+.modal-content.warning h3 { color: #ffc107; }
+.modal-content.warning p { color: #ffc107; }
+.modal-content.warning { border: 2px solid #ffc107; }
+
+.modal-content.info h3 { color: #2196f3; }
+.modal-content.info p { color: #2196f3; }
+.modal-content.info { border: 2px solid #2196f3; }
+
+
+/* ===== NOVO: Estilos para o Indicador de Carregamento ===== */
+.loading-indicator {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+    font-style: italic;
+    /* display: none; */ /* Removido para ser controlado via JS */
+    position: absolute; /* Posição absoluta em relação ao pai com position: relative */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8); /* Fundo semi-transparente */
+    display: flex; /* Flex para centralizar conteúdo */
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10; /* Acima do conteúdo da tabela */
+    /* Adicionado para transição de opacidade */
+    opacity: 0;
+    transition: opacity 0.05s ease-in-out; /* Transição MUITO rápida */
+    pointer-events: none; /* Não interfere com cliques quando invisível */
+}
+
+.loading-indicator.active {
+    opacity: 1;
+    pointer-events: auto; /* Permite interações quando visível (embora não haja) */
+}
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-top: 4px solid #2196f3; /* Azul */
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   ESTILO MESTRE RESPONSIVO - CBA DIESEL (CORREÇÃO GLOBAL)
+   ============================================================ */
+
+@media (max-width: 768px) {
+    /* 1. RESET DE ESTRUTURA (Resolve Imagens 2 e 3) */
+    /* Garante que o conteúdo não seja empurrado para a direita pela barra lateral inexistente */
+    .content, 
+    .content-cadastro, 
+    .content-manutencao, 
+    .main-content, 
+    .container {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 10px !important;
+        display: block !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 2. CABEÇALHOS E TÍTULOS (Resolve Imagem 3 e Títulos cortados) */
+    .main-content-header, .header-content {
+        display: flex !important;
+        flex-direction: column !important; /* Empilha o botão 'Voltar' e o Título */
+        align-items: center !important;
+        text-align: center !important;
+        width: 100% !important;
+    }
+
+    h1, .page-title {
+        font-size: 1.4rem !important;
+        line-height: 1.2 !important;
+        margin: 15px 0 !important;
+        white-space: normal !important; /* Permite que o título quebre linha em vez de sumir */
+    }
+
+    /* 3. FORMULÁRIOS E INPUTS (Resolve Imagem 1 - Cadastro vovô/vazando) */
+    /* Isso impede que qualquer campo de texto saia da tela */
+    input[type="text"], 
+    input[type="email"], 
+    input[type="tel"], 
+    input[type="password"],
+    select, 
+    textarea,
+    .form-control {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        display: block !important;
+    }
+
+    .form-group {
+        margin-bottom: 15px !important;
+        width: 100% !important;
+    }
+
+    /* 4. BOTÕES DE AÇÃO (Resolve Imagem 2 - Botão verde "fugindo") */
+    .action-buttons, .botoes-acao-group, .modal-buttons {
+        display: flex !important;
+        flex-direction: column !important; /* Botões um embaixo do outro no celular */
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    .btn-add, .btn-edit, .btn-delete, .btn-primary, .btn-novo, .btn-excluir, .btn-editar, .btn-limpar {
+        width: 100% !important;
+        margin: 0 !important;
+        float: none !important; /* Remove alinhamentos à direita que quebram o layout */
+    }
+
+    /* 5. TABELAS */
+	.table-container, .tabela-scroll, .table-content-wrapper {
+	    width: 100% !important;
+	    overflow-x: auto !important;
+	    -webkit-overflow-scrolling: touch;
+	    border: 1px solid #eee !important;
+	}
+	
+	table, .tabela {
+	    width: max-content !important;
+   		min-width: max-content !important;
+	}
+	
+	.tabela td,
+	.tabela th {
+	    /*overflow: hidden;
+	    text-overflow: ellipsis;
+	    white-space: nowrap;*/
+	    white-space: normal;
+       word-break: break-word;
+	    
+	}
+	
+	/* BOTÕES MOBILE */
+	.form-buttons-container button,
+	.botoes-acao-group button,
+	.pagination button {
+	    width: 100% !important;
+	    max-width: 100% !important;
+	}
+
+    /* 6. SIDEBAR (Menu Principal) - Mantendo o que já funcionou */
+    .sidebar {
+        position: relative !important;
+        width: 100% !important;
+        height: auto !important;
+        margin-bottom: 20px !important;
+    }
+    
+    /* --- VACINA ESPECÍFICA PARA CADASTROS E GERENCIAMENTO --- */
+    
+    /* 1. Resolve o desalinhamento lateral (Imagem 7ac5f7) */
+    .content-full, .content-cadastro {
+        margin-left: 0 !important;
+        width: 100% !important;
+        padding: 15px !important;
+    }
+
+    /* 2. Resolve campos vazando (Imagens 7a5463 e 7a5440) */
+    .form-row {
+        display: flex !important;
+        flex-direction: column !important; /* Força um campo embaixo do outro */
+    }
+
+    /* Anula o 'min-width: 400px' que está travando o layout no JSP */
+    .form-group {
+        min-width: 0 !important; 
+        width: 100% !important;
+        flex: none !important;
+    }
+
+    /* Garante que NENHUM input seja maior que a tela do celular */
+    #cadastroEntidadeForm input, 
+    #cadastroEntidadeForm select, 
+    #cadastroEntidadeForm textarea,
+    .form-control {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 3. Ajusta os botões de ação que estão sumindo na direita */
+    .action-buttons, .form-buttons-container {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+
+    .btn-add, .btn-edit, .btn-delete, .btn-salvar, .btn-limpar {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+    
+    /* ------------------------------------------------------------------- */
+	/* PADRONIZAÇÃO: LETRAS MAIÚSCULAS PARA LANÇAMENTO */
+	/* ------------------------------------------------------------------- */
+	
+	
+}

@@ -13,7 +13,7 @@ if (mensagemErro == null) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NexaCore - Acesso ao Sistema</title>
+<title>Acesso ao Sistema - NexaCore</title>
 
 <!-- Bootstrap -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -21,13 +21,16 @@ if (mensagemErro == null) {
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
 <!-- CSS Externos Padronizados com ctx -->
-<link rel="stylesheet" href="<%=ctx%>/assets/css/login.css">
+<!--  <link rel="stylesheet" href="<%=ctx%>/assets/css/login.css">
 <link rel="stylesheet" href="<%=ctx%>/assets/css/global.css">
-<link rel="stylesheet" href="<%=ctx%>/assets/css/layout.css">
+<link rel="stylesheet" href="<%=ctx%>/assets/css/layout.css"> -->
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/login.css">
 
 </head>
 
-<body>
+<body class="p-4 bg-light" data-app-context-path="${pageContext.request.contextPath}">
 	<div class="login-page">
 		<!-- LADO ESQUERDO -->
 		<section class="brand-panel">
@@ -113,15 +116,18 @@ if (mensagemErro == null) {
 						<i class="bi bi-shield-check me-2"></i> Entrar com SSO (Corporativo)
 					</button>
 
-					<div class="version">Versão 1.0.0</div>
+					<div class="divider">
+						<span>Precisa de Ajuda ?</span>
+					</div>
+
 
 					<div class="support-box">
 						<div class="support-icon">
 							<i class="bi bi-question-lg"></i>
 						</div>
 						<div>
-							<strong>Precisa de ajuda?</strong> Entre em contato com o suporte: 
-							<a href="mailto:suporte@nexacore.com.br">suporte@nexacore.com.br</a>
+							<strong> Entre em contato com o suporte: </strong>
+							<a href="mailto:suporte@nexacore.com.br">informatica@nexacore.com.br</a>
 						</div>
 					</div>
 				</div>
@@ -139,7 +145,7 @@ if (mensagemErro == null) {
 	</script>
 	<!-- SCRIPT EXTERNO PADRONIZADO -->
 	 <!-- NOVO: Inclui o script global de branding PRIMEIRO -->
-    <script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
-	<script src="<%=ctx%>/assets/js/login.js"></script>	
+    <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>	
+	<script src="${pageContext.request.contextPath}/assets/js/login.js"></script>
 </body>
 </html>

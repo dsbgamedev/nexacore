@@ -9,12 +9,21 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/gerenciar-usuario.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/menu.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
 </head>
-<body class="p-4 bg-light">
+<body class="p-4 bg-light" data-app-context-path="${pageContext.request.contextPath}">
 
 <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+  <!-- 1. INCLUI O MENU LATERAL DA PASTA DE LAYOUT -->
+    <jsp:include page="/WEB-INF/jsp/layout/sidebar.jsp" />
+
+    <!-- CONTEÚDO PRINCIPAL DENTRO DO LAYOUT -->
+    <main id="main-content" class="nexacore-main">
+        
+        <!-- 2. INCLUI A TOPBAR DA PASTA DE LAYOUT -->
+        <jsp:include page="/WEB-INF/jsp/layout/topbar.jsp" />
 
     <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
     <div class="card-cabecalho-padrao tema-escuro ">
@@ -129,6 +138,7 @@
 <!-- 3. OBRIGATÓRIO: Carregue o JavaScript do Bootstrap PRIMEIRO -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+<script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/gerenciar-usuarios.js"></script>
 </body>
 </html>

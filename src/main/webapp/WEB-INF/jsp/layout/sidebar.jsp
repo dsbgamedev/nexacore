@@ -49,9 +49,15 @@
 <c:set var="canWriteProdutos" value="${hasFullAccess or sessionScope.usuarioLogado.temPermissao('produtos', 'INSERIR') or sessionScope.usuarioLogado.temPermissao('produtos', 'EDITAR')}" />
 <c:set var="canWriteManutencao" value="${hasFullAccess or sessionScope.usuarioLogado.temPermissao('manutencao_chamados', 'INSERIR') or sessionScope.usuarioLogado.temPermissao('manutencao_chamados', 'EDITAR')}" />
 <c:set var="canWriteTransportadoras" value="${hasFullAccess or sessionScope.usuarioLogado.temPermissao('transportadoras', 'INSERIR') or sessionScope.usuarioLogado.temPermissao('transportadoras', 'EDITAR')}" />
+<c:set var="canSeeFrete" value="${hasFullAccess or fn:contains(modulosStr, ',frete,') or sessionScope.usuarioLogado.temPermissao('frete', 'INSERIR') or sessionScope.usuarioLogado.temPermissao('frete', 'EDITAR')}" />
 
 <!-- SIDEBAR LATERAL ESQUERDA -->
 <aside id="sidebar" class="nexacore-sidebar">
+    <!-- Botão flutuante na bordinha para recolher/expandir o menu principal -->
+    <button type="button" class="sidebar-toggle-btn" onclick="toggleSidebar()" title="Recolher/Expandir Menu">
+        <i class="bi bi-chevron-left" id="sidebarToggleIcon"></i>
+    </button>
+
     <div class="sidebar-brand">
         <div class="logo-symbol">N</div>
         <div class="logo-info">
@@ -61,109 +67,178 @@
     </div>
 
     <div class="sidebar-menu-container">
+        <!-- PRINCIPAL -->
         <span class="menu-category">PRINCIPAL</span>
         <ul class="sidebar-menu">
             <li><a href="<%=ctx%>/MenuServlet"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
         </ul>
         
+        <!-- EQUIPAMENTOS -->
         <c:if test="${canSeeEquipamentos or canSeeProdutos}">
-            <span class="menu-category">EQUIPAMENTOS</span>
-            <ul class="sidebar-menu">
-                <c:if test="${canSeeEquipamentos}">
-                    <li><a href="<%=ctx%>/ConsultaEquipamentosServlet"><i class="bi bi-cpu"></i> Consulta de Equipamentos</a></li>
-                    <c:if test="${canWriteEquipamentos}">
-                        <li><a href="<%=ctx%>/CadastrarEquipamentoServlet"><i class="bi bi-plus-circle"></i> Novo Equipamento</a></li>
+            <div class="sidebar-dropdown-group collapsed">
+                <span class="menu-category dropdown-toggle-title" onclick="toggleSidebarMenu(this)">
+                    <span>EQUIPAMENTOS</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </span>
+                <ul class="sidebar-menu">
+                    <c:if test="${canSeeEquipamentos}">
+                        <li><a href="<%=ctx%>/ConsultaEquipamentosServlet"><i class="bi bi-cpu"></i> Consulta de Equipamentos</a></li>
+                        <c:if test="${canWriteEquipamentos}">
+                            <li><a href="<%=ctx%>/CadastrarEquipamentoServlet"><i class="bi bi-plus-circle"></i> Novo Equipamento</a></li>
+                        </c:if>
                     </c:if>
-                </c:if>
-                <c:if test="${canSeeProdutos}">
-                    <c:if test="${canWriteProdutos}">
-                        <li><a href="<%=ctx%>/ProdutoServlet"><i class="bi bi-plus-circle"></i> Novo Produto</a></li>                  
+                    <c:if test="${canSeeProdutos}">
+                        <c:if test="${canWriteProdutos}">
+                            <li><a href="<%=ctx%>/ProdutoServlet"><i class="bi bi-plus-circle"></i> Novo Produto</a></li>                  
+                        </c:if>
+                        <li><a href="<%=ctx%>/ConsultaProdutoServlet"><i class="bi bi-box-seam"></i> Consulta de Produtos</a></li>                  
                     </c:if>
-                    <li><a href="<%=ctx%>/ConsultaProdutoServlet"><i class="bi bi-box-seam"></i> Consulta de Produtos</a></li>                  
-                </c:if>
-            </ul>
+                </ul>
+            </div>
         </c:if>
         
+        <!-- TRANSPORTADORA -->
         <c:if test="${canSeeTransportadoras}">
-            <span class="menu-category">TRANSPORTADORA</span>
-            <ul class="sidebar-menu">
-                <c:if test="${canSeeTransportadoras}">
-                    <li><a href="<%=ctx%>/TransportadoraServlet"><i class="bi bi-truck"></i> Transportadoras</a></li>
-                </c:if>
-                <li><a href="<%=ctx%>/ConsultaTransportadoraServlet"><i class="bi bi-list-check"></i> Consultar Transportadoras </a></li>
-            </ul>
+            <div class="sidebar-dropdown-group collapsed">
+                <span class="menu-category dropdown-toggle-title" onclick="toggleSidebarMenu(this)">
+                    <span>TRANSPORTADORA</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </span>
+                <ul class="sidebar-menu">
+                    <c:if test="${canSeeTransportadoras}">
+                        <li><a href="<%=ctx%>/TransportadoraServlet"><i class="bi bi-truck"></i> Transportadoras</a></li>
+                    </c:if>
+                    <li><a href="<%=ctx%>/ConsultaTransportadoraServlet"><i class="bi bi-list-check"></i> Consultar Transportadoras </a></li>
+                </ul>
+            </div>
         </c:if>
         
+        <!-- FRETE -->
+        <c:if test="${canSeeFrete}">
+            <div class="sidebar-dropdown-group collapsed">
+                <span class="menu-category dropdown-toggle-title" onclick="toggleSidebarMenu(this)">
+                    <span>FRETE</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </span>
+                <ul class="sidebar-menu">
+                    <li><a href="<%=ctx%>/LancarFreteServlet"><i class="bi bi-truck-flatbed"></i> Lançar Frete</a></li>
+                    <li><a href="<%=ctx%>/ConsultaFreteServlet"><i class="bi bi-search"></i> Consultar Fretes</a></li>
+                </ul>
+            </div>
+        </c:if>
+        
+        <!-- FORNECEDORES -->
         <c:if test="${canSeeFornecedores}">
-            <span class="menu-category">FORNECEDORES</span>
-            <ul class="sidebar-menu">
-                <li><a href="<%=ctx%>/ConsultaFornecedorServlet"><i class="bi bi-shop"></i> Consulta de Fornecedores</a></li>
-                <li><a href="<%=ctx%>/FornecedorServlet"><i class="bi bi-plus-circle"></i> Cadastrar Fornecedor</a></li>
-            </ul>
+            <div class="sidebar-dropdown-group collapsed">
+                <span class="menu-category dropdown-toggle-title" onclick="toggleSidebarMenu(this)">
+                    <span>FORNECEDORES</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </span>
+                <ul class="sidebar-menu">
+                    <li><a href="<%=ctx%>/ConsultaFornecedorServlet"><i class="bi bi-shop"></i> Consulta de Fornecedores</a></li>
+                    <li><a href="<%=ctx%>/FornecedorServlet"><i class="bi bi-plus-circle"></i> Cadastrar Fornecedor</a></li>
+                </ul>
+            </div>
         </c:if>
 
+        <!-- MOVIMENTAÇÕES -->
         <c:if test="${canSeeMovimentacao}">
-            <span class="menu-category">MOVIMENTAÇÕES</span>
-            <ul class="sidebar-menu">
-                <li><a href="<%=ctx%>/EnvioEquipamentoServlet"><i class="bi bi-arrow-up-right-circle"></i> Envios</a></li>
-                <li><a href="<%=ctx%>/ConsultaEnvioServlet"><i class="bi bi-search"></i> Consulta de Envios</a></li>
-                <li><a href="<%=ctx%>/DevolucaoEquipamentoServlet"><i class="bi bi-arrow-return-left"></i> Devolução de Equipamento</a></li>
-                <li><a href="<%=ctx%>/RecebimentoServlet"><i class="bi bi-arrow-down-left-circle"></i> Recebimentos/Devoluções</a></li>
-            </ul>
+            <div class="sidebar-dropdown-group collapsed">
+                <span class="menu-category dropdown-toggle-title" onclick="toggleSidebarMenu(this)">
+                    <span>MOVIMENTAÇÕES</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </span>
+                <ul class="sidebar-menu">
+                    <li><a href="<%=ctx%>/EnvioEquipamentoServlet"><i class="bi bi-arrow-up-right-circle"></i> Envios</a></li>
+                    <li><a href="<%=ctx%>/ConsultaEnvioServlet"><i class="bi bi-search"></i> Consulta de Envios</a></li>
+                    <li><a href="<%=ctx%>/DevolucaoEquipamentoServlet"><i class="bi bi-arrow-return-left"></i> Devolução de Equipamento</a></li>
+                    <li><a href="<%=ctx%>/RecebimentoServlet"><i class="bi bi-arrow-down-left-circle"></i> Recebimentos/Devoluções</a></li>
+                </ul>
+            </div>
         </c:if>
 
+        <!-- MANUTENÇÕES -->
         <c:if test="${canSeeManutencao}">
-            <span class="menu-category">MANUTENÇÕES</span>
-            <ul class="sidebar-menu">
-                <c:if test="${canWriteManutencao}">
-                    <li><a href="<%=ctx%>/ManutencaoServlet"><i class="bi bi-tools"></i> Abrir Chamado</a></li>
-                </c:if>
-                <li><a href="<%=ctx%>/ConsultaChamadosServlet"><i class="bi bi-list-check"></i> Consulta de Chamados</a></li>
-            </ul>
+            <div class="sidebar-dropdown-group collapsed">
+                <span class="menu-category dropdown-toggle-title" onclick="toggleSidebarMenu(this)">
+                    <span>MANUTENÇÕES</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </span>
+                <ul class="sidebar-menu">
+                    <c:if test="${canWriteManutencao}">
+                        <li><a href="<%=ctx%>/ManutencaoServlet"><i class="bi bi-tools"></i> Abrir Chamado</a></li>
+                    </c:if>
+                    <li><a href="<%=ctx%>/ConsultaChamadosServlet"><i class="bi bi-list-check"></i> Consulta de Chamados</a></li>
+                </ul>
+            </div>
         </c:if>
 
+        <!-- CADASTROS -->
         <c:if test="${canSeeFabricantes or canSeeMarcas or canSeeEmpresas or canSeeAtributos or canSeeUsuarios or canSeeGerenciarUsuarios}">
-            <span class="menu-category">CADASTROS</span>
-            <ul class="sidebar-menu">           	
-                <c:if test="${canSeeFabricantes}">
-                    <li><a href="<%=ctx%>/FabricanteServlet"><i class="bi bi-building"></i> Fabricantes</a></li>
-                </c:if>
-                <c:if test="${canSeeMarcas}">
-                    <li><a href="<%=ctx%>/MarcaServlet"><i class="bi bi-tag"></i> Marcas</a></li>
-                </c:if>
-                <c:if test="${canSeeEmpresas}">
-                    <li><a href="<%=ctx%>/CadastrarEmpresaServlet"><i class="bi bi-grid"></i> Empresas</a></li>
-                </c:if>
-                <c:if test="${canSeeAtributo}">
-                    <li><a href="<%=ctx%>/AtributoServlet"><i class="bi bi-list-nested"></i> Atributos</a></li>
-                </c:if>
-                <c:if test="${canSeeUsuarios}">
-                    <li><a href="<%=ctx%>/CadastrarUsuarioServlet"><i class="bi bi-people"></i> Usuários</a></li>
-                </c:if>
-                <c:if test="${canSeeGerenciarUsuarios}">
-                    <li><a href="<%=ctx%>/GerenciarUsuariosServlet"><i class="bi bi-people"></i> Gerenciar Usuários</a></li>
-                </c:if>
-            </ul>
+            <div class="sidebar-dropdown-group collapsed">
+                <span class="menu-category dropdown-toggle-title" onclick="toggleSidebarMenu(this)">
+                    <span>CADASTROS</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </span>
+                <ul class="sidebar-menu">           	
+                    <c:if test="${canSeeFabricantes}">
+                        <li><a href="<%=ctx%>/FabricanteServlet"><i class="bi bi-building"></i> Fabricantes</a></li>
+                    </c:if>
+                    <c:if test="${canSeeMarcas}">
+                        <li><a href="<%=ctx%>/MarcaServlet"><i class="bi bi-tag"></i> Marcas</a></li>
+                    </c:if>
+                    <c:if test="${canSeeEmpresas}">
+                        <li><a href="<%=ctx%>/CadastrarEmpresaServlet"><i class="bi bi-grid"></i> Empresas</a></li>
+                    </c:if>
+                    <c:if test="${canSeeAtributo}">
+                        <li><a href="<%=ctx%>/AtributoServlet"><i class="bi bi-list-nested"></i> Atributos</a></li>
+                    </c:if>
+                    <c:if test="${canSeeUsuarios}">
+                        <li><a href="<%=ctx%>/CadastrarUsuarioServlet"><i class="bi bi-people"></i> Usuários</a></li>
+                    </c:if>
+                    <c:if test="${canSeeGerenciarUsuarios}">
+                        <li><a href="<%=ctx%>/GerenciarUsuariosServlet"><i class="bi bi-people"></i> Gerenciar Usuários</a></li>
+                    </c:if>
+                </ul>
+            </div>
         </c:if>
         
+        <!-- AUDITORIA -->
         <c:if test="${canSeeAuditoria}">
-            <span class="menu-category">AUDITORIA</span>
-            <ul class="sidebar-menu">
-                <li><a href="<%=ctx%>/AuditoriaServlet"><i class="bi bi-cpu"></i> Consulta Auditoria</a></li>
-            </ul>       
+            <div class="sidebar-dropdown-group collapsed">
+                <span class="menu-category dropdown-toggle-title" onclick="toggleSidebarMenu(this)">
+                    <span>AUDITORIA</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </span>
+                <ul class="sidebar-menu">
+                    <li><a href="<%=ctx%>/AuditoriaServlet"><i class="bi bi-cpu"></i> Consulta Auditoria</a></li>
+                </ul>       
+            </div>
         </c:if>
         
+        <!-- GERENCIAR SESSÕES -->
         <c:if test="${canSeeSessoes}">
-            <span class="menu-category">GERENCIAR SESSÕES</span>
-            <ul class="sidebar-menu">
-                <li><a href="<%=ctx%>/AdminSessoesServlet"><i class="bi bi-cpu"></i> GERENCIAR SESSÕES </a></li>
-            </ul>       
+            <div class="sidebar-dropdown-group collapsed">
+                <span class="menu-category dropdown-toggle-title" onclick="toggleSidebarMenu(this)">
+                    <span>GERENCIAR SESSÕES</span>
+                    <i class="bi bi-chevron-down toggle-icon"></i>
+                </span>
+                <ul class="sidebar-menu">
+                    <li><a href="<%=ctx%>/AdminSessoesServlet"><i class="bi bi-cpu"></i> GERENCIAR SESSÕES </a></li>
+                </ul>       
+            </div>
         </c:if>
          
-        <span class="menu-category">CONFIGURAÇÕES</span>
-        <ul class="sidebar-menu">
-            <li><a href="<%=ctx%>/ConfiguracoesServlet"><i class="bi bi-gear"></i> Configurações</a></li>
-        </ul>
+        <!-- CONFIGURAÇÕES -->
+        <div class="sidebar-dropdown-group collapsed">
+            <span class="menu-category dropdown-toggle-title" onclick="toggleSidebarMenu(this)">
+                <span>CONFIGURAÇÕES</span>
+                <i class="bi bi-chevron-down toggle-icon"></i>
+            </span>
+            <ul class="sidebar-menu">
+                <li><a href="<%=ctx%>/ConfiguracoesServlet"><i class="bi bi-gear"></i> Configurações</a></li>
+            </ul>
+        </div>
     </div>
 
     <!-- USER FOOTER NA SIDEBAR -->

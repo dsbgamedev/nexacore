@@ -24,14 +24,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexacore | Consulta de Transportadoras</title>
+    <title>Consulta de Transportadoras - Nexacore</title>
       
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/menu.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
 </head>
 <body class="p-4 bg-light" data-app-context-path="${pageContext.request.contextPath}">
+<!-- 1. INCLUI O MENU LATERAL DA PASTA DE LAYOUT -->
+    <jsp:include page="/WEB-INF/jsp/layout/sidebar.jsp" />
+
+    <!-- CONTEÚDO PRINCIPAL DENTRO DO LAYOUT -->
+    <main id="main-content" class="nexacore-main">
+        
+        <!-- 2. INCLUI A TOPBAR DA PASTA DE LAYOUT -->
+        <jsp:include page="/WEB-INF/jsp/layout/topbar.jsp" />
 
 <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
 
@@ -69,8 +79,8 @@
             <h5 class="mb-0 fw-bold">FILTROS DE PESQUISA</h5>
         </div>
         
-        <form action="${pageContext.request.contextPath}/TransportadoraServlet" method="get" id="formFiltroTransportadora">
-            <input type="hidden" name="acao" value="filtrar">
+        <form action="${pageContext.request.contextPath}/ConsultaTransportadoraServlet" method="get">
+             <input type="hidden" name="acao" value="filtrar">    
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">Pesquisa (Razão Social / Nome Fantasia)</label>
@@ -196,6 +206,7 @@
     const filialUsuarioCodigo = "<%= filialCod %>";
 </script>
 <script src="${pageContext.request.contextPath}/assets/js/consulta-transportadora.js"></script>
+<script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 </body>
 </html>

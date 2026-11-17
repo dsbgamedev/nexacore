@@ -1,0 +1,22 @@
+/*@charset "UTF-8";*/
+
+/* Garante que a tabela se adapte sem sobreposições */
+.tabela-auditoria {
+    width: 100% !important;
+    table-layout: auto !important; /* Deixa o navegador calcular o espaço de forma inteligente */
+}
+
+.tabela-auditoria th, 
+.tabela-auditoria td {
+    white-space: nowrap; /* Evita que o texto quebre de forma feia nas colunas compactas */
+    padding: 0.75rem 0.5rem !important;
+}
+
+/* Fixa apenas a coluna de Ações para acomodar perfeitamente os 3 botões */
+.tabela-auditoria th:last-child,
+.tabela-auditoria td:last-child {
+    white-space: nowrap !important;
+    width: 135px !important;
+    min-width: 135px !important;
+    text-align: center;
+}

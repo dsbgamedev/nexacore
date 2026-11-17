@@ -3,8 +3,10 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Nexacore | Consulta de Envios</title>
+    <title>Consulta de Envios - Nexacore</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/menu.css">
     <!-- Adicionado Bootstrap Icons para combinar com a nova UI moderna -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -13,7 +15,18 @@
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
   
 </head>
-<body class="bg-light">
+<body class="p-4 bg-light" data-app-context-path="${pageContext.request.contextPath}">
+
+<!-- 1. INCLUI O MENU LATERAL DA PASTA DE LAYOUT -->
+    <jsp:include page="/WEB-INF/jsp/layout/sidebar.jsp" />
+
+    <!-- CONTEÚDO PRINCIPAL DENTRO DO LAYOUT -->
+    <main id="main-content" class="nexacore-main">
+        
+        <!-- 2. INCLUI A TOPBAR DA PASTA DE LAYOUT -->
+        <jsp:include page="/WEB-INF/jsp/layout/topbar.jsp" />
+
+
 
 <div class="container-fluid px-4 py-4">
     <!-- Cabeçalho da Página Envolvido em Card / Painel de Fundo -->
@@ -267,6 +280,7 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+ <script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/consulta-envios.js"></script>
 </body>
 </html>

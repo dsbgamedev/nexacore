@@ -4,12 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexacore | Abertura de Chamado</title>
+    <title>Abertura de Chamado - Nexacore</title>
     <script>
         var contextPath = "<%= request.getContextPath() %>";
     </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/menu.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
     <style>
@@ -18,7 +20,16 @@
         .card-resumo { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; }
     </style>
 </head>
-<body class="p-4 bg-light">
+<body class="p-4 bg-light" data-app-context-path="${pageContext.request.contextPath}">
+<!-- 1. INCLUI O MENU LATERAL DA PASTA DE LAYOUT -->
+    <jsp:include page="/WEB-INF/jsp/layout/sidebar.jsp" />
+
+    <!-- CONTEÚDO PRINCIPAL DENTRO DO LAYOUT -->
+    <main id="main-content" class="nexacore-main">
+        
+        <!-- 2. INCLUI A TOPBAR DA PASTA DE LAYOUT -->
+        <jsp:include page="/WEB-INF/jsp/layout/topbar.jsp" />
+
 
 <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
 
@@ -422,7 +433,8 @@
 	    var contextPath = "<%= request.getContextPath() %>";
 	    var usuarioPodeEditar = ${podeEditar};
 	</script>
-    <script src="${pageContext.request.contextPath}/assets/js/manutencao-abertura.js"></script>   
+    <script src="${pageContext.request.contextPath}/assets/js/manutencao-abertura.js"></script> 
+    <script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>  
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 </body>
 </html>

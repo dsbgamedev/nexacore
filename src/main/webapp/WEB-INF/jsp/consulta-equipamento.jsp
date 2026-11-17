@@ -317,6 +317,7 @@
         const filialUsuarioCodigo = "<%= filialCod %>";
     </script>
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+    <script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/consulta-equipamento.js"></script>
 </body>
 </html>

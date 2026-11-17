@@ -58,7 +58,9 @@ public class AuthFilter implements Filter {
             "/WEB-INF/jsp/consulta-transportadora.jsp",
             "/WEB-INF/jsp/cadastro-fornecedor.jsp",
             "/WEB-INF/jsp/consulta-fornecedores.jsp",
-            "/WEB-INF/jsp/admin-sessoes.jsp"
+            "/WEB-INF/jsp/admin-sessoes.jsp",
+            "/WEB-INF/jsp/consulta-frete.jsp",
+            "/WEB-INF/jsp/lancar-frete.jsp"
             
             
     	     // Protegendo o acesso direto		
@@ -195,6 +197,16 @@ public class AuthFilter implements Filter {
         PROTECTED_RESOURCES_MODULES.put("/AdminSessoesServlet", "usuarios");
         PROTECTED_RESOURCES_MODULES.put("/api/sessoes", "usuarios");
         PROTECTED_RESOURCES_MODULES.put("/api/sessoes/", "usuarios");
+        
+     // 16. fretes (Mapeamento unificado e abrangente para evitar bloqueios)
+        PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/lancar-frete.jsp", "frete");
+        PROTECTED_RESOURCES_MODULES.put("/WEB-INF/jsp/consulta-frete.jsp", "frete");
+        PROTECTED_RESOURCES_MODULES.put("/ConsultaFreteServlet", "frete");
+        PROTECTED_RESOURCES_MODULES.put("/LancarFreteServlet", "frete"); 
+        PROTECTED_RESOURCES_MODULES.put("/ListarFretesServlet", "frete"); // <--- ADICIONADO AQUI PARA COBRIR O SERVLET REAL
+        PROTECTED_RESOURCES_MODULES.put("/ListarTransportadorasServlet", "frete"); // <--- ADICIONADO PARA O AUTOCOMPLETE
+        PROTECTED_RESOURCES_MODULES.put("/api/fretes", "frete");
+        PROTECTED_RESOURCES_MODULES.put("/api/fretes/", "frete");
     }
 
     @Override
@@ -319,26 +331,36 @@ public class AuthFilter implements Filter {
         String requiredModule = PROTECTED_RESOURCES_MODULES.get(path);
 
         if (requiredModule != null) {
+            // Se for Administrador ou Super Administrador, libera acesso total
             if (PerfilUsuario.SUPER_ADMINISTRADOR.name().equalsIgnoreCase(userProfile) || 
-                PerfilUsuario.ADMINISTRADOR.name().equalsIgnoreCase(userProfile)) {
-                System.out.println("AuthFilter: Usuário é " + userProfile.toUpperCase() + ". Permitindo acesso a " + path + ".");
+                PerfilUsuario.ADMINISTRADOR.name().equalsIgnoreCase(userProfile) ||
+                "super_administrador".equalsIgnoreCase(userProfile) ||
+                "administrador".equalsIgnoreCase(userProfile)) {
+                System.out.println("AuthFilter: Usuário Administrador. Permitindo acesso a " + path + ".");
                 chain.doFilter(request, response);
             } else {
                 boolean hasPermission = false;
+                
+                // 1. Verifica na lista simples de modulos permitidos da sessão
                 if (modulosPermitidos != null) {
                     for (String module : modulosPermitidos) {
-                        if (module.equalsIgnoreCase(requiredModule)) {
+                        if (module != null && module.toLowerCase().trim().equals(requiredModule.toLowerCase().trim())) {
                             hasPermission = true;
                             break;
                         }
                     }
                 }
                 
+                // 2. Verifica também pelas permissões granulares do objeto Usuario (CONSULTAR por padrão para a página)
+                if (!hasPermission && usuarioLogadoObj != null) {
+                    hasPermission = usuarioLogadoObj.temPermissao(requiredModule, "CONSULTAR");
+                }
+                
                 if (hasPermission) {
-                    System.out.println("AuthFilter: Usuário '" + usuarioLogadoObj.getUsername() + "' tem permissão para o módulo '" + requiredModule + "'. Permitindo acesso a " + path + ".");
+                    System.out.println("AuthFilter: Usuário '" + usuarioLogadoObj.getUsername() + "' tem permissão para o módulo '" + requiredModule + "'. Permitindo acesso.");
                     chain.doFilter(request, response);
                 } else {
-                    System.out.println("AuthFilter: Usuário '" + usuarioLogadoObj.getUsername() + "' NÃO tem permissão para o módulo '" + requiredModule + "'. Negando acesso a " + path + ".");
+                    System.out.println("AuthFilter: Usuário '" + usuarioLogadoObj.getUsername() + "' NÃO tem permissão para o módulo '" + requiredModule + "'. Negando acesso.");
                     String errorMessage = "Acesso negado. Você não possui permissão para o módulo de '" + requiredModule + "'.";
                     sendAccessDeniedResponse(httpRequest, httpResponse, isAjaxRequest, contextPath, errorMessage);
                 }
@@ -352,7 +374,9 @@ public class AuthFilter implements Filter {
     }
 
     private void sendAccessDeniedResponse(HttpServletRequest httpRequest, HttpServletResponse httpResponse, boolean isAjaxRequest, String contextPath, String message) throws IOException {
-        if (isAjaxRequest) {
+    	// COLOQUE ESTE PRINT AQUI:
+            System.err.println(">>> ALERTA DO AUTHFILTER: ACESSO NEGADO PARA A ROTA: " + httpRequest.getRequestURI() + " | MOTIVO: " + message);
+    	if (isAjaxRequest) {
             httpResponse.setStatus(HttpServletResponse.SC_FORBIDDEN);
             httpResponse.setContentType("application/json");
             httpResponse.setCharacterEncoding("UTF-8");

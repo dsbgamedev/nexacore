@@ -14,15 +14,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NexaCore - ${title != null ? title : "Cadastro de Usuário"}</title>
+    <title> Cadastro de Usuário - NexaCore</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/menu.css">
     <link rel="stylesheet" href="<%=ctx%>/assets/css/cadastro-usuario.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
 </head>
 
-<body class="nexacore-cadastro-usuario p-4 bg-light">
+<body class="p-4 bg-light" data-app-context-path="${pageContext.request.contextPath}">
+
+<!-- 1. INCLUI O MENU LATERAL DA PASTA DE LAYOUT -->
+    <jsp:include page="/WEB-INF/jsp/layout/sidebar.jsp" />
+
+    <!-- CONTEÚDO PRINCIPAL DENTRO DO LAYOUT -->
+    <main id="main-content" class="nexacore-main">
+        
+        <!-- 2. INCLUI A TOPBAR DA PASTA DE LAYOUT -->
+        <jsp:include page="/WEB-INF/jsp/layout/topbar.jsp" />
+
+
+
 <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
     
     <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
@@ -273,5 +286,6 @@
     const unidadesPermitidasUsuario = ${not empty usuarioUnidadesJson ? usuarioUnidadesJson : '[]'};
 </script>
 <script src="${pageContext.request.contextPath}/assets/js/cadastro-usuario.js"></script>
+<script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
 </body>
 </html>
