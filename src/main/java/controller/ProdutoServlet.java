@@ -66,12 +66,15 @@ public class ProdutoServlet extends HttpServlet {
 
     protected void doGet(HttpServletRequest request, HttpServletResponse response) 
             throws ServletException, IOException {
-    	String path = request.getPathInfo();
+        String path = request.getPathInfo();
         HttpSession session = request.getSession(false);
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
         boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
 
+        // =========================================================================
+        // BLINDAGEM IDOR E CONTROLE DE FLUXO DA PÁGINA (CADASTRO / EDIÇÃO)
+        // =========================================================================
         if (path == null || path.equals("/")) {
             boolean temAcessoEscrita = usuario != null && (
                 isAdmin ||
@@ -92,6 +95,62 @@ public class ProdutoServlet extends HttpServlet {
             request.setAttribute("podeEditar", podeEditar);
             request.setAttribute("podeExcluir", podeExcluir);
 
+            String idStr = request.getParameter("id");
+            String autorizado = request.getParameter("autorizado");
+            String tokenOk = request.getParameter("token_ok");
+            HttpSession sessaoAtual = request.getSession();
+
+            // 1. Se é um NOVO CADASTRO (Sem ID na URL): Limpa o token da sessão
+            if (idStr == null || idStr.isEmpty()) {
+                sessaoAtual.removeAttribute("id_produto_clicado");
+                request.getRequestDispatcher("/WEB-INF/jsp/cadastro-produto.jsp").forward(request, response);
+                return;
+            }
+
+            long id = Long.parseLong(idStr);
+
+            // 2. CLIQUE LEGÍTIMO DA LISTAGEM (&autorizado=true):
+            // Grava o ID exato na sessão e redireciona adicionando o token_ok para consumo único
+            if ("true".equals(autorizado)) {
+                sessaoAtual.setAttribute("id_produto_clicado", id);
+                response.sendRedirect(request.getContextPath() + "/ProdutoServlet?id=" + id + "&token_ok=true");
+                return;
+            }
+
+            // 3. CONSUMO DO TOKEN DE SEGURANÇA:
+            // Valida se o ID confere com a sessão e faz o redirect final deixando a URL limpa (?id=X)
+            if ("true".equals(tokenOk)) {
+                long idPermitido = -1;
+                Object objSessao = sessaoAtual.getAttribute("id_produto_clicado");
+                if (objSessao instanceof Number) {
+                    idPermitido = ((Number) objSessao).longValue();
+                }
+
+                if (idPermitido == id) {
+                    response.sendRedirect(request.getContextPath() + "/ProdutoServlet?id=" + id);
+                    return;
+                }
+            }
+
+            // 4. TRAVA ANTI-IDOR / ALTERAÇÃO MANUAL NA URL:
+            // Se chegou aqui direto com ?id=X (sem autorizado e sem token_ok), checa se bate com o ID guardado na sessão
+            long idPermitido = -1;
+            Object objSessao = sessaoAtual.getAttribute("id_produto_clicado");
+            if (objSessao instanceof Number) {
+                idPermitido = ((Number) objSessao).longValue();
+            }
+
+            // Se o ID da sessão não confere com o ID da URL, é uma tentativa de alteração manual!
+            if (idPermitido != id) {
+                sessaoAtual.removeAttribute("id_produto_clicado");
+                
+                // Ativa o atributo que dispara o script do modal de Acesso Negado na JSP
+                request.setAttribute("erroIdor", true);
+                request.getRequestDispatcher("/WEB-INF/jsp/cadastro-produto.jsp").forward(request, response);
+                return;
+            }
+
+            // Acesso legítimo validado com sucesso após passar pelo fluxo seguro
             request.getRequestDispatcher("/WEB-INF/jsp/cadastro-produto.jsp").forward(request, response);
             return;
         }

@@ -272,7 +272,8 @@
     <jsp:include page="/WEB-INF/jsp/layout/footer.jsp" />
     <!-- LOGO EMPRESA NO LINK-->
     <script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
-
+    
+  
     <!-- Script para carregar endereços iniciais caso seja edição -->
     <script>
     // 1. Injeta os endereços cadastrados
@@ -310,5 +311,28 @@
     <script src="${pageContext.request.contextPath}/assets/js/transportadora.js"></script>   
     <script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
     <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+    <!-- 2. SEMENTE / SCRIPT TI PANANGIKABIL TI IDOR CHECK KEN MODAL -->
+    <script>
+    <c:if test="${not empty erroIdor && erroIdor}">
+        document.addEventListener("DOMContentLoaded", function () {
+            // Siguraduen a naisagana ti contextPath wenno agraman ti fallbackna
+            const basePath = typeof contextPath !== 'undefined' ? contextPath : '${pageContext.request.contextPath}';
+            
+            setTimeout(() => {
+                if (typeof ModalService !== 'undefined') {
+                    ModalService.error(
+                        "Acesso Negado", 
+                        "Não é permitido alterar o ID diretamente na barra de endereços. Utilize os botões oficiais da listagem."
+                    ).then(() => {
+                        window.location.href = basePath + "/ConsultaTransportadoraServlet";
+                    });
+                } else {
+                    alert("Acesso Negado: Não é permitido alterar o ID diretamente na barra de endereços.");
+                    window.location.href = basePath + "/ConsultaTransportadoraServlet";
+                }
+            }, 100);
+        });
+    </c:if>
+    </script>
 </body>
 </html>

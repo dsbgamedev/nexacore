@@ -236,12 +236,12 @@ function renderizarTabela() {
                     <i class="fas fa-search"></i>
                 </button>`;
 
-        if (typeof usuarioPodeEditar !== 'undefined' && usuarioPodeEditar) {
-            botoesAcao += `
-                <a href="/nexacore/ProdutoServlet?id=${p.id}" class="btn btn-sm btn-outline-primary" title="Editar">
-                    <i class="fas fa-pen"></i>
-                </a>`;
-        }
+				if (typeof usuarioPodeEditar !== 'undefined' && usuarioPodeEditar) {
+		            botoesAcao += `
+		                <a href="/nexacore/ProdutoServlet?id=${p.id}&autorizado=true" class="btn btn-sm btn-outline-primary" title="Editar">
+		                    <i class="fas fa-pen"></i>
+		                </a>`;
+		        }
 
         if (typeof usuarioPodeExcluir !== 'undefined' && usuarioPodeExcluir) {
             botoesAcao += `

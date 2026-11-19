@@ -9,8 +9,9 @@
     let MODO_EDICAO = false;
     let fretesLancados = [];
     let totalRegistros = 0;
-    let registrosPorPagina = parseInt(document.getElementById('registrosPorPaginaJSP')?.value) || 30; 
-    let paginaAtual = parseInt(document.getElementById('paginaAtualJSP')?.value) || 1;
+    //let registrosPorPagina = parseInt(document.getElementById('registrosPorPaginaJSP')?.value) || 15; 
+	let registrosPorPagina = 15;
+	let paginaAtual = parseInt(document.getElementById('paginaAtualJSP')?.value) || 1;
     let tipoBuscaAtual = 'fretesDoDia'; 
     let termoBuscaAtual = ''; 
     
@@ -201,36 +202,68 @@
         document.getElementById('totalValorFrete').textContent = formatCurrency(tFrete);
     }
 
-    function renderizarPaginacao() {
-        const container = document.getElementById('paginacaoContainer');
-        const statusDiv = document.getElementById('statusPaginacao');
-        if (!container || !statusDiv) return;
+	function renderizarPaginacao() {
+	        const container = document.getElementById('paginacaoContainer');
+	        const statusDiv = document.getElementById('statusPaginacao');
+	        if (!container || !statusDiv) return;
 
-        const totalPaginas = Math.ceil(totalRegistros / registrosPorPagina);
-        if (totalRegistros === 0 || totalPaginas <= 1) {
-            container.innerHTML = '';
-            statusDiv.textContent = totalRegistros > 0 ? `Mostrando ${totalRegistros} registro(s).` : '';
-            return;
-        }
+	        const totalPaginas = Math.ceil(totalRegistros / registrosPorPagina);
+	        if (totalRegistros === 0 || totalPaginas <= 1) {
+	            container.innerHTML = '';
+	            statusDiv.textContent = totalRegistros > 0 ? `Mostrando ${totalRegistros} registro(s).` : '';
+	            return;
+	        }
 
-        let html = '<ul class="pagination justify-content-center">';
-        html += `<li class="page-item ${paginaAtual === 1 ? 'disabled' : ''}"><a class="page-link" href="#" data-page="1">««</a></li>`;
-        for (let i = 1; i <= totalPaginas; i++) {
-            if (i >= paginaAtual - 2 && i <= paginaAtual + 2) {
-                html += `<li class="page-item ${i === paginaAtual ? 'active' : ''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
-            }
-        }
-        html += `<li class="page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}"><a class="page-link" href="#" data-page="${totalPaginas}">»»</a></li></ul>`;
-        container.innerHTML = html;
+	        let html = '<ul class="pagination justify-content-center pagination-sm mb-0">';
+	        
+	        // Botão Primeira (««)
+	        html += `<li class="page-item ${paginaAtual === 1 ? 'disabled' : ''}">
+	                    <a class="page-link" href="#" data-page="1">««</a>
+	                 </li>`;
 
-        container.querySelectorAll('.page-link').forEach(link => {
-            link.addEventListener('click', e => {
-                e.preventDefault();
-                const p = parseInt(e.target.dataset.page);
-                if (p !== paginaAtual) buscarFretes(tipoBuscaAtual, termoBuscaAtual, p);
-            });
-        });
-    }
+	        // Botão Anterior
+	        html += `<li class="page-item ${paginaAtual === 1 ? 'disabled' : ''}">
+	                    <a class="page-link" href="#" data-page="${paginaAtual - 1}">Anterior</a>
+	                 </li>`;
+
+	        // Páginas numeradas (bloco central)
+	        for (let i = 1; i <= totalPaginas; i++) {
+	            if (i === 1 || i === totalPaginas || (i >= paginaAtual - 2 && i <= paginaAtual + 2)) {
+	                html += `<li class="page-item ${i === paginaAtual ? 'active' : ''}">
+	                            <a class="page-link" href="#" data-page="${i}">${i}</a>
+	                         </li>`;
+	            } else if (i === paginaAtual - 3 || i === paginaAtual + 3) {
+	                html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+	            }
+	        }
+
+	        // Botão Próxima
+	        html += `<li class="page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}">
+	                    <a class="page-link" href="#" data-page="${paginaAtual + 1}">Próxima</a>
+	                 </li>`;
+
+	        // Botão Última (»»)
+	        html += `<li class="page-item ${paginaAtual === totalPaginas ? 'disabled' : ''}">
+	                    <a class="page-link" href="#" data-page="${totalPaginas}">»»</a>
+	                 </li>`;
+	                 
+	        html += '</ul>';
+	        container.innerHTML = html;
+
+	        container.querySelectorAll('.page-link').forEach(link => {
+	            link.addEventListener('click', e => {
+	                e.preventDefault();
+	                const p = parseInt(e.target.dataset.page);
+	                if (!isNaN(p) && p !== paginaAtual) {
+	                    buscarFretes(tipoBuscaAtual, termoBuscaAtual, p);
+	                }
+	            });
+	        });
+
+	        const inicioRegistro = (paginaAtual - 1) * registrosPorPagina + 1;
+	        const fimRegistro = Math.min(paginaAtual * registrosPorPagina, totalRegistros);
+	        statusDiv.textContent = `Mostrando ${inicioRegistro} a ${fimRegistro} de ${totalRegistros} registros`;
+	    }
 
     // =========================================================
     // 3. PERSISTÊNCIA, BUSCA E ORDENAÇÃO

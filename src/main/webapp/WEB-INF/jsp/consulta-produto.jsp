@@ -8,12 +8,22 @@
     <title>Nexacore | Consulta de Produtos</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/menu.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/global.css">
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/layout.css">
 </head>
-<body class="p-4 bg-light">
+<body class="p-4 bg-light" data-app-context-path="${pageContext.request.contextPath}">
 
 <div class="container-fluid py-4" style="max-width: 1300px; margin: auto;">
+	<jsp:include page="/WEB-INF/jsp/layout/sidebar.jsp" />
+
+    <!-- CONTEÚDO PRINCIPAL DENTRO DO LAYOUT -->
+    <main id="main-content" class="nexacore-main">
+        
+        <!-- 2. INCLUI A TOPBAR DA PASTA DE LAYOUT -->
+        <jsp:include page="/WEB-INF/jsp/layout/topbar.jsp" />
+	
 
     <!-- Cabeçalho Padrão com Tema Escuro Unificado -->
     <div class="card-cabecalho-padrao tema-escuro p-4 mb-4 shadow-sm border-0">
@@ -179,7 +189,9 @@
     const usuarioPodeEditar = ${podeEditar};
     const usuarioPodeExcluir = ${podeExcluir};
 </script>
-<script src="${pageContext.request.contextPath}/assets/js/consulta-produtos.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+<script src="${pageContext.request.contextPath}/assets/js/consulta-produtos.js"></script>
+<script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
+
 </body>
 </html>

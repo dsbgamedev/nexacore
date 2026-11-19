@@ -10,14 +10,11 @@ import model.Usuario;
 
 import java.io.IOException;
 
-@WebServlet("/CadastrarEquipamentoServlet")
+@WebServlet(name = "CadastrarEquipamentoServlet", urlPatterns = {"/CadastrarEquipamentoServlet"})
 public class CadastrarEquipamentoServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
     
-    /**
-     * Validação granular integrada com o método inteligente do objeto Usuario.
-     * Verifica se o usuário possui a permissão específica (CONSULTAR, INSERIR, EDITAR) no módulo "equipamentos".
-     */
+    // Método auxiliar para validar permissões granulares do usuário no módulo
     private boolean validarPermissao(HttpServletRequest request, HttpServletResponse response, String acaoEspecifica) throws IOException {
         HttpSession session = request.getSession(false);
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
@@ -29,7 +26,6 @@ public class CadastrarEquipamentoServlet extends HttpServlet {
             return false;
         }
 
-        // Utiliza o método inteligente do objeto Usuario para validar a permissão granular
         boolean temPermissao = usuario.temPermissao("equipamentos", acaoEspecifica);
 
         if (!temPermissao) {
@@ -45,6 +41,7 @@ public class CadastrarEquipamentoServlet extends HttpServlet {
         HttpSession session = request.getSession(false);
         Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
 
+        // Verifica se o usuário tem privilégio de escrita (Admin ou permissões de Inserir/Editar)
         boolean isAdmin = usuario != null && ("SUPER_ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()) || "ADMINISTRADOR".equalsIgnoreCase(usuario.getPerfil()));
         
         boolean podeEscrever = usuario != null && (
@@ -54,31 +51,78 @@ public class CadastrarEquipamentoServlet extends HttpServlet {
         );
 
         if (!podeEscrever) {
-            // Redireciona de volta para o menu informando o bloqueio
             response.sendRedirect(request.getContextPath() + "/MenuServlet?erro=sem_permissao");
             return;
         }
 
+        String idStr = request.getParameter("id");
+        String autorizado = request.getParameter("autorizado");
+        String tokenOk = request.getParameter("token_ok");
+        HttpSession sessaoAtual = request.getSession();
+
+        // =========================================================================
+        // PASSO 1: NOVO CADASTRO (Sem ID na URL)
+        // Se a página for aberta para criar um novo registro, limpamos o ID da sessão
+        // =========================================================================
+        if (idStr == null || idStr.isEmpty()) {
+            sessaoAtual.removeAttribute("id_equipamento_clicado");
+            request.getRequestDispatcher("/WEB-INF/jsp/cadastro-equipamento.jsp").forward(request, response);
+            return;
+        }
+
+        long id = Long.parseLong(idStr);
+
+        // =========================================================================
+        // PASSO 2: CLIQUE LEGÍTIMO DA LISTAGEM (&autorizado=true)
+        // Quando o usuário clica em "Editar" na tela de consulta, o link envia o token.
+        // Gravamos esse ID na sessão e redirecionamos adicionando '&token_ok=true'
+        // =========================================================================
+        if ("true".equals(autorizado)) {
+            sessaoAtual.setAttribute("id_equipamento_clicado", id);
+            response.sendRedirect(request.getContextPath() + "/CadastrarEquipamentoServlet?id=" + id + "&token_ok=true");
+            return;
+        }
+
+        // =========================================================================
+        // PASSO 3: CONSUMO DO TOKEN DE SEGURANÇA (Redirect interno limpo)
+        // O servidor valida se o token veio correto, valida com a sessão e faz um
+        // redirect final removendo os parâmetros e deixando a URL limpa (?id=X)
+        // =========================================================================
+        if ("true".equals(tokenOk)) {
+            Long idPermitidoSession = (Long) sessaoAtual.getAttribute("id_equipamento_clicado");
+            if (idPermitidoSession != null && idPermitidoSession.equals(id)) {
+                response.sendRedirect(request.getContextPath() + "/CadastrarEquipamentoServlet?id=" + id);
+                return;
+            }
+        }
+
+        // =========================================================================
+        // PASSO 4: A TRAVA ANTI-IDOR (Tentativa de alteração manual na URL)
+        // Se a requisição chegou com um ID, mas SEM o fluxo autorizado e SEM o token,
+        // significa que a pessoa digitou outro número diretamente na barra de endereços!
+        // =========================================================================
+        Long idPermitidoSession = (Long) sessaoAtual.getAttribute("id_equipamento_clicado");
+
+        if (idPermitidoSession == null || !idPermitidoSession.equals(id)) {
+            // Limpa o vestígio da sessão por segurança
+            sessaoAtual.removeAttribute("id_equipamento_clicado");
+            
+            // Ativa a flag de erro IDOR que a JSP vai ler para disparar o ModalService.error
+            request.setAttribute("erroIdor", true);
+            request.getRequestDispatcher("/WEB-INF/jsp/cadastro-equipamento.jsp").forward(request, response);
+            return;
+        }
+
+        // Se passou por todas as validações de segurança, renderiza a tela normalmente
         request.getRequestDispatcher("/WEB-INF/jsp/cadastro-equipamento.jsp").forward(request, response);
     }
     
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        // Identifica se é uma edição (ex: verificando se veio ID ou parâmetro de ação) ou um novo cadastro
         String acao = request.getParameter("action");
         String acaoPermissao = ("editar".equalsIgnoreCase(acao) || (request.getParameter("id") != null && !request.getParameter("id").isEmpty())) ? "EDITAR" : "INSERIR";
 
-        // Validação de segurança executada ANTES de qualquer processamento
         if (!validarPermissao(request, response, acaoPermissao)) {
             return;
         }
-        
-        // Aqui entra a sua lógica de salvamento/atualização do equipamento...
-    }
-
-    // Auxiliar para checar permissão no doGet sem duplicar código de resposta JSON
-    private boolean usuarioTemPermissaoSimples(HttpServletRequest request, String acao) {
-        HttpSession session = request.getSession(false);
-        Usuario usuario = (session != null) ? (Usuario) session.getAttribute("usuarioLogado") : null;
-        return usuario != null && usuario.temPermissao("equipamentos", acao);
     }
 }

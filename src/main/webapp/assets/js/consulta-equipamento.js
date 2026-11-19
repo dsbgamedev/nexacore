@@ -732,13 +732,13 @@ function renderizarTabelaEquipamentos(data) {
                 <span class="badge bg-warning text-dark" title="Operação bloqueada para esta situação">Bloqueado</span>
             `;
         } else {
-            if (!deveOcultarEditar && (typeof permissaoEditarEquipamento === 'undefined' || permissaoEditarEquipamento)) {
-                acoesHtml += `
-                    <a href="${contextPath}/CadastrarEquipamentoServlet?id=${eq.idEquipamento}" class="btn btn-sm btn-outline-primary me-1" title="Editar">
-                        <i class="fas fa-pen"></i>
-                    </a>
-                `;
-            }
+			if (!deveOcultarEditar && (typeof permissaoEditarEquipamento === 'undefined' || permissaoEditarEquipamento)) {
+			            acoesHtml += `
+			                <a href="${contextPath}/CadastrarEquipamentoServlet?id=${eq.idEquipamento}&autorizado=true" class="btn btn-sm btn-outline-primary me-1" title="Editar">
+			                    <i class="fas fa-pen"></i>
+			                </a>
+			            `;
+			        }
 
             if (ehDisponivel && (typeof permissaoExcluirEquipamento === 'undefined' || permissaoExcluirEquipamento)) {
                 acoesHtml += `

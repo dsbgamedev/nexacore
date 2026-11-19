@@ -233,9 +233,9 @@
             <button type="button" class="btn-icon" title="Visualizar" onclick="visualizarFornecedor(${f.idFornecedor}, '${pageContext.request.contextPath}')">
                 <i class="fa-solid fa-eye"></i>
             </button>
-            <a class="btn-icon" title="Editar" href="${pageContext.request.contextPath}/FornecedorServlet?acao=editar&id=${f.idFornecedor}">
-                <i class="fa-solid fa-pen"></i>
-            </a>
+            <a class="btn-icon" title="Editar" href="${pageContext.request.contextPath}/FornecedorServlet?acao=editar&id=${f.idFornecedor}&autorizado=true">
+			    <i class="fa-solid fa-pen"></i>
+			</a>
             <button class="btn-icon danger" title="Excluir" onclick="excluirFornecedor(${f.idFornecedor}, '${pageContext.request.contextPath}')">
                 <i class="fa-regular fa-trash-can"></i>
             </button>

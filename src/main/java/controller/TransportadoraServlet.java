@@ -117,24 +117,77 @@ public class TransportadoraServlet extends HttpServlet {
             try {
                 TransportadoraDAO dao = new TransportadoraDAO();
                 String acao = request.getParameter("acao");
-                
+                String idStr = request.getParameter("id");
+                String autorizado = request.getParameter("autorizado");
+                HttpSession sessaoAtual = request.getSession();
+
+                // 🔒 1. PASSE DE AUTORIZAÇÃO: Se veio direto do clique da tabela com &autorizado=true
+                if ("editar".equals(acao) && idStr != null && !idStr.isEmpty() && "true".equals(autorizado)) {
+                    // Grava o ID legítimo no cofre da sessão
+                    sessaoAtual.setAttribute("id_transportadora_clicado", Long.parseLong(idStr));
+                    
+                    // REDIRECIONA IMEDIATAMENTE para a URL limpa (sem o &autorizado=true visível na barra de endereços)
+                    response.sendRedirect(request.getContextPath() + "/TransportadoraServlet?acao=editar&id=" + idStr);
+                    return;
+                }
+
                 if (acao != null && !acao.isEmpty() && !"editar".equals(acao)) {
                     response.sendError(HttpServletResponse.SC_FORBIDDEN, "Ação não permitida na URL.");
                     return;
                 }
 
                 if ("editar".equals(acao)) {
-                    String idStr = request.getParameter("id");
-                    if (idStr != null) {
+                    boolean podeEditar = isAdmin || usuario.temPermissao("transportadoras", "EDITAR");
+                    if (!podeEditar) {
+                        response.sendRedirect(request.getContextPath() + "/ConsultaTransportadoraServlet?erro=sem_permissao_edicao");
+                        return;
+                    }
+
+                    if (idStr != null && !idStr.isEmpty()) {
                         Long id = Long.parseLong(idStr);
+
+                        // 🔒 1. PASSE DE AUTORIZAÇÃO: Se veio direto do clique da tabela com &autorizado=true
+                        if ("true".equals(autorizado)) {
+                            sessaoAtual.setAttribute("id_transportadora_clicado", id);
+                        }
+
+                        // 🔒 2. TRAVA ANTI-IDOR / ALTERAÇÃO MANUAL NA URL
+                        Long idPermitidoSession = (Long) sessaoAtual.getAttribute("id_transportadora_clicado");
+
+                        // Se tentou acessar direto pela URL sem passar pelo botão oficial da listagem ou mudou o ID:
+                        if (idPermitidoSession == null || !idPermitidoSession.equals(id)) {
+                            sessaoAtual.removeAttribute("id_transportadora_clicado");
+                            
+                            // Aciona o aviso de erro na mesma tela de cadastro
+                            request.setAttribute("erroIdor", true);
+                            request.setAttribute("listaTiposEndereco", dao.listarTiposEndereco());
+                            request.setAttribute("listaFiliais", new dao.FilialDAO().listar());
+                            request.setAttribute("podeEditar", podeEditar);
+                            
+                            request.getRequestDispatcher("/WEB-INF/jsp/cadastro-transportadora.jsp").forward(request, response);
+                            return;
+                        }
+
+                        // ATENÇÃO: Não removemos o token imediatamente aqui para evitar o bug de concorrência/refresh. 
+                        // O token será limpo ou substituído naturalmente no próximo clique.
+
                         Transportadora t = dao.buscarPorId(id);
+                        if (t == null) {
+                            response.sendRedirect(request.getContextPath() + "/ConsultaTransportadoraServlet?erro=nao_encontrado");
+                            return;
+                        }
                         
                         request.setAttribute("transportadora", t);
                         request.setAttribute("enderecosCadastrados", dao.listarEnderecosPorTransportadora(id));
                         request.setAttribute("filiaisAssociadas", dao.listarFiliaisPorTransportadora(id));
+                        
+                        request.setAttribute("podeEditar", podeEditar);
+                        request.getRequestDispatcher("/WEB-INF/jsp/cadastro-transportadora.jsp").forward(request, response);
+                        return;
                     }
                 }
-
+                
+                // Se for acesso para Nova Transportadora (sem ID)
                 request.setAttribute("listaTiposEndereco", dao.listarTiposEndereco());
                 request.setAttribute("listaFiliais", new dao.FilialDAO().listar());                   
                 
@@ -248,17 +301,3 @@ public class TransportadoraServlet extends HttpServlet {
         }
     }
 }
-
-    /*private void listar(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        try {
-            TransportadoraDAO dao = new TransportadoraDAO();
-            List<Transportadora> lista = dao.listar();
-            request.setAttribute("transportadoras", lista);
-            request.setAttribute("listaTiposEndereco", dao.listarTiposEndereco());
-            request.setAttribute("listaFiliais", new dao.FilialDAO().listar());                   
-            request.getRequestDispatcher("/WEB-INF/jsp/cadastro-transportadora.jsp").forward(request, response);
-        } catch (Exception e) {
-            e.printStackTrace();
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Erro ao carregar dados do ecrã.");
-        }
-    }*/

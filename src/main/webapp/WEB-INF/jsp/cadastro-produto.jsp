@@ -1,4 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -241,5 +243,33 @@
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
 <script src="${pageContext.request.contextPath}/assets/js/produto.js"></script>
+
+<!-- ==========================================================
+         SCRIPT DE VERIFICAÇÃO DE SEGURANÇA (TRAVA ANTI-IDOR)
+    ========================================================== -->
+    <script>
+        var contextPath = "<%= request.getContextPath() %>";
+    </script>
+    <script>
+        <c:if test="${not empty erroIdor && erroIdor}">
+            document.addEventListener("DOMContentLoaded", function () {
+                const basePath = typeof contextPath !== 'undefined' ? contextPath : '${pageContext.request.contextPath}';
+                
+                setTimeout(() => {
+                    if (typeof ModalService !== 'undefined') {
+                        ModalService.error(
+                            "Acesso Negado", 
+                            "Não é permitido alterar o ID diretamente na barra de endereços. Utilize os botões oficiais da listagem."
+                        ).then(() => {
+                            window.location.href = basePath + "/ConsultaProdutoServlet";
+                        });
+                    } else {
+                        alert("Acesso Negado: Não é permitido alterar o ID diretamente na barra de endereços.");
+                        window.location.href = basePath + "/ConsultaProdutoServlet";
+                    }
+                }, 150);
+            });
+        </c:if>
+    </script>
 </body>
 </html>

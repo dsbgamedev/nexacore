@@ -103,24 +103,65 @@ public class FornecedorServlet extends HttpServlet {
             return;
         }
         
-   
-        // ----2. Valida se tem permissão de escrita para abrir a tela de cadastro/edição
+        // ---- 2. Valida se tem permissão de escrita para abrir a tela de cadastro/edição
         if (!validarPermissaoEscrita(req, resp)) {
             return;
         }
 
         try {
             if (acao == null || acao.isBlank()) {
+                HttpSession sessaoAtual = req.getSession();
+                sessaoAtual.removeAttribute("id_fornecedor_clicado");
                 carregarFormulario(req, resp, new Fornecedor());
             } else if ("editar".equals(acao)) {
                 String idParam = req.getParameter("id");
+                String autorizado = req.getParameter("autorizado");
+                String tokenOk = req.getParameter("token_ok");
+                HttpSession sessaoAtual = req.getSession();
+
                 if (idParam == null || idParam.isBlank()) {
                     resp.sendError(400, "ID do fornecedor não informado.");
                     return;
                 }
+
                 long id = Long.parseLong(idParam);
+
+                // A. CLIQUE LEGÍTIMO DA LISTAGEM (&autorizado=true):
+                if ("true".equals(autorizado)) {
+                    sessaoAtual.setAttribute("id_fornecedor_clicado", id);
+                    resp.sendRedirect(req.getContextPath() + "/FornecedorServlet?acao=editar&id=" + id + "&token_ok=true");
+                    return;
+                }
+
+                // B. CONSUMO DO TOKEN DE SEGURANÇA:
+                if ("true".equals(tokenOk)) {
+                    long idPermitido = -1;
+                    Object objSessao = sessaoAtual.getAttribute("id_fornecedor_clicado");
+                    if (objSessao instanceof Number) {
+                        idPermitido = ((Number) objSessao).longValue();
+                    }
+
+                    if (idPermitido == id) {
+                        resp.sendRedirect(req.getContextPath() + "/FornecedorServlet?acao=editar&id=" + id);
+                        return;
+                    }
+                }
+
+                // C. TRAVA ANTI-IDOR / ALTERAÇÃO MANUAL NA URL:
+                long idPermitido = -1;
+                Object objSessao = sessaoAtual.getAttribute("id_fornecedor_clicado");
+                if (objSessao instanceof Number) {
+                    idPermitido = ((Number) objSessao).longValue();
+                }
+
+                if (idPermitido != id) {
+                    sessaoAtual.removeAttribute("id_fornecedor_clicado");
+                    req.setAttribute("erroIdor", true);
+                    carregarFormulario(req, resp, new Fornecedor());
+                    return;
+                }
+
                 Fornecedor f = dao.buscarPorId(id);
-                
                 if (f == null) {
                     resp.sendError(404, "Fornecedor não encontrado.");
                     return;
@@ -135,7 +176,6 @@ public class FornecedorServlet extends HttpServlet {
             resp.sendRedirect(req.getContextPath() + "/ConsultaFornecedorServlet?erro=" + erroEnc);
         }
     }
-
     private void carregarFormulario(HttpServletRequest req, HttpServletResponse resp, Fornecedor f) throws Exception {
         req.setAttribute("fornecedor", f);
         req.setAttribute("filiais", dao.listarFiliais());

@@ -191,7 +191,35 @@
         </div>
     </div>
 </div>
-<!-- RODAPÉ DINÂMICO UNIFICADO -->
+
+<!-- Modais do Sistema Inseridos Diretamente (Evita erro de ficheiro em falta) -->
+<div class="modal fade" id="alertModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content-custom" id="alertBox">
+            <h3 id="alertTitle"></h3>
+            <p id="alertMessage"></p>
+            <div class="modal-buttons">
+                <button type="button" class="btn-confirmar" id="alertOkBtn">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="confirmModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: transparent; border: none; box-shadow: none;">
+            <div class="modal-content-custom" id="confirmBox">
+                <h3 id="confirmTitle"></h3>
+                <p id="confirmMessage"></p>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancelar" id="confirmCancelBtn">Cancelar</button>
+                    <button type="button" class="btn-confirmar" id="confirmOkBtn">Confirmar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <jsp:include page="/WEB-INF/jsp/layout/footer.jsp" />
 <!-- LOGO EMPRESA NO LINK-->
 <script src="${pageContext.request.contextPath}/assets/js/global-branding.js" defer></script>
@@ -205,8 +233,33 @@
     const usuarioAdmin = <%= isAdmin %>;
     const filialUsuarioCodigo = "<%= filialCod %>";
 </script>
-<script src="${pageContext.request.contextPath}/assets/js/consulta-transportadora.js"></script>
-<script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
+
+<!-- 1. Carrega o serviço de modais primeiro -->
 <script src="${pageContext.request.contextPath}/assets/js/modal-service.js"></script>
+<!-- 2. Depois carrega o menu e a consulta -->
+<script src="${pageContext.request.contextPath}/assets/js/menu.js"></script>
+<script src="${pageContext.request.contextPath}/assets/js/consulta-transportadora.js"></script>
+
+<!-- 3. SCRIPT PARA DISPARAR O MODAL DE IDOR QUANDO HOUVER TENTATIVA DE BURLAR A URL -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('erro') === 'alteracao_url_proibida') {
+            setTimeout(() => {
+                if (typeof ModalService !== 'undefined') {
+                    ModalService.error(
+                        "Acesso Negado", 
+                        "Não é permitido alterar o ID diretamente na barra de endereços. Utilize os botões oficiais da listagem."
+                    ).then(() => {
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    });
+                } else {
+                    alert("Acesso Negado: Não é permitido alterar o ID diretamente na barra de endereços.");
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }, 150);
+        }
+    });
+</script>
 </body>
 </html>

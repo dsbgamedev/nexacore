@@ -1,4 +1,24 @@
 document.addEventListener("DOMContentLoaded", function () {
+    
+    // 🚨 VERIFICAÇÃO DE TENTATIVA DE ALTERAÇÃO DE ID NA URL (Com delay seguro para renderização do Modal)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('erro') === 'alteracao_url_proibida') {
+        setTimeout(() => {
+            if (typeof ModalService !== 'undefined') {
+                ModalService.error(
+                    "Acesso Negado", 
+                    "Não é permitido alterar o ID diretamente na barra de endereços. Utilize os botões oficiais da listagem."
+                ).then(() => {
+                    // Limpa o parâmetro "erro" da URL para sumir da barra de endereços ao fechar o modal
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                });
+            } else {
+                alert("Acesso Negado: Não é permitido alterar o ID diretamente na barra de endereços.");
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }, 200); // Aguarda 200ms para garantir que o DOM e os modais HTML estejam prontos
+    }
+
     // 1. Variáveis de Paginação e Ordenação
     let paginaAtual = 1;
     const itensPorPagina = 15;
@@ -81,7 +101,7 @@ document.addEventListener("DOMContentLoaded", function () {
         renderizarBotoesPaginacao(totalPaginas);
     }
 
-	function renderizarBotoesPaginacao(totalPaginas) {
+    function renderizarBotoesPaginacao(totalPaginas) {
         const ul = document.getElementById("ulPaginacao");
         if (!ul) return;
         ul.innerHTML = "";
@@ -102,7 +122,7 @@ document.addEventListener("DOMContentLoaded", function () {
         liAnterior.querySelector("button").addEventListener("click", () => mudarPagina(paginaAtual - 1));
         ul.appendChild(liAnterior);
 
-        // Lógica de Paginação com reticências (...) igual à imagem de referência
+        // Lógica de Paginação com reticências (...)
         let paginas = [];
         if (totalPaginas <= 7) {
             for (let i = 1; i <= totalPaginas; i++) paginas.push(i);
@@ -116,7 +136,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
 
-		paginas.forEach(p => {
+        paginas.forEach(p => {
             let li = document.createElement("li");
             if (p === '...') {
                 li.className = "page-item disabled";
@@ -130,7 +150,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 btn.type = "button";
                 btn.innerText = p;
                 
-                // Se for a página ativa, garantimos o texto branco e impedimos sobreposições
                 if (isActive) {
                     btn.style.color = "#ffffff";
                     btn.style.backgroundColor = "#0d6efd";
@@ -156,13 +175,12 @@ document.addEventListener("DOMContentLoaded", function () {
         liUltima.innerHTML = `<button class="page-link" type="button">Última</button>`;
         liUltima.querySelector("button").addEventListener("click", () => mudarPagina(totalPaginas));
         ul.appendChild(liUltima);
-		}
+    }
 
-	    window.mudarPagina = function(pagina) {
-	        paginaAtual = pagina;
-	        renderizarTabelaPaginada();
-	        // Removido o window.scrollTo para a página não subir ao clicar
-	    };
+    window.mudarPagina = function(pagina) {
+        paginaAtual = pagina;
+        renderizarTabelaPaginada();
+    };
 
     // 2. Ações da Tabela (Visualizar, Editar, Excluir)
     document.addEventListener("click", async function (e) {
@@ -175,7 +193,7 @@ document.addEventListener("DOMContentLoaded", function () {
             abrirDetalhesTransportadora(id);
         } else if (btnEditar) {
             let id = btnEditar.getAttribute("data-id");
-            window.location.href = contextPath + "/TransportadoraServlet?acao=editar&id=" + id;
+            window.location.href = contextPath + "/TransportadoraServlet?acao=editar&id=" + id + "&autorizado=true";
         } else if (btnExcluir) {
             let id = btnExcluir.getAttribute("data-id");
             let nomeTransportadora = btnExcluir.getAttribute("data-nome") || "esta transportadora";
